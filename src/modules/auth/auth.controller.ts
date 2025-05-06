@@ -13,24 +13,6 @@ import { OtpService } from '../otp/otp.service';
 import rateLimit from 'express-rate-limit';
 import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Too many login attempts. Please try again later.',
-});
-
-const forgotPasswordLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 3,
-  message: 'Too many password reset requests. Please try again later.',
-});
-
-const verifyEmailLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: 'Too many email verification attempts. Please try again later.',
-});
-
 const validateUserStatus = (user: TUser) => {
   if (user?.isDeleted) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'User account is deleted.');

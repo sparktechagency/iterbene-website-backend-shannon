@@ -6,13 +6,11 @@ const loggingMiddleware = async (
   res: Response,
   next: NextFunction
 ) => {
-  const start = Date.now();
   const { method, originalUrl, ip, headers } = req;
   const userAgent = headers['user-agent'] || 'unknown';
   const userId = req.user?.userId;
 
   res.on('finish', async () => {
-    const duration = Date.now() - start;
     const status = res.statusCode;
 
     const payload = { ...req.body };

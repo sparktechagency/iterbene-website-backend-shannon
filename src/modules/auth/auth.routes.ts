@@ -21,7 +21,7 @@ const resendOtpLimiter = rateLimit({
 });
 
 // Apply logging middleware to all routes
-router.use(loggingMiddleware);
+// router.use(loggingMiddleware);
 
 router.post(
   '/register',
