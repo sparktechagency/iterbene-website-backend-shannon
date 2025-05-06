@@ -3,59 +3,82 @@ import cors from 'cors';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import globalErrorHandler from './middlewares/globalErrorHandler';
-import notFound from './middlewares/notFount';
 import router from './routes';
-import { Morgan } from './shared/morgen';
-import i18next from './i18n/i18n'; 
+import i18next from './i18n/i18n';
 import i18nextMiddleware from 'i18next-express-middleware';
+import helmet from 'helmet';
+import notFound from './middlewares/notFount';
+import loggingMiddleware from './middlewares/loggingMiddleware';
 
 const app = express();
 
-// morgan
-app.use(Morgan.successHandler);
-app.use(Morgan.errorHandler);
-
-// body parser
+// Security headers
 app.use(
-  cors({
-    origin: [
-      'http://localhost:7002',
-      "http://localhost:3000",
-      "http://rakib3000.sobhoy.com",
-      'http://10.0.80.220:3000',
-      'http://10.0.80.220:7002',
-      'http://10.0.80.220:4173',
-      'http://localhost:7003',
-      'https://rakib7002.sobhoy.com',
-    ],
-    credentials: true,
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+      },
+    },
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// CORS configuration
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'http://localhost:7002',
+        'http://localhost:3000',
+        'http://rakib3000.sobhoy.com',
+        'http://10.0.80.220:3000',
+        'http://10.0.80.220:7002',
+        'http://10.0.80.220:4173',
+        'http://localhost:7003',
+        'https://rakib7002.sobhoy.com',
+      ];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
-// Use cookie-parser to parse cookies
+// Body parser
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Cookie parser
 app.use(cookieParser());
 
-// file retrieve
-app.use('/uploads', express.static(path.join(__dirname, '../uploads/')));
+// File serving
+app.use('/uploads', express.static(path.join(__dirname, '../Uploads/')));
 
-// Use i18next middleware
+// i18next middleware
 app.use(i18nextMiddleware.handle(i18next));
 
-// router
+// Logging middleware
+app.use(loggingMiddleware);
+
+// Routes
 app.use('/api/v1', router);
 
-// live response
+// Health check
 app.get('/test', (req: Request, res: Response) => {
-  res.status(201).json({ message: "Welcome the inter bene website backend" });
+  res
+    .status(200)
+    .json({ message: 'Welcome to the Inter Bene website backend' });
 });
 
-// global error handle
+// Error handling
 app.use(globalErrorHandler);
-
-// handle not found route
 app.use(notFound);
 
 export default app;

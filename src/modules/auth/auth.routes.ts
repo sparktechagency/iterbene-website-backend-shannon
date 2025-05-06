@@ -8,6 +8,18 @@ import rateLimit from 'express-rate-limit';
 import loggingMiddleware from '../../middlewares/loggingMiddleware';
 const router = Router();
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Too many login attempts. Please try again later.',
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: 'Too many password reset requests. Please try again later.',
+});
+
 const verifyEmailLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
@@ -31,6 +43,7 @@ router.post(
 
 router.post(
   '/login',
+  loginLimiter,
   validateRequest(AuthValidation.loginValidationSchema),
   AuthController.login
 );
@@ -42,14 +55,11 @@ router.post(
   AuthController.verifyEmail
 );
 
-router.post(
-  '/resend-otp',
-  resendOtpLimiter,
-  AuthController.resendOtp
-);
+router.post('/resend-otp', resendOtpLimiter, AuthController.resendOtp);
 
 router.post(
   '/forgot-password',
+  forgotPasswordLimiter,
   validateRequest(AuthValidation.forgotPasswordValidationSchema),
   AuthController.forgotPassword
 );

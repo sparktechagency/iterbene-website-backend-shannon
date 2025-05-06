@@ -56,6 +56,7 @@ const verifyEmail = async (
   );
 
   user.isEmailVerified = true;
+  user.isResetPassword = false;
   await user.save();
 
   const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
@@ -76,8 +77,6 @@ const forgotPassword = async (email: string, ip: string, userAgent: string) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-
-  const resetPasswordToken = await TokenService.createResetPasswordToken(user);
   await OtpService.createResetPasswordOtp(user.email);
   user.isResetPassword = true;
   await user.save();
@@ -91,7 +90,7 @@ const forgotPassword = async (email: string, ip: string, userAgent: string) => {
     userAgent,
     { email }
   );
-  return { resetPasswordToken };
+  return { userId: user._id };
 };
 
 const resendOtp = async (email: string, ip: string, userAgent: string) => {
