@@ -10,12 +10,12 @@ const userSchema = new Schema<TUser, UserModal>(
   {
     firstName: {
       type: String,
-      required: [true, 'First name is required'],
+      required: [false, 'First name is required'],
       trim: true,
     },
     lastName: {
       type: String,
-      required: [true, 'Last name is required'],
+      required: [false, 'Last name is required'],
       trim: true,
     },
     username: {
@@ -26,7 +26,7 @@ const userSchema = new Schema<TUser, UserModal>(
     },
     nickname: {
       type: String,
-      required: [true, 'Nickname is required'],
+      required: [false, 'Nickname is required'],
       unique: true,
       trim: true,
     },

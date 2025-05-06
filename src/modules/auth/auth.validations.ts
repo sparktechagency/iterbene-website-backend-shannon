@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 const loginValidationSchema = z.object({
   body: z.object({
-    userName: z
+    email: z
       .string({
-        required_error: 'User Name is required',
-        invalid_type_error: 'User Name must be a string',
+        required_error: 'Email is required',
+        invalid_type_error: 'Email must be a string',
       }),
     password: z
       .string({

@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { NextFunction, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import path from 'path';
 import globalErrorHandler from './middlewares/globalErrorHandler';
 import notFound from './middlewares/notFount';
@@ -22,8 +22,6 @@ app.use(
       'http://localhost:7002',
       "http://localhost:3000",
       "http://rakib3000.sobhoy.com",
-      'https://1plus1dating.com',
-      'https://admin.1plus1dating.com',
       'http://10.0.80.220:3000',
       'http://10.0.80.220:7002',
       'http://10.0.80.220:4173',
@@ -51,7 +49,7 @@ app.use('/api/v1', router);
 
 // live response
 app.get('/test', (req: Request, res: Response) => {
-  res.status(201).json({ message: "Welcome the dating apps" });
+  res.status(201).json({ message: "Welcome the inter bene website backend" });
 });
 
 // global error handle

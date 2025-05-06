@@ -8,14 +8,16 @@ import { TokenService } from '../token/token.service';
 import { TokenType } from '../token/token.interface';
 import { OtpType } from '../otp/otp.interface';
 import { TUser } from '../user/user.interface';
+import { generateUsernameFromEmail } from '../../utils/generateUsernameFromEmail';
 
 const createUser = async (userData: TUser) => {
-  const existingUser = await User.findOne({
-    $or: [{ email: userData.email }, { phoneNumber: userData.phoneNumber }],
-  });
+  const existingUser = await User.findOne({ email: userData.email });
   if (existingUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'User already exists.');
   }
+  // Generate username from email
+  const userName = generateUsernameFromEmail(userData.email);
+  userData.username = userName;
   const user = await User.create(userData);
   if (!user.isEmailVerified) {
     // Create verification email token
@@ -53,7 +55,7 @@ const verifyEmail = async (email: string, token: string, otp: string) => {
 };
 
 const forgotPassword = async (email: string) => {
-  console.log(email)
+  console.log(email);
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');

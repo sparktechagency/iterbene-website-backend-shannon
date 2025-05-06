@@ -8,10 +8,6 @@ const createUserValidationSchema = z.object({
         invalid_type_error: 'Email must be a string.',
       })
       .email('Invalid email format.'),
-    phoneNumber: z.string({
-      required_error: 'Phone number is required.',
-      invalid_type_error: 'Phone number must be a string.',
-    }),
     //password must be 8 characters and 1 uppercase, 1 lowercase, 1 special character
     password: z
       .string({
