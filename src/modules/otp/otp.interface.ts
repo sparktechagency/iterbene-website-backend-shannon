@@ -1,19 +1,22 @@
-export enum OtpType {
-  ACCESS = 'access',
-  REFRESH = 'refresh',
-  RESET_PASSWORD = 'resetPassword',
-  VERIFY = 'verify',
-  LOGIN = 'login',
-}
+import { Model } from 'mongoose';
 
-interface IOtp {
+export type TOtp = {
   userEmail: string;
   otp: string;
-  type: OtpType;
-  expiresAt: Date;
+  type: string;
   verified: boolean;
+  expiresAt: Date;
   attempts: number;
   lastAttemptAt?: Date;
-}
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-export default IOtp;
+export const OtpType = {
+  VERIFY: 'verify',
+  RESET_PASSWORD: 'resetPassword',
+} as const;
+
+export interface OtpModel extends Model<TOtp> {
+  isExistOtpByEmail(email: string, type: string): Promise<TOtp | null>;
+}

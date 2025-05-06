@@ -1,60 +1,83 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { Secret } from 'jsonwebtoken';
-import { roleRights } from './roles';
-import { User } from '../modules/user/user.model';
 import ApiError from '../errors/ApiError';
 import catchAsync from '../shared/catchAsync';
 import { config } from '../config';
-import { TokenType } from '../modules/token/token.interface';
 import { TokenService } from '../modules/token/token.service';
+import { TokenType } from '../modules/token/token.interface';
+import { User } from '../modules/user/user.model';
+import { roleRights } from './roles';
 
 const auth = (...roles: string[]) =>
   catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    // Step 1: Get Authorization Header
     const tokenWithBearer = req.headers.authorization;
-    if (!tokenWithBearer) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'You are not authorized');
-    }
-    if (tokenWithBearer.startsWith('Bearer')) {
-      const token = tokenWithBearer.split(' ')[1];
-      // Step 2: Verify Token
-      const verifyUser = await TokenService.verifyToken(
-        token,
-        config.jwt.accessSecret as Secret,
-        TokenType.ACCESS
+    if (!tokenWithBearer || !tokenWithBearer.startsWith('Bearer')) {
+      throw new ApiError(
+        StatusCodes.UNAUTHORIZED,
+        'Authorization header missing or invalid.'
       );
-      // Step 3: Attach user to the request object
-      req.user = verifyUser;
+    }
 
-      // Step 4: Check if the user exists and is active
-      const user = await User.findById(verifyUser.userId);
-      if (!user) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, 'User not found.');
-      } else if (!user.isEmailVerified) {
+    const token = tokenWithBearer.split(' ')[1];
+    const verifyUser = await TokenService.verifyToken(
+      token,
+      config.jwt.accessSecret as Secret,
+      TokenType.ACCESS,
+      req.ip || 'unknown',
+      req.get('User-Agent') || 'unknown'
+    );
+
+    if (verifyUser) {
+      req.user = verifyUser;
+    } else {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token.');
+    }
+
+    const user = await User.findById(verifyUser.userId).select(
+      '+mfaSecret +mfaEnabled'
+    );
+    if (!user || user.isDeleted) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+    }
+    if (!user.isEmailVerified) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Your account is not verified.'
+      );
+    }
+    if (user.isBlocked || user.isBanned) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Your account is blocked or banned.'
+      );
+    }
+
+    if (user.mfaEnabled && !req.body.mfaToken) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'MFA token required.');
+    }
+    if (user.mfaEnabled) {
+      const isValid = require('otplib').totp.check(
+        req.body.mfaToken,
+        user.mfaSecret
+      );
+      if (!isValid) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid MFA token.');
+      }
+    }
+
+    if (roles.length) {
+      const userRole = roleRights.get(verifyUser?.role);
+      const hasRole = userRole?.some(role => roles.includes(role));
+      if (!hasRole) {
         throw new ApiError(
-          StatusCodes.BAD_REQUEST,
-          'Your account is not verified.'
+          StatusCodes.FORBIDDEN,
+          "You don't have permission to access this API."
         );
       }
-
-      // Step 5: Role-based Authorization
-      if (roles.length) {
-        const userRole = roleRights.get(verifyUser?.role);
-        const hasRole = userRole?.some(role => roles.includes(role));
-        if (!hasRole) {
-          throw new ApiError(
-            StatusCodes.FORBIDDEN,
-            "You don't have permission to access this API"
-          );
-        }
-      }
-
-      next();
-    } else {
-      // If the token format is incorrect
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'You are not authorized');
     }
+
+    next();
   });
 
 export default auth;

@@ -1,16 +1,21 @@
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
-export enum TokenType {
-  ACCESS = 'access',
-  REFRESH = 'refresh',
-  RESET_PASSWORD = 'resetPassword',
-  VERIFY = 'verify',
-}
-export interface IToken {
-  _id: string;
-  user?: Types.ObjectId;
+export type TToken = {
+  user: Types.ObjectId;
   token: string;
-  verified: boolean;
+  type: string;
+  ip: string;
+  userAgent: string;
   expiresAt: Date;
-  type: TokenType;
+};
+
+export const TokenType = {
+  ACCESS: 'access',
+  REFRESH: 'refresh',
+  RESET_PASSWORD: 'resetPassword',
+  VERIFY_EMAIL: 'verifyEmail',
+} as const;
+
+export interface TokenModel extends Model<TToken> {
+  isExistTokenByUserId(userId: string, type: string): Promise<TToken | null>;
 }

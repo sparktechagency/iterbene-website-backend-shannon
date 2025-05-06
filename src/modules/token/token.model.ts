@@ -1,33 +1,49 @@
-import { model, Schema } from 'mongoose';
-import { IToken, TokenType } from './token.interface';
+import { Schema, model } from 'mongoose';
+import { TToken, TokenModel, TokenType } from './token.interface';
 
-const tokenSchema = new Schema<IToken>({
-  token: {
-    type: String,
-    required: [true, 'Token is required'],
+const tokenSchema = new Schema<TToken, TokenModel>(
+  {
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    token: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(TokenType),
+      required: true,
+    },
+    ip: {
+      type: String,
+      required: true,
+    },
+    userAgent: {
+      type: String,
+      required: true,
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
+      index: { expires: '0' },
+    },
   },
-  type: {
-    type: String,
-    enum: [
-      TokenType.ACCESS,
-      TokenType.REFRESH,
-      TokenType.RESET_PASSWORD,
-      TokenType.VERIFY,
-    ],
-    required: [true, 'Token type is required'],
-  },
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  verified: {
-    type: Boolean,
-    default: false,
-  },
-  expiresAt: {
-    type: Date,
-    required: true,
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
-export const Token  = model<IToken>('Token', tokenSchema);
+tokenSchema.statics.isExistTokenByUserId = async function (
+  userId: string,
+  type: string
+) {
+  return await this.findOne({ user: userId, type });
+};
+
+tokenSchema.index({ user: 1, type: 1 });
+
+export const Token = model<TToken, TokenModel>('Token', tokenSchema);

@@ -1,138 +1,189 @@
-import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
-import { TUser } from '../user/user.interface';
-import { config } from '../../config';
-import { addMinutes, addDays } from 'date-fns';
-import ApiError from '../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
-import { TokenType } from './token.interface';
+import jwt, { Secret } from 'jsonwebtoken';
+import { config } from '../../config';
+import ApiError from '../../errors/ApiError';
 import { Token } from './token.model';
+import { TUser } from '../user/user.interface';
+import { TokenType } from './token.interface';
+import moment from 'moment';
+import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
-const getExpirationTime = (expiration: string) => {
-  const timeValue = parseInt(expiration);
-  if (expiration.includes('d')) {
-    return addDays(new Date(), timeValue);
-  } else if (expiration.includes('m')) {
-    return addMinutes(new Date(), timeValue);
-  }
-  return new Date();
+interface TokenPayload {
+  userId: string;
+  email: string;
+  role: string;
+  ip: string;
+  userAgent: string;
+}
+
+const generateToken = (
+  payload: TokenPayload,
+  secret: Secret,
+  expiresIn: string
+): string => {
+  return jwt.sign(payload, secret, { expiresIn });
 };
 
-const createToken = (payload: object, secret: Secret, expireTime: string) => {
-  return jwt.sign(payload, secret, { expiresIn: expireTime });
+const saveToken = async (
+  token: string,
+  userId: string,
+  type: string,
+  ip: string,
+  userAgent: string,
+  expiresAt: Date
+) => {
+  const tokenDoc = await Token.create({
+    token,
+    user: userId,
+    type,
+    ip,
+    userAgent,
+    expiresAt,
+  });
+  return tokenDoc;
 };
 
 const verifyToken = async (
   token: string,
   secret: Secret,
-  tokenType: TokenType
-) => {
+  type: string,
+  ip: string,
+  userAgent: string
+): Promise<TokenPayload | null> => {
   try {
-    // Decode the JWT token
-    const decoded = jwt.verify(token, secret) as JwtPayload;
-
-    // Find the stored token from the database
-    const storedToken = await Token.findOne({
+    const payload = jwt.verify(token, secret) as TokenPayload;
+    const tokenDoc = await Token.findOne({
       token,
-      user: decoded.userId,
-      type: tokenType,
+      type,
+      user: payload.userId,
+      ip,
+      userAgent,
     });
-
-    // Check if token is invalid or already used
-    if (!storedToken) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Token is invalid.');
+    if (!tokenDoc) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token.');
     }
-
-    // Check if the token has expired
-    if (storedToken.expiresAt < new Date()) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Token has expired.');
-    }
-
-    // Check if the token type is valid
-    if (storedToken.type !== tokenType) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid token type.');
-    }
-
-    // Mark the token as verified
-    storedToken.verified = true;
-    await storedToken.save();
-
-    // Return decoded payload
-    return decoded;
+    return payload;
   } catch (error) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Token is invalid.');
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token.');
   }
 };
 
-const createVerifyEmailToken = async (user: TUser) => {
-  const payload = { userId: user._id, email: user.email, role: user.role };
-    const verifyEmailToken = createToken(
-    payload,
-    config.token.TokenSecret,
-    config.token.verifyEmailTokenExpiration
-  );
-  const expiresAt = getExpirationTime(config.token.verifyEmailTokenExpiration);
+const accessAndRefreshToken = async (
+  user: TUser,
+  ip: string,
+  userAgent: string
+) => {
+  const accessTokenPayload: TokenPayload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    ip,
+    userAgent,
+  };
 
-  await Token.create({
-    token: verifyEmailToken,
-    user: user._id,
-    type: TokenType.VERIFY,
-    expiresAt,
-  });
-  return verifyEmailToken;
-};
-
-const createResetPasswordToken = async (user: TUser) => {
-  const payload = { userId: user._id, email: user.email, role: user.role };
-  const resetPasswordToken = createToken(
-    payload,
-    config.token.TokenSecret,
-    config.token.resetPasswordTokenExpiration
-  );
-  const expiresAt = getExpirationTime(
-    config.token.resetPasswordTokenExpiration
-  );
-
-  await Token.create({
-    token: resetPasswordToken,
-    user: user._id,
-    type: TokenType.RESET_PASSWORD,
-    expiresAt,
-  });
-  return resetPasswordToken;
-};
-
-const accessAndRefreshToken = async (user: TUser) => {
-  const payload = { userId: user._id, email: user.email, role: user.role };
-  const accessToken = createToken(
-    payload,
-    config.jwt.accessSecret,
+  const accessToken = generateToken(
+    accessTokenPayload,
+    config.jwt.accessSecret as Secret,
     config.jwt.accessExpiration
   );
-  const refreshToken = createToken(
-    payload,
-    config.jwt.refreshSecret,
+
+  const accessTokenExpires = moment().add(
+    moment.duration(config.jwt.accessExpiration)
+  );
+
+  await saveToken(
+    accessToken,
+    user._id.toString(),
+    TokenType.ACCESS,
+    ip,
+    userAgent,
+    accessTokenExpires.toDate()
+  );
+
+  const refreshTokenPayload: TokenPayload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    ip,
+    userAgent,
+  };
+
+  const refreshToken = generateToken(
+    refreshTokenPayload,
+    config.jwt.refreshSecret as Secret,
     config.jwt.refreshExpiration
   );
-  await Token.create({
-    token: accessToken,
-    user: user._id,
-    type: TokenType.ACCESS,
-    expiresAt: getExpirationTime(config.jwt.accessExpiration),
-  });
-  await Token.create({
-    token: refreshToken,
-    user: user._id,
-    type: TokenType.REFRESH,
-    expiresAt: getExpirationTime(config.jwt.refreshExpiration),
-  });
+
+  const refreshTokenExpires = moment().add(
+    moment.duration(config.jwt.refreshExpiration)
+  );
+
+  await saveToken(
+    refreshToken,
+    user._id.toString(),
+    TokenType.REFRESH,
+    ip,
+    userAgent,
+    refreshTokenExpires.toDate()
+  );
+
+  await UserInteractionLogService.createLog(
+    user._id,
+    'tokens_generated',
+    '/auth/token',
+    'POST',
+    ip,
+    userAgent,
+    { email: user.email }
+  );
 
   return { accessToken, refreshToken };
 };
 
+const createResetPasswordToken = async (user: TUser) => {
+  const resetPasswordTokenPayload: TokenPayload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    ip: 'unknown',
+    userAgent: 'unknown',
+  };
+  const resetPasswordToken = generateToken(
+    resetPasswordTokenPayload,
+    config.token.TokenSecret as Secret,
+    config.token.resetPasswordTokenExpiration
+  );
+
+  const resetPasswordExpires = moment().add(
+    moment.duration(config.token.resetPasswordTokenExpiration)
+  );
+
+  await saveToken(
+    resetPasswordToken,
+    user._id.toString(),
+    TokenType.RESET_PASSWORD,
+    'unknown',
+    'unknown',
+    resetPasswordExpires.toDate()
+  );
+
+  await UserInteractionLogService.createLog(
+    user._id,
+    'reset_password_token_created',
+    '/auth/forgot-password',
+    'POST',
+    'unknown',
+    'unknown',
+    { email: user.email }
+  );
+
+  return resetPasswordToken;
+};
+
 export const TokenService = {
-  createToken,
+  generateToken,
+  saveToken,
   verifyToken,
-  createVerifyEmailToken,
-  createResetPasswordToken,
   accessAndRefreshToken,
+  createResetPasswordToken,
 };

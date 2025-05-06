@@ -1,22 +1,30 @@
 import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../shared/catchAsync';
-import pick from '../../shared/pick';
 import sendResponse from '../../shared/sendResponse';
 import ApiError from '../../errors/ApiError';
 import { UserService } from './user.service';
-import { TPhoto } from './user.interface';
+import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
 const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const super_admin = await UserService.getSingleUser(userId);
-  if (super_admin?.role !== 'super_admin') {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Only super admin can create admin or super admin.'
-    );
+  const superAdmin = await UserService.getSingleUser(userId);
+  if (superAdmin?.role !== 'super_admin') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only super admin can create admin or super admin.');
   }
+
   const payload = req.body;
   const result = await UserService.createAdminOrSuperAdmin(payload);
+
+  await UserInteractionLogService.createLog(
+    result._id,
+    'admin_created',
+    '/user/admin',
+    'POST',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown',
+    { email: payload.email, role: payload.role }
+  );
+
   sendResponse(res, {
     code: StatusCodes.CREATED,
     data: result,
@@ -24,11 +32,20 @@ const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   });
 });
 
-
-/** ===================================Get single user =================================== */
 const getSingleUser = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const result = await UserService.getSingleUser(userId);
+
+  await UserInteractionLogService.createLog(
+    req.user?.userId,
+    'user_fetched',
+    `/user/${userId}`,
+    'GET',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown',
+    { userId }
+  );
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -39,6 +56,17 @@ const getSingleUser = catchAsync(async (req, res) => {
 const setUserLatestLocation = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.setUserLatestLocation(userId, req.body);
+
+  await UserInteractionLogService.createLog(
+    userId,
+    'location_updated',
+    '/user/location',
+    'POST',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown',
+    { latitude: req.body.latitude, longitude: req.body.longitude }
+  );
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -46,17 +74,24 @@ const setUserLatestLocation = catchAsync(async (req, res) => {
   });
 });
 
-
 const updateMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   if (req.file) {
-    req.body.profileImage = {
-      imageUrl: '/uploads/users/' + req.file.filename,
-      file: req.file,
-    };
+    req.body.profilePicture = `/Uploads/users/${req.file.filename}`;
   }
-  const payload = req.body;
-  const result = await UserService.updateMyProfile(userId, payload);
+
+  const result = await UserService.updateMyProfile(userId, req.body);
+
+  await UserInteractionLogService.createLog(
+    userId,
+    'profile_updated',
+    '/user/profile',
+    'PATCH',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown',
+    req.body
+  );
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -64,11 +99,21 @@ const updateMyProfile = catchAsync(async (req, res) => {
   });
 });
 
-/** ===================================Update user status =================================== */
 const updateUserStatus = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const { status } = req.body;
   const result = await UserService.updateUserStatus(userId, status);
+
+  await UserInteractionLogService.createLog(
+    req.user?.userId,
+    `user_status_${status}`,
+    `/user/${userId}/status`,
+    'PATCH',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown',
+    { userId, status }
+  );
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -77,8 +122,18 @@ const updateUserStatus = catchAsync(async (req, res) => {
 });
 
 const getMyProfile = catchAsync(async (req, res) => {
-  const userId = req.user.userId;
+  const { userId } = req.user;
   const result = await UserService.getMyProfile(userId);
+
+  await UserInteractionLogService.createLog(
+    userId,
+    'profile_fetched',
+    '/user/profile',
+    'GET',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown'
+  );
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -87,8 +142,18 @@ const getMyProfile = catchAsync(async (req, res) => {
 });
 
 const deleteMyProfile = catchAsync(async (req, res) => {
-  const userId = req.user.userId;
+  const { userId } = req.user;
   const result = await UserService.deleteMyProfile(userId);
+
+  await UserInteractionLogService.createLog(
+    userId,
+    'profile_deleted',
+    '/user/profile',
+    'DELETE',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown'
+  );
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,

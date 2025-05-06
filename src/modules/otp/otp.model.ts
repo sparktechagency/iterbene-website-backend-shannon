@@ -1,34 +1,31 @@
-import mongoose, { Schema } from 'mongoose';
-import IOtp, { OtpType } from './otp.interface';
+import { Schema, model } from 'mongoose';
+import { TOtp, OtpModel } from './otp.interface';
+import { OtpType } from './otp.interface';
 
-const otpSchema = new Schema<IOtp>(
+const otpSchema = new Schema<TOtp, OtpModel>(
   {
     userEmail: {
       type: String,
-      required: [true, 'User Email is required'],
+      required: true,
+      index: true,
     },
     otp: {
       type: String,
-      required: [true, 'OTP is required'],
+      required: true,
     },
     type: {
       type: String,
-      enum: [
-        OtpType.ACCESS,
-        OtpType.REFRESH,
-        OtpType.RESET_PASSWORD,
-        OtpType.VERIFY,
-        OtpType.LOGIN,
-      ],
-      required: true,
-    },
-    expiresAt: {
-      type: Date,
+      enum: Object.values(OtpType),
       required: true,
     },
     verified: {
       type: Boolean,
       default: false,
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
+      index: { expires: '0' },
     },
     attempts: {
       type: Number,
@@ -43,5 +40,10 @@ const otpSchema = new Schema<IOtp>(
   }
 );
 
-const OTP = mongoose.model<IOtp>('OTP', otpSchema);
-export default OTP;
+otpSchema.statics.isExistOtpByEmail = async function (email: string, type: string) {
+  return await this.findOne({ userEmail: email, type });
+};
+
+otpSchema.index({ userEmail: 1, type: 1 });
+
+export default model<TOtp, OtpModel>('OTP', otpSchema);

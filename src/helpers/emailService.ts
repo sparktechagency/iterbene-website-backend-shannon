@@ -43,11 +43,11 @@ const sendEmail = async (values: ISendEmail) => {
 };
 
 const sendVerificationEmail = async (to: string, otp: string) => {
-  const subject = 'Marray Meet Love - Verify Your Email Address';
+  const subject = 'Iter Bene - Verify Your Email Address';
   const html = `
   <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center;  padding: 50px 0px;">
    <img
-    src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+    src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
     alt="Logo"
     style="width: 80px; margin-bottom: 20px"
   />
@@ -160,11 +160,11 @@ const sendVerificationEmail = async (to: string, otp: string) => {
 };
 
 const sendResetPasswordEmail = async (to: string, otp: string) => {
-  const subject = 'Marray Meet Love - Reset Your Password';
+  const subject = 'Iter Bene - Reset Your Password';
   const html = `
   <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center;  padding: 50px 0px;">
    <img
-    src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+    src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
     alt="Logo"
     style="width: 80px; margin-bottom: 20px"
   />
@@ -277,7 +277,7 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
 };
 
 const sendWelcomeEmail = async (to: string, password: string) => {
-  const subject = 'Marray Meet Love - Welcome to the Platform!';
+  const subject = 'Iter Bene - Welcome to the Platform!';
   const html = `
   
   `;
@@ -291,7 +291,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
   password: string,
   message?: string // Optional custom message
 ) => {
-  const subject = `Marray Meet Love - Congratulations! You are now an ${role}`;
+  const subject = `Iter Bene - Congratulations! You are now an ${role}`;
   const html = `
      <div
       style="
@@ -304,7 +304,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -322,7 +322,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
       >
         <tr>
           <td>
-            <h2>Welcome to Marray Meet Love!</h2>
+            <h2>Welcome to Iter Bene!</h2>
             <p>
               Congratulations! You've been granted the role of
               <strong>${role}</strong> in our system.
@@ -335,7 +335,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
               Feel free to reach out if you have any questions or need
               assistance. We're excited to have you on board!
             </p>
-            <p style="margin-top: 30px;">Best regards,<br />The Marray Meet Love Team</p>
+            <p style="margin-top: 30px;">Best regards,<br />The Iter Bene Team</p>
           </td>
         </tr>
       </table>
@@ -443,7 +443,7 @@ const sendSupportMessageEmail = async (
   const html = `
    <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center;  padding: 50px 0px;">
       <img
-       src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+       src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
        alt="Logo"
        style="width: 80px; margin-bottom: 20px"
      />
@@ -471,7 +471,7 @@ const sendWarningEmail = async (
   userName: string,
   warningMessage: string
 ) => {
-  const subject = 'Marray Meet Love - Important Warning Notification';
+  const subject = 'Iter Bene - Important Warning Notification';
   const html = `
         <div
       style="
@@ -484,7 +484,7 @@ const sendWarningEmail = async (
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -502,9 +502,9 @@ const sendWarningEmail = async (
       >
         <tr>
           <td>
-          <h1 style="font-size: 22px; color: red; margin-bottom: 40px;">Warning Notification from Marray Meet Love</h1>
+          <h1 style="font-size: 22px; color: red; margin-bottom: 40px;">Warning Notification from Iter Bene</h1>
           <p style="font-size: 16px;">Dear User ${userName},</p>
-          <p style="font-size: 16px;">We have reviewed your recent activity on the Marray Meet Love platform and found that it violates our community guidelines. Please review the details below:</p>
+          <p style="font-size: 16px;">We have reviewed your recent activity on the Iter Bene platform and found that it violates our community guidelines. Please review the details below:</p>
          <div style="background-color: #FFE6E6; padding: 15px; border-radius: 10px; margin: 20px 0;">
           <p style="font-size: 16px; color: #D32F2F; text-align: center;"><strong>⚠️ Warning:</strong> ${warningMessage}</p>
          </div>
@@ -630,7 +630,7 @@ const sendBanNotificationEmail = async (
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -765,7 +765,7 @@ const sendReportConfirmation = async (to: string,userName:string) => {
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/dating-apps-logo.png"
+        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -789,7 +789,7 @@ const sendReportConfirmation = async (to: string,userName:string) => {
             <p style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">If you have any more information to share or need assistance, feel free to reach out.</p>
             <p style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">Thank you for helping us improve!</p>
             <a href="#" style="display: inline-block; background-color: #F1CF70; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; text-align: center; margin-top: 20px;">Contact Support</a>
-            <p style="font-size: 14px; color: #777; text-align: center; margin-top: 20px;">Best regards,<br>The Marray Meet Love Team</p>
+            <p style="font-size: 14px; color: #777; text-align: center; margin-top: 20px;">Best regards,<br>The Iter Bene Team</p>
           </td>
         </tr>
       </table>
