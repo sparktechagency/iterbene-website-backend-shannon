@@ -5,7 +5,6 @@ import { UserValidation } from '../user/user.validation';
 import { AuthValidation } from './auth.validations';
 import auth from '../../middlewares/auth';
 import rateLimit from 'express-rate-limit';
-import loggingMiddleware from '../../middlewares/loggingMiddleware';
 const router = Router();
 
 const loginLimiter = rateLimit({
@@ -31,9 +30,6 @@ const resendOtpLimiter = rateLimit({
   max: 3,
   message: 'Too many OTP resend requests. Please try again later.',
 });
-
-// Apply logging middleware to all routes
-// router.use(loggingMiddleware);
 
 router.post(
   '/register',
@@ -66,6 +62,7 @@ router.post(
 
 router.post(
   '/reset-password',
+  auth('common'),
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword
 );
@@ -79,7 +76,7 @@ router.post(
 
 router.post('/logout', AuthController.logout);
 
-router.post('/refresh-token', AuthController.refreshToken);
+router.post('/refresh-token',AuthController.refreshToken);
 
 router.post('/enable-mfa', auth('common'), AuthController.enableMFA);
 
