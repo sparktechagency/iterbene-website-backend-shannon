@@ -16,7 +16,10 @@ router
   .get(auth('common'), UserController.getMyProfile)
   .patch(
     auth('common'),
-    upload.single('profileImage'),
+    upload.fields([
+      { name: 'profilePicture', maxCount: 1 },
+      { name: 'coverPicture', maxCount: 1 },
+    ]),
     UserController.updateMyProfile
   )
   .delete(auth('common'), UserController.deleteMyProfile);

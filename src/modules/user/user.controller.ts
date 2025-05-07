@@ -4,12 +4,16 @@ import sendResponse from '../../shared/sendResponse';
 import ApiError from '../../errors/ApiError';
 import { UserService } from './user.service';
 import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
+import { uploadFile } from '../../helpers/s3Service';
 
 const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const superAdmin = await UserService.getSingleUser(userId);
   if (superAdmin?.role !== 'super_admin') {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Only super admin can create admin or super admin.');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only super admin can create admin or super admin.'
+    );
   }
 
   const payload = req.body;
@@ -76,8 +80,24 @@ const setUserLatestLocation = catchAsync(async (req, res) => {
 
 const updateMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  if (req.file) {
-    req.body.profilePicture = `/Uploads/users/${req.file.filename}`;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  const UPLOADS_FOLDER = 'uploads/users';
+  // Handle profile picture
+  if (files?.profilePicture?.[0]) {
+    const profilePictureUrl = await uploadFile(
+      files.profilePicture[0],
+      UPLOADS_FOLDER
+    );
+    req.body.profilePicture = profilePictureUrl;
+  }
+
+  // Handle cover picture
+  if (files?.coverPicture?.[0]) {
+    const coverPictureUrl = await uploadFile(
+      files.coverPicture[0],
+      UPLOADS_FOLDER
+    );
+    req.body.coverPicture = coverPictureUrl;
   }
 
   const result = await UserService.updateMyProfile(userId, req.body);
