@@ -101,6 +101,7 @@ const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
   }
   Object.assign(user, payload);
   await user.save();
+  
   return user;
 };
 
@@ -141,7 +142,9 @@ const getMyProfile = async (userId: string): Promise<TUser | null> => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
   }
-  const result = await User.findById(userId);
+  const result = await User.findById(userId).select(
+    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -banUntil -lastPasswordChange -isBanned  -isDeleted -__v'
+  );
   if (!result || result.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }

@@ -104,6 +104,22 @@ const userSchema = new Schema<TUser, UserModal>(
     country: { type: String },
     city: { type: String },
     state: { type: String },
+    referredAs: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    passwordHistory: [
+      {
+        hash: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    mfaSecret: { type: String },
+    mfaEnabled: {
+      type: Boolean,
+      default: false,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -147,6 +163,11 @@ const userSchema = new Schema<TUser, UserModal>(
 
 // Apply the paginate plugin
 userSchema.plugin(paginate);
+
+// Virtual field for full name
+userSchema.virtual('fullName').get(function (this: TUser) {
+  return `${this.firstName || ''} ${this.lastName || ''}`.trim();
+});
 
 // Static methods
 userSchema.statics.isExistUserById = async function (id: string) {

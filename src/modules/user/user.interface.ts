@@ -28,6 +28,7 @@ export type TUser = {
   city?: string;
   state?: string;
   isEmailVerified: boolean;
+  referredAs?: string;
   isBanned: boolean;
   banUntil?: Date;
   isOnline: boolean;
