@@ -47,6 +47,7 @@ router.post(
 router.post(
   '/verify-email',
   verifyEmailLimiter,
+  auth('common'),
   validateRequest(AuthValidation.verifyEmailValidationSchema),
   AuthController.verifyEmail
 );
@@ -62,7 +63,7 @@ router.post(
 
 router.post(
   '/reset-password',
-  auth('common'),
+   auth('common'),
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword
 );

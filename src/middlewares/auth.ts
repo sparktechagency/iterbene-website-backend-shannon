@@ -40,12 +40,6 @@ const auth = (...roles: string[]) =>
     if (!user || user.isDeleted) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
     }
-    if (!user.isEmailVerified) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        'Your account is not verified.'
-      );
-    }
     if (user.isBlocked || user.isBanned) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,

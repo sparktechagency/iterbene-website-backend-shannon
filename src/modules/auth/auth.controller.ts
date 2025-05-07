@@ -10,7 +10,6 @@ import bcrypt from 'bcrypt';
 import { User } from '../user/user.model';
 import { TUser } from '../user/user.interface';
 import { OtpService } from '../otp/otp.service';
-import rateLimit from 'express-rate-limit';
 import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
 const validateUserStatus = (user: TUser) => {
@@ -148,10 +147,16 @@ const login = catchAsync(async (req, res) => {
       req.get('User-Agent') || 'unknown',
       { email }
     );
+    const tokens = await TokenService.accessAndRefreshToken(
+      user,
+      req.ip || 'unknown',
+      req.get('User-Agent') || 'unknown'
+    );
+
     sendResponse(res, {
       code: StatusCodes.OK,
       message: 'Email is not verified. Please verify your email.',
-      data: { userId: user._id },
+      data: tokens,
     });
     return;
   }
@@ -161,17 +166,18 @@ const login = catchAsync(async (req, res) => {
     req.ip || 'unknown',
     req.get('User-Agent') || 'unknown'
   );
+  // Set cookies for access and refresh tokens
   res.cookie('accessToken', tokens.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 15 * 60 * 1000,
+    maxAge: 15 * 60 * 1000, // 15 minutes
   });
   res.cookie('refreshToken', tokens.refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.environment === 'production',
     sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   await UserInteractionLogService.createLog(
@@ -191,26 +197,14 @@ const login = catchAsync(async (req, res) => {
 });
 
 const verifyEmail = catchAsync(async (req, res) => {
-  const { email, otp } = req.body;
+  const { email } = req.user;
+  const { otp } = req.body;
   const result = await AuthService.verifyEmail(
     email,
     otp,
     req.ip || 'unknown',
     req.get('User-Agent') || 'unknown'
   );
-  res.cookie('accessToken', result.tokens.accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 15 * 60 * 1000,
-  });
-  res.cookie('refreshToken', result.tokens.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Email verified successfully.',
@@ -272,7 +266,8 @@ const changePassword = catchAsync(async (req, res) => {
 });
 
 const resetPassword = catchAsync(async (req, res) => {
-  const { email, password } = req.body;
+  const { email } = req.user;
+  const { password } = req.body;
   const result = await AuthService.resetPassword(email, password);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -282,9 +277,12 @@ const resetPassword = catchAsync(async (req, res) => {
 });
 
 const logout = catchAsync(async (req, res) => {
-  await AuthService.logout(req.body.refreshToken);
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  //get refresh token from cookies
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Refresh token is required.');
+  }
+  await AuthService.logout(refreshToken);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'User logged out successfully.',
@@ -293,7 +291,8 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshToken = catchAsync(async (req, res) => {
-  const { refreshToken } = req.body;
+  //get refresh token from cookies
+  const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Refresh token is required.');
   }

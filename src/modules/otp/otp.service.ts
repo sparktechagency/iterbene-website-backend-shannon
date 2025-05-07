@@ -63,7 +63,6 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
     }
   }
 
-  await OTP.deleteMany({ userEmail, type });
 
   const otp = generateOTP();
   const otpDoc = await OTP.create({

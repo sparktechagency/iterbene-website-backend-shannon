@@ -6,6 +6,7 @@ import { Token } from './token.model';
 import { TUser } from '../user/user.interface';
 import { TokenType } from './token.interface';
 import moment from 'moment';
+import { addMinutes, addDays } from 'date-fns';
 import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
 interface TokenPayload {
@@ -15,13 +16,18 @@ interface TokenPayload {
   ip: string;
   userAgent: string;
 }
+const getExpirationTime = (expiration: string) => {
+  const timeValue = parseInt(expiration);
+  if (expiration.includes('d')) {
+    return addDays(new Date(), timeValue);
+  } else if (expiration.includes('m')) {
+    return addMinutes(new Date(), timeValue);
+  }
+  return new Date();
+};
 
-const generateToken = (
-  payload: TokenPayload,
-  secret: Secret,
-  expiresIn: string
-): string => {
-  return jwt.sign(payload, secret, { expiresIn });
+const generateToken = (payload: object, secret: Secret, expireTime: string) => {
+  return jwt.sign(payload, secret, { expiresIn: expireTime });
 };
 
 const saveToken = async (
@@ -87,17 +93,14 @@ const accessAndRefreshToken = async (
     config.jwt.accessExpiration
   );
 
-  const accessTokenExpires = moment().add(
-    moment.duration(config.jwt.accessExpiration)
-  );
-
+  const accessTokenExpires = getExpirationTime(config.jwt.accessExpiration);
   await saveToken(
     accessToken,
     user._id.toString(),
     TokenType.ACCESS,
     ip,
     userAgent,
-    accessTokenExpires.toDate()
+    accessTokenExpires
   );
 
   const refreshTokenPayload: TokenPayload = {
@@ -114,9 +117,7 @@ const accessAndRefreshToken = async (
     config.jwt.refreshExpiration
   );
 
-  const refreshTokenExpires = moment().add(
-    moment.duration(config.jwt.refreshExpiration)
-  );
+  const refreshTokenExpires = getExpirationTime(config.jwt.refreshExpiration);
 
   await saveToken(
     refreshToken,
@@ -124,7 +125,7 @@ const accessAndRefreshToken = async (
     TokenType.REFRESH,
     ip,
     userAgent,
-    refreshTokenExpires.toDate()
+    refreshTokenExpires
   );
 
   await UserInteractionLogService.createLog(
@@ -154,8 +155,8 @@ const createResetPasswordToken = async (user: TUser) => {
     config.token.resetPasswordTokenExpiration
   );
 
-  const resetPasswordExpires = moment().add(
-    moment.duration(config.token.resetPasswordTokenExpiration)
+  const resetPasswordExpires = getExpirationTime(
+    config.token.resetPasswordTokenExpiration
   );
 
   await saveToken(
@@ -164,7 +165,7 @@ const createResetPasswordToken = async (user: TUser) => {
     TokenType.RESET_PASSWORD,
     'unknown',
     'unknown',
-    resetPasswordExpires.toDate()
+    resetPasswordExpires
   );
 
   await UserInteractionLogService.createLog(

@@ -25,6 +25,11 @@ const createUser = async (userData: TUser, ip: string, userAgent: string) => {
   const user = await User.create(userData);
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
+    const tokens = await TokenService.accessAndRefreshToken(
+      user,
+      ip,
+      userAgent
+    );
     await UserInteractionLogService.createLog(
       user._id,
       'user_created',
@@ -34,7 +39,7 @@ const createUser = async (userData: TUser, ip: string, userAgent: string) => {
       userAgent,
       { email: user.email }
     );
-    return { userId: user._id };
+    return tokens;
   }
 };
 
@@ -48,13 +53,11 @@ const verifyEmail = async (
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-
   await OtpService.verifyOTP(
     user.email,
     otp,
     user.isResetPassword ? OtpType.RESET_PASSWORD : OtpType.VERIFY
   );
-
   user.isEmailVerified = true;
   user.isResetPassword = false;
   await user.save();
@@ -69,9 +72,8 @@ const verifyEmail = async (
     userAgent,
     { email }
   );
-  return { user, tokens };
+  return { tokens };
 };
-
 const forgotPassword = async (email: string, ip: string, userAgent: string) => {
   const user = await User.findOne({ email });
   if (!user) {
@@ -80,6 +82,7 @@ const forgotPassword = async (email: string, ip: string, userAgent: string) => {
   await OtpService.createResetPasswordOtp(user.email);
   user.isResetPassword = true;
   await user.save();
+  const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
 
   await UserInteractionLogService.createLog(
     user._id,
@@ -90,7 +93,7 @@ const forgotPassword = async (email: string, ip: string, userAgent: string) => {
     userAgent,
     { email }
   );
-  return { userId: user._id };
+  return tokens;
 };
 
 const resendOtp = async (email: string, ip: string, userAgent: string) => {
@@ -117,6 +120,7 @@ const resendOtp = async (email: string, ip: string, userAgent: string) => {
   }
 
   await OtpService.createVerificationEmailOtp(user.email);
+  const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
   await UserInteractionLogService.createLog(
     user._id,
     'resend_otp_verify',
@@ -126,7 +130,7 @@ const resendOtp = async (email: string, ip: string, userAgent: string) => {
     userAgent,
     { email }
   );
-  return { userId: user._id };
+  return tokens;
 };
 
 const resetPassword = async (email: string, password: string) => {

@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  environment: process.env.NODE_ENV || 'development',
+  environment: process.env.NODE_ENV,
   port: process.env.PORT || 8083,
   socketPort: process.env.SOCKET || 8082,
 
