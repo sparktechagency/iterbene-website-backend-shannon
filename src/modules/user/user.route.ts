@@ -12,35 +12,35 @@ const router = express.Router();
 //check user name already exists
 router.get(
   '/check-username/:userName',
-  auth('common'),
+  auth('Common'),
   UserController.checkUserNameAlreadyExists
 );
 
 // Get and fill up User Profile
 router
   .route('/profile')
-  .get(auth('common'), UserController.getMyProfile)
+  .get(auth('Common'), UserController.getMyProfile)
   .patch(
-    auth('common'),
+    auth('Common'),
     upload.fields([
       { name: 'profilePicture', maxCount: 1 },
       { name: 'coverPicture', maxCount: 1 },
     ]),
     UserController.updateMyProfile
   )
-  .delete(auth('common'), UserController.deleteMyProfile);
+  .delete(auth('Common'), UserController.deleteMyProfile);
 
 // Set Latest User Location
 router.post(
   '/location',
-  auth('common'),
+  auth('Common'),
   validateRequest(UserValidation.setLatestLocationValidationSchema),
   UserController.setUserLatestLocation
 );
 
 router.post(
   '/create-user',
-  auth('super_admin'),
+  auth('Super_Admin'),
   UserController.createAdminOrSuperAdmin
 );
 
@@ -49,7 +49,7 @@ router
   .route('/:userId')
   .get(UserController.getSingleUser) // Get user by ID
   .patch(
-    auth('admin'),
+    auth('Admin'),
     UserController.updateUserStatus // Admin can change user status
   );
 

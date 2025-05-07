@@ -60,6 +60,7 @@ const auth = (...roles: string[]) =>
       }
     }
 
+
     if (roles.length) {
       const userRole = roleRights.get(verifyUser?.role);
       const hasRole = userRole?.some(role => roles.includes(role));

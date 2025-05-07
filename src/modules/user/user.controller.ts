@@ -107,6 +107,7 @@ const updateMyProfile = catchAsync(async (req, res) => {
       files.profilePicture[0],
       UPLOADS_FOLDER
     );
+    console.log(profilePictureUrl)
     req.body.profilePicture = profilePictureUrl;
   }
 

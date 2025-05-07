@@ -1,10 +1,20 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import multerS3 from 'multer-s3';
+import { S3Client } from '@aws-sdk/client-s3';
+import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import sharp from 'sharp';
 import fs from 'fs';
-import path from 'path';
-import { awsConfig, s3Client } from '../aws/awsConfig';
+import { v4 as uuidv4 } from 'uuid';
+
+// Initialize AWS S3 client
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1', // Use your region
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'your-access-key', // Use your access key
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'your-secret-key', // Use your secret key
+  },
+});
 
 // Helper function to get video duration
 const getVideoDuration = (filePath: string): Promise<number> => {
@@ -68,7 +78,7 @@ const compressVideo = (filePath: string): Promise<Buffer> => {
   });
 };
 
-// Main function to upload file to S3
+// Updated uploadFile function with multer-s3 for S3 upload
 export const uploadFile = async (
   file: Express.Multer.File,
   uploadsFolder: string
@@ -130,34 +140,25 @@ export const uploadFile = async (
 
   // Check size after compression
   if (uploadBuffer.length > maxSize) {
-    // fs.unlinkSync(filePath); // Delete file if size exceeds limit
     throw new Error('Compressed file size exceeds 100MB limit.');
   }
 
+  // S3 upload using multer-s3
   const fileExtension = path.extname(file.originalname).toLowerCase().slice(1);
   const fileName = `${uuidv4()}.${fileExtension}`;
   const key = `uploads/${fileName}`;
 
-  const command = new PutObjectCommand({
-    Bucket: awsConfig.bucketName,
-    Key: key,
-    Body: uploadBuffer,
-    ContentType: file.mimetype,
-    ACL: 'public-read', // Make file publicly accessible
+  const upload = multer({
+    storage: multerS3({
+      s3: s3,
+      bucket: process.env.AWS_S3_BUCKET_NAME || 'your-bucket-name',
+      acl: 'public-read',
+      key: function (req, file, cb) {
+        cb(null, key); // Set the file path in S3
+      },
+    }),
   });
-  console.log(command)
-
-  try {
-    await s3Client.send(command);
-    // Delete file from server after successful upload
-    // fs.unlinkSync(filePath);
-    return `https://${awsConfig.bucketName}.s3.${awsConfig.region}.amazonaws.com/${key}`;
-  } catch (err) {
-    // fs.unlinkSync(filePath); // Delete file if upload fails
-    if (err instanceof Error) {
-      throw new Error(`Failed to upload file to S3: ${err.message}`);
-    } else {
-      throw new Error('Failed to upload file to S3 due to an unknown error.');
-    }
-  }
+  // Generate the file URL dynamically after upload
+  const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  return fileUrl;
 };

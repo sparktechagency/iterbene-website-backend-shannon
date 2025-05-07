@@ -1,4 +1,4 @@
-import { model, Schema, Types } from 'mongoose';
+import { model, Schema } from 'mongoose';
 import { TUser, UserModal } from './user.interface';
 import paginate from '../../common/plugins/paginate';
 import bcrypt from 'bcrypt';
@@ -27,7 +27,6 @@ const userSchema = new Schema<TUser, UserModal>(
     nickname: {
       type: String,
       required: [false, 'Nickname is required'],
-      unique: true,
       trim: true,
     },
     profilePicture: {
@@ -97,7 +96,7 @@ const userSchema = new Schema<TUser, UserModal>(
         message: '{VALUE} is not a valid role',
       },
       required: [true, 'Role is required'],
-      default: 'user',
+      default: 'User',
     },
     profession: { type: String },
     age: { type: Number },

@@ -9,6 +9,7 @@ import { MessageRoutes } from '../modules/message/message.routes';
 import { ReportRoutes } from '../modules/reports/reports.routes';
 import { CountryRoutes } from '../modules/country/country.routes';
 import { NotificationRoutes } from '../modules/notification/notification.routes';
+import { GroupRoutes } from '../modules/group/group.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -23,6 +24,10 @@ const apiRoutes = [
   {
     path: '/admin',
     route: AdminRoutes,
+  },
+  {
+    path: '/group',
+    route: GroupRoutes,
   },
   {
     path: '/chat',
