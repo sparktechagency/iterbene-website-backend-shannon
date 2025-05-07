@@ -78,6 +78,25 @@ const setUserLatestLocation = catchAsync(async (req, res) => {
   });
 });
 
+const checkUserNameAlreadyExists = catchAsync(async (req, res) => {
+  const { userName } = req.params;
+  const result = await UserService.checkUserNameAlreadyExists(userName);
+  await UserInteractionLogService.createLog(
+    req.user?.userId,
+    'user_name_checked',
+    `/user/check-username/${userName}`,
+    'GET',
+    req.ip || 'unknown',
+    req.get('User-Agent') || 'unknown'
+  );
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: result,
+    message: 'User name checked successfully.',
+  });
+});
+
 const updateMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -183,6 +202,7 @@ const deleteMyProfile = catchAsync(async (req, res) => {
 
 export const UserController = {
   createAdminOrSuperAdmin,
+  checkUserNameAlreadyExists,
   getSingleUser,
   setUserLatestLocation,
   updateUserStatus,

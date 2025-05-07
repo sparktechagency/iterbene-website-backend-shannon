@@ -9,6 +9,12 @@ const upload = fileUploadHandler(UPLOADS_FOLDER);
 
 const router = express.Router();
 
+//check user name already exists
+router.get(
+  '/check-username/:userName',
+  auth('common'),
+  UserController.checkUserNameAlreadyExists
+);
 
 // Get and fill up User Profile
 router
@@ -31,7 +37,6 @@ router.post(
   validateRequest(UserValidation.setLatestLocationValidationSchema),
   UserController.setUserLatestLocation
 );
-
 
 router.post(
   '/create-user',

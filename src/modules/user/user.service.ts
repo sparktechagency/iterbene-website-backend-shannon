@@ -54,7 +54,9 @@ const getSingleUser = async (userId: string): Promise<TUser | null> => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
   }
-  const result = await User.findById(userId);
+  const result = await User.findById(userId).select(
+    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -lastPasswordChange -isBanned  -isDeleted -__v'
+  );
   if (!result || result.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
@@ -77,7 +79,9 @@ const setUserLatestLocation = async (
   const user = await User.findByIdAndUpdate(userId, updatedData, {
     new: true,
     runValidators: true,
-  });
+  }).select(
+    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -lastPasswordChange -isBanned  -isDeleted -__v'
+  );
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
@@ -88,7 +92,9 @@ const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
   }
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select(
+    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -lastPasswordChange -isBanned  -isDeleted -__v'
+  );
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
@@ -101,8 +107,13 @@ const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
   }
   Object.assign(user, payload);
   await user.save();
-  
   return user;
+};
+
+const checkUserNameAlreadyExists = async (userName: string): Promise<boolean> => {
+  const user = await User.findOne({ username: userName }).select('_id');
+  console.log(user)
+  return !!user;
 };
 
 const updateUserStatus = async (
@@ -143,7 +154,7 @@ const getMyProfile = async (userId: string): Promise<TUser | null> => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
   }
   const result = await User.findById(userId).select(
-    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -banUntil -lastPasswordChange -isBanned  -isDeleted -__v'
+    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -lastPasswordChange -isBanned  -isDeleted -__v'
   );
   if (!result || result.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
@@ -169,6 +180,7 @@ export const UserService = {
   getSingleUser,
   setUserLatestLocation,
   updateMyProfile,
+  checkUserNameAlreadyExists,
   updateUserStatus,
   getMyProfile,
   deleteMyProfile,
