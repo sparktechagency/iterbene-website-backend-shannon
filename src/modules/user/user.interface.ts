@@ -37,6 +37,8 @@ export type TUser = {
   lastPasswordChange?: Date;
   isResetPassword: boolean;
   failedLoginAttempts: number;
+  friends: Types.ObjectId[];
+  blockedUsers: Types.ObjectId[];
   lockUntil?: Date;
   mfaSecret?: string;
   mfaEnabled: boolean;

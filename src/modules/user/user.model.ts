@@ -88,6 +88,8 @@ const userSchema = new Schema<TUser, UserModal>(
       },
       required: [false, 'Marital status is required'],
     },
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     description: { type: String },
     role: {
       type: String,
