@@ -29,12 +29,12 @@ const userSchema = new Schema<TUser, UserModal>(
       required: [false, 'Nickname is required'],
       trim: true,
     },
-    profilePicture: {
+    profileImage: {
       type: String,
       required: false,
       default: '/uploads/users/user.png',
     },
-    coverPicture: {
+    coverImage: {
       type: String,
       required: false,
       default: '/uploads/users/user.png',

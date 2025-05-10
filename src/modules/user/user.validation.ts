@@ -42,6 +42,10 @@ const setLatestLocationValidationSchema = z.object({
       required_error: 'Longitude is required.',
       invalid_type_error: 'Longitude must be a string.',
     }),
+    locationName: z.string({
+      required_error: 'Location name is required.',
+      invalid_type_error: 'Location name must be a string.',
+    })
   }),
 });
 

@@ -65,7 +65,7 @@ const getSingleUser = async (userId: string): Promise<TUser | null> => {
 
 const setUserLatestLocation = async (
   userId: string,
-  payload: { latitude: number; longitude: number }
+  payload: { latitude: number; longitude: number; locationName: string }
 ): Promise<TUser | null> => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
@@ -75,6 +75,7 @@ const setUserLatestLocation = async (
       latitude: payload.latitude,
       longitude: payload.longitude,
     },
+    locationName: payload.locationName,
   };
   const user = await User.findByIdAndUpdate(userId, updatedData, {
     new: true,
@@ -110,9 +111,11 @@ const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
   return user;
 };
 
-const checkUserNameAlreadyExists = async (userName: string): Promise<boolean> => {
+const checkUserNameAlreadyExists = async (
+  userName: string
+): Promise<boolean> => {
   const user = await User.findOne({ username: userName }).select('_id');
-  console.log(user)
+  console.log(user);
   return !!user;
 };
 

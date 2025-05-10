@@ -23,8 +23,8 @@ router
   .patch(
     auth('Common'),
     upload.fields([
-      { name: 'profilePicture', maxCount: 1 },
-      { name: 'coverPicture', maxCount: 1 },
+      { name: 'profileImage', maxCount: 1 },
+      { name: 'coverImage', maxCount: 1 },
     ]),
     UserController.updateMyProfile
   )

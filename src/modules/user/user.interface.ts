@@ -7,8 +7,8 @@ export type TUser = {
   lastName?: string;
   username: string;
   nickname?: string;
-  profilePicture?: string;
-  coverPicture?: string;
+  profileImage?: string;
+  coverImage?: string;
   email: string;
   aboutMe?: string;
   password: string;

@@ -100,24 +100,16 @@ const checkUserNameAlreadyExists = catchAsync(async (req, res) => {
 const updateMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  const UPLOADS_FOLDER = 'uploads/users';
-  // Handle profile picture
-  if (files?.profilePicture?.[0]) {
-    const profilePictureUrl = await uploadFile(
-      files.profilePicture[0],
-      UPLOADS_FOLDER
-    );
-    console.log(profilePictureUrl)
-    req.body.profilePicture = profilePictureUrl;
+  if (files && files.profileImage) {
+    const file = files.profileImage[0];
+    const fileUrl = 'uploads/users/' + file.filename;
+    req.body.profileImage = fileUrl;
   }
 
-  // Handle cover picture
-  if (files?.coverPicture?.[0]) {
-    const coverPictureUrl = await uploadFile(
-      files.coverPicture[0],
-      UPLOADS_FOLDER
-    );
-    req.body.coverPicture = coverPictureUrl;
+  if (files && files.coverImage) {
+    const file = files.coverImage[0];
+    const fileUrl = 'uploads/users/' + file.filename;
+    req.body.coverImage = fileUrl;
   }
 
   const result = await UserService.updateMyProfile(userId, req.body);
