@@ -63,7 +63,6 @@ const acceptConnection = async (connectionId: string, userId: string) => {
       'You are not authorized to accept this connection'
     );
   }
-
   if (connection.status !== ConnectionStatus.PENDING) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
@@ -166,7 +165,19 @@ const getMyAllConnections = async (
   const connections = await Connections.paginate(query, options);
   return connections;
 };
-
+const getMyAllRequests = async (
+    filters: Record<string, any>,
+    options: PaginateOptions
+  ): Promise<PaginateResult<IConnections>> => {
+    const query: Record<string, any> = {
+      status: ConnectionStatus.PENDING,
+      receivedBy: filters.userId,
+    };
+  
+    options.sortBy = options.sortBy || '-createdAt';
+    const connections = await Connections.paginate(query, options);
+    return connections;
+  };
 const getSentMyRequests = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -174,20 +185,6 @@ const getSentMyRequests = async (
   const query: Record<string, any> = {
     status: ConnectionStatus.PENDING,
     sentBy: filters.userId,
-  };
-
-  options.sortBy = options.sortBy || '-createdAt';
-  const connections = await Connections.paginate(query, options);
-  return connections;
-};
-
-const getMyAllRequests = async (
-  filters: Record<string, any>,
-  options: PaginateOptions
-): Promise<PaginateResult<IConnections>> => {
-  const query: Record<string, any> = {
-    status: ConnectionStatus.PENDING,
-    receivedBy: filters.userId,
   };
 
   options.sortBy = options.sortBy || '-createdAt';
@@ -333,6 +330,7 @@ export const ConnectionsService = {
   cancelRequest,
   getMyAllConnections,
   getMyAllRequests,
+  getSentMyRequests,
   blockUser,
   unblockUser,
   getMutualConnections,

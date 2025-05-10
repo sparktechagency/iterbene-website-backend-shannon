@@ -28,6 +28,7 @@ const auth = (...roles: string[]) =>
       req.get('User-Agent') || 'unknown'
     );
 
+    console.log(verifyUser)
     if (verifyUser) {
       req.user = verifyUser;
     } else {

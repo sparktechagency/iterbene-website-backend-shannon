@@ -47,7 +47,7 @@ router.post(
 router.post(
   '/verify-email',
   verifyEmailLimiter,
-  auth('common'),
+  auth('Common'),
   validateRequest(AuthValidation.verifyEmailValidationSchema),
   AuthController.verifyEmail
 );
@@ -63,14 +63,14 @@ router.post(
 
 router.post(
   '/reset-password',
-   auth('common'),
+   auth('Common'),
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword
 );
 
 router.post(
   '/change-password',
-  auth('common'),
+  auth('Common'),
   validateRequest(AuthValidation.changePasswordValidationSchema),
   AuthController.changePassword
 );
@@ -79,7 +79,7 @@ router.post('/logout', AuthController.logout);
 
 router.post('/refresh-token',AuthController.refreshToken);
 
-router.post('/enable-mfa', auth('common'), AuthController.enableMFA);
+router.post('/enable-mfa', auth('Common'), AuthController.enableMFA);
 
 router.get('/interaction-logs/:userId', auth('admin'));
 

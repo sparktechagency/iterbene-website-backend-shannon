@@ -10,6 +10,7 @@ import { ReportRoutes } from '../modules/reports/reports.routes';
 import { CountryRoutes } from '../modules/country/country.routes';
 import { NotificationRoutes } from '../modules/notification/notification.routes';
 import { GroupRoutes } from '../modules/group/group.routes';
+import { ConnectionsRoutes } from '../modules/connections/connections.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -24,6 +25,10 @@ const apiRoutes = [
   {
     path: '/admin',
     route: AdminRoutes,
+  },
+  {
+    path: '/connections',
+    route: ConnectionsRoutes,
   },
   {
     path: '/group',
@@ -56,7 +61,7 @@ const apiRoutes = [
   {
     path: '/notification',
     route: NotificationRoutes,
-  }
+  },
 ];
 
 apiRoutes.forEach(route => router.use(route.path, route.route));
