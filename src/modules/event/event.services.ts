@@ -5,8 +5,18 @@ import { IEvent, EventPrivacy } from './event.interface';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import ApiError from '../../errors/ApiError';
 
-const createEvent = async (payload: Partial<IEvent>): Promise<IEvent> => {
-  const event = await Event.create(payload);
+const createEvent = async (
+  userId: string,
+  payload: Partial<IEvent>
+): Promise<IEvent> => {
+  const eventData: Partial<IEvent> = {
+    ...payload,
+    creatorId: new Types.ObjectId(userId),
+    interestedUsers: [],
+    pendingInterestedUsers: [],
+    isDeleted: false,
+  };
+  const event = await Event.create(eventData);
   return event;
 };
 
@@ -16,20 +26,13 @@ const joinEvent = async (userId: string, eventId: string): Promise<IEvent> => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   const userObjectId = new Types.ObjectId(userId);
-  if (event.interests.includes(userObjectId)) {
+  if (event.interestedUsers.includes(userObjectId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Already interested in event');
   }
-  if (
-    event.privacy === EventPrivacy.PRIVATE &&
-    !event.coHosts.includes(userObjectId) &&
-    !event.creatorId.equals(userId)
-  ) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Cannot join private event without invite'
-    );
+  if (event.pendingInterestedUsers.includes(userObjectId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Join request already pending');
   }
-  event.interests.push(userObjectId);
+  event.pendingInterestedUsers.push(userObjectId);
   await event.save();
   return event;
 };
@@ -43,10 +46,80 @@ const leaveEvent = async (userId: string, eventId: string): Promise<IEvent> => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Creator cannot leave event');
   }
   const userObjectId = new Types.ObjectId(userId);
-  if (!event.interests.includes(userObjectId)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Not interested in event');
+  if (
+    !event.interestedUsers.includes(userObjectId) &&
+    !event.pendingInterestedUsers.includes(userObjectId)
+  ) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Not interested or pending in event'
+    );
   }
-  event.interests = event.interests.filter(id => !id.equals(userObjectId));
+  event.interestedUsers = event.interestedUsers.filter(
+    id => !id.equals(userObjectId)
+  );
+  event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
+    id => !id.equals(userObjectId)
+  );
+  await event.save();
+  return event;
+};
+
+const approveJoinEvent = async (
+  userId: string,
+  eventId: string,
+  targetUserId: string
+): Promise<IEvent> => {
+  const event = await Event.findById(eventId);
+  if (!event || event.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
+  }
+  if (
+    !event.coHosts.includes(new Types.ObjectId(userId)) &&
+    !event.creatorId.equals(userId)
+  ) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only co-hosts or creator can approve join requests'
+    );
+  }
+  const targetUserObjectId = new Types.ObjectId(targetUserId);
+  if (!event.pendingInterestedUsers.includes(targetUserObjectId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending join request');
+  }
+  event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
+    id => !id.equals(targetUserObjectId)
+  );
+  event.interestedUsers.push(targetUserObjectId);
+  await event.save();
+  return event;
+};
+
+const rejectJoinEvent = async (
+  userId: string,
+  eventId: string,
+  targetUserId: string
+): Promise<IEvent> => {
+  const event = await Event.findById(eventId);
+  if (!event || event.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
+  }
+  if (
+    !event.coHosts.includes(new Types.ObjectId(userId)) &&
+    !event.creatorId.equals(userId)
+  ) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only co-hosts or creator can reject join requests'
+    );
+  }
+  const targetUserObjectId = new Types.ObjectId(targetUserId);
+  if (!event.pendingInterestedUsers.includes(targetUserObjectId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending join request');
+  }
+  event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
+    id => !id.equals(targetUserObjectId)
+  );
   await event.save();
   return event;
 };
@@ -70,13 +143,19 @@ const removeUser = async (
     );
   }
   const targetUserObjectId = new Types.ObjectId(targetUserId);
-  if (!event.interests.includes(targetUserObjectId)) {
+  if (
+    !event.interestedUsers.includes(targetUserObjectId) &&
+    !event.pendingInterestedUsers.includes(targetUserObjectId)
+  ) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'User is not interested in event'
+      'User is not interested or pending in event'
     );
   }
-  event.interests = event.interests.filter(
+  event.interestedUsers = event.interestedUsers.filter(
+    id => !id.equals(targetUserObjectId)
+  );
+  event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     id => !id.equals(targetUserObjectId)
   );
   await event.save();
@@ -102,7 +181,7 @@ const promoteToCoHost = async (
     );
   }
   const targetUserObjectId = new Types.ObjectId(targetUserId);
-  if (!event.interests.includes(targetUserObjectId)) {
+  if (!event.interestedUsers.includes(targetUserObjectId)) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       'User is not interested in event'
@@ -147,7 +226,8 @@ const getEvent = async (eventId: string, userId: string): Promise<IEvent> => {
   }
   if (
     event.privacy === EventPrivacy.PRIVATE &&
-    !event.interests.includes(new Types.ObjectId(userId)) &&
+    !event.interestedUsers.includes(new Types.ObjectId(userId)) &&
+    !event.pendingInterestedUsers.includes(new Types.ObjectId(userId)) &&
     !event.coHosts.includes(new Types.ObjectId(userId)) &&
     !event.creatorId.equals(userId)
   ) {
@@ -206,7 +286,8 @@ const getMyEvents = async (
     $or: [
       { creatorId: new Types.ObjectId(userId) },
       { coHosts: new Types.ObjectId(userId) },
-      { interests: new Types.ObjectId(userId) },
+      { interestedUsers: new Types.ObjectId(userId) },
+      { pendingInterestedUsers: new Types.ObjectId(userId) },
     ],
   };
   return Event.paginate(query, options);
@@ -220,7 +301,10 @@ const getMyInterestedEvents = async (
   const query = {
     ...filters,
     isDeleted: false,
-    interests: new Types.ObjectId(userId),
+    $or: [
+      { interestedUsers: new Types.ObjectId(userId) },
+      { pendingInterestedUsers: new Types.ObjectId(userId) },
+    ],
   };
   return Event.paginate(query, options);
 };
@@ -233,7 +317,8 @@ const getEventSuggestions = async (
   const query = {
     isDeleted: false,
     privacy: EventPrivacy.PUBLIC,
-    interests: { $ne: new Types.ObjectId(userId) },
+    interestedUsers: { $ne: new Types.ObjectId(userId) },
+    pendingInterestedUsers: { $ne: new Types.ObjectId(userId) },
   };
   return Event.find(query)
     .sort(options.sortBy || '-createdAt')
@@ -253,6 +338,8 @@ export const EventService = {
   updateEvent,
   deleteEvent,
   getMyEvents,
+  approveJoinEvent,
+  rejectJoinEvent,
   getMyInterestedEvents,
   getEventSuggestions,
 };

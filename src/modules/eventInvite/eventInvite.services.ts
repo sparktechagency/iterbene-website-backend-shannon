@@ -15,7 +15,7 @@ const sendInvite = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   if (
-    !event.interests.includes(new Types.ObjectId(userId)) &&
+    !event.interestedUsers.includes(new Types.ObjectId(userId)) &&
     !event.coHosts.includes(new Types.ObjectId(userId)) &&
     !event.creatorId.equals(userId)
   ) {
@@ -68,7 +68,9 @@ const acceptInvite = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   invite.status = EventInviteStatus.ACCEPTED;
-  event.interests.push(invite.to);
+  if (!event.pendingInterestedUsers.includes(invite.to)) {
+    event.pendingInterestedUsers.push(invite.to);
+  }
   await Promise.all([invite.save(), event.save()]);
   return invite;
 };

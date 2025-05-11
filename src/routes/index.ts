@@ -13,6 +13,7 @@ import { GroupRoutes } from '../modules/group/group.routes';
 import { ConnectionsRoutes } from '../modules/connections/connections.routes';
 import { BlockedUserRoutes } from '../modules/blockedUsers/blockedUsers.route';
 import { FollowerRoutes } from '../modules/followers/followers.route';
+import { EventRoutes } from '../modules/event/event.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -21,7 +22,7 @@ const apiRoutes = [
     route: AuthRoutes,
   },
   {
-    path: '/user',
+    path: '/users',
     route: UserRoutes,
   },
   {
@@ -41,19 +42,23 @@ const apiRoutes = [
     route: ConnectionsRoutes,
   },
   {
-    path: '/group',
+    path: '/groups',
     route: GroupRoutes,
   },
   {
-    path: '/chat',
+    path: "/events",
+    route: EventRoutes
+  },
+  {
+    path: '/chats',
     route: ChatRoutes,
   },
   {
-    path: '/message',
+    path: '/messages',
     route: MessageRoutes,
   },
   {
-    path: '/report',
+    path: '/reports',
     route: ReportRoutes,
   },
   {
@@ -65,11 +70,11 @@ const apiRoutes = [
     route: SettingsRoutes,
   },
   {
-    path: '/contact',
+    path: '/contacts',
     route: ContactRoutes,
   },
   {
-    path: '/notification',
+    path: '/notifications',
     route: NotificationRoutes,
   },
 ];

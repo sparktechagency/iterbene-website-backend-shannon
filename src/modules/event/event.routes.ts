@@ -7,12 +7,10 @@ import { EventController } from './event.controllers';
 
 const router = express.Router();
 
-// Event Routes
-
 // Create an event (any authenticated user)
 router.post(
   '/',
-  auth('Common'),
+  auth('User'),
   validateRequest(EventValidation.createEventValidationSchema),
   EventController.createEvent
 );
@@ -33,10 +31,25 @@ router.post(
   EventController.leaveEvent
 );
 
+//approve join event (admin only)
+router.post(
+  '/approve-join',
+  auth('User'),
+  validateRequest(EventValidation.approveJoinValidationSchema),
+  EventController.approveJoinEvent
+);
+//reject join event (admin only)
+router.post(
+  '/reject-join',
+  auth('User'),
+  validateRequest(EventValidation.rejectJoinValidationSchema),
+  EventController.rejectJoinEvent
+);
+
 // Remove a user (co-host only)
 router.post(
   '/remove-user',
-  auth('Admin'),
+  auth('User'),
   validateRequest(EventValidation.removeUserValidationSchema),
   EventController.removeUser
 );
@@ -44,41 +57,9 @@ router.post(
 // Promote user to co-host (co-host only)
 router.post(
   '/promote-co-host',
-  auth('Admin'),
+  auth('User'),
   validateRequest(EventValidation.promoteCoHostValidationSchema),
   EventController.promoteToCoHost
-);
-
-// Demote co-host (creator only, enforced in service)
-router.post(
-  '/demote-co-host',
-  auth('Admin'),
-  validateRequest(EventValidation.demoteCoHostValidationSchema),
-  EventController.demoteCoHost
-);
-
-// Get event details (any authenticated user)
-router.get(
-  '/:id',
-  auth('Common'),
-  validateRequest(EventValidation.getEventValidationSchema),
-  EventController.getEvent
-);
-
-// Update event (co-host only)
-router.patch(
-  '/:id',
-  auth('Admin'),
-  validateRequest(EventValidation.updateEventValidationSchema),
-  EventController.updateEvent
-);
-
-// Delete event (creator only, enforced in service)
-router.delete(
-  '/:id',
-  auth('Common'),
-  validateRequest(EventValidation.deleteEventValidationSchema),
-  EventController.deleteEvent
 );
 
 // Get my events (any authenticated user)
@@ -119,6 +100,11 @@ router.post(
   validateRequest(EventValidation.declineInviteValidationSchema),
   EventInviteController.declineInvite
 );
+router.get(
+  '/invites/my-invites',
+  auth('Common'),
+  EventInviteController.getMyInvites
+);
 
 // Cancel event invite (any authenticated user, sender/co-host in service)
 router.post(
@@ -134,5 +120,33 @@ router.get(
   auth('Common'),
   EventInviteController.getMyInvites
 );
+
+// Demote co-host (creator only, enforced in service)
+router.post(
+  '/demote-co-host',
+  auth('User'),
+  validateRequest(EventValidation.demoteCoHostValidationSchema),
+  EventController.demoteCoHost
+);
+
+// Get event details (any authenticated user)
+
+router
+  .route('/:id')
+  .get(
+    auth('Common'),
+    validateRequest(EventValidation.getEventValidationSchema),
+    EventController.getEvent
+  )
+  .patch(
+    auth('User'),
+    validateRequest(EventValidation.updateEventValidationSchema),
+    EventController.updateEvent
+  )
+  .delete(
+    auth('Common'),
+    validateRequest(EventValidation.deleteEventValidationSchema),
+    EventController.deleteEvent
+  );
 
 export const EventRoutes = router;

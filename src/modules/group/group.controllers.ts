@@ -127,6 +127,16 @@ const demoteCoLeader = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getGroup = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { id } = req.params;
+  const result = await GroupService.getGroup(userId, id);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Group retrieved successfully',
+    data: result,
+  });
+});
 const updateGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { id } = req.params;
@@ -199,6 +209,7 @@ export const GroupController = {
   demoteAdmin,
   promoteToCoLeader,
   demoteCoLeader,
+  getGroup,
   updateGroup,
   deleteGroup,
   getMyGroups,

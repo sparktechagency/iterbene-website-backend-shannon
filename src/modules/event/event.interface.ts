@@ -19,8 +19,9 @@ export interface IEvent {
   locationName: string;
   privacy: EventPrivacy;
   coHosts: Types.ObjectId[];
+  interestedUsers: Types.ObjectId[];
+  pendingInterestedUsers: Types.ObjectId[];
   eventCost: number;
-  interests: Types.ObjectId[];
   interestCount: number;
   isDeleted: boolean;
   createdAt?: Date;

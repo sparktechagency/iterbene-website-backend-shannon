@@ -2,7 +2,7 @@ import { model, Schema } from 'mongoose';
 import { EventPrivacy, IEvent, IEventModel } from './event.interface';
 import paginate from '../../common/plugins/paginate';
 
-const eventSchema = new Schema<IEvent>(
+const eventSchema = new Schema<IEvent, IEventModel>(
   {
     creatorId: {
       type: Schema.Types.ObjectId,
@@ -57,10 +57,16 @@ const eventSchema = new Schema<IEvent>(
       type: Number,
       default: 0,
     },
-    interests: [
+    interestedUsers: [
       {
         type: Schema.Types.ObjectId,
-        ref: 'Interest',
+        ref: 'User',
+      },
+    ],
+    pendingInterestedUsers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
       },
     ],
     interestCount: {

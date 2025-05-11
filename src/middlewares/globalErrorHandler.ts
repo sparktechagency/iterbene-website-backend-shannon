@@ -88,7 +88,7 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     code,
     message: `${formattedMessage}`,
     error: errorMessages, // Error details (path and message)
-    stack: config.environment === 'development' ? error?.stack : undefined, // Stack trace in development mode
+    stack: config.environment === 'production' ? error?.stack : undefined, // Stack trace in development mode
   });
 };
 

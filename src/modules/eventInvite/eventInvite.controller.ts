@@ -56,7 +56,7 @@ const getMyInvites = catchAsync(async (req, res) => {
   const result = await EventInviteService.getMyInvites(filters, options);
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Invites retrieved successfully',
+    message: 'My Invites events retrieved successfully',
     data: result,
   });
 });

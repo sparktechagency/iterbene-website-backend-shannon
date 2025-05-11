@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { User } from '../user/user.model';
 
 // Utility schema for MongoDB ObjectId
 const objectIdSchema = z.string({
@@ -58,6 +59,22 @@ const joinEventValidationSchema = z.object({
 const leaveEventValidationSchema = z.object({
   body: z.object({
     eventId: objectIdSchema,
+  }),
+});
+
+//POST /events/approve-join
+const approveJoinValidationSchema = z.object({
+  body: z.object({
+    eventId: objectIdSchema,
+    UserId: objectIdSchema,
+  }),
+});
+
+//POST /events/reject-join
+const rejectJoinValidationSchema = z.object({
+  body: z.object({
+    eventId: objectIdSchema,
+    UserId: objectIdSchema,
   }),
 });
 
@@ -182,6 +199,8 @@ export const EventValidation = {
   createEventValidationSchema,
   joinEventValidationSchema,
   leaveEventValidationSchema,
+  approveJoinValidationSchema,
+  rejectJoinValidationSchema,
   removeUserValidationSchema,
   promoteCoHostValidationSchema,
   demoteCoHostValidationSchema,

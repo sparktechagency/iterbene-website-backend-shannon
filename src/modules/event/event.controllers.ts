@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { PaginateOptions } from '../../types/paginate';
 import catchAsync from '../../shared/catchAsync';
 import { EventService } from './event.services';
 import sendResponse from '../../shared/sendResponse';
@@ -9,8 +8,7 @@ import pick from '../../shared/pick';
 const createEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const payload = req.body;
-  payload.creatorId = userId;
-  const result = await EventService.createEvent(payload);
+  const result = await EventService.createEvent(userId, payload);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Event created successfully',
@@ -24,7 +22,7 @@ const joinEvent = catchAsync(async (req: Request, res: Response) => {
   const result = await EventService.joinEvent(userId, eventId);
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Joined event successfully',
+    message: 'Join request sent successfully',
     data: result,
   });
 });
@@ -36,6 +34,36 @@ const leaveEvent = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Left event successfully',
+    data: result,
+  });
+});
+
+const approveJoinEvent = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { eventId, userId: targetUserId } = req.body;
+  const result = await EventService.approveJoinEvent(
+    userId,
+    eventId,
+    targetUserId
+  );
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Join request approved successfully',
+    data: result,
+  });
+});
+
+const rejectJoinEvent = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { eventId, userId: targetUserId } = req.body;
+  const result = await EventService.rejectJoinEvent(
+    userId,
+    eventId,
+    targetUserId
+  );
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Join request rejected successfully',
     data: result,
   });
 });
@@ -159,6 +187,8 @@ export const EventController = {
   createEvent,
   joinEvent,
   leaveEvent,
+  approveJoinEvent,
+  rejectJoinEvent,
   removeUser,
   promoteToCoHost,
   demoteCoHost,
