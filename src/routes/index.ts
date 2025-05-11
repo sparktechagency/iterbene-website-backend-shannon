@@ -14,6 +14,7 @@ import { ConnectionsRoutes } from '../modules/connections/connections.routes';
 import { BlockedUserRoutes } from '../modules/blockedUsers/blockedUsers.route';
 import { FollowerRoutes } from '../modules/followers/followers.route';
 import { EventRoutes } from '../modules/event/event.routes';
+import { StoryRoutes } from '../modules/story/story.route';
 const router = express.Router();
 
 const apiRoutes = [
@@ -30,12 +31,12 @@ const apiRoutes = [
     route: AdminRoutes,
   },
   {
-    path:"/blocked-users",
-    route:BlockedUserRoutes
+    path: '/blocked-users',
+    route: BlockedUserRoutes,
   },
   {
-    path:'/followers',
-    route:FollowerRoutes
+    path: '/followers',
+    route: FollowerRoutes,
   },
   {
     path: '/connections',
@@ -46,8 +47,12 @@ const apiRoutes = [
     route: GroupRoutes,
   },
   {
-    path: "/events",
-    route: EventRoutes
+    path: '/events',
+    route: EventRoutes,
+  },
+  {
+    path: '/stories',
+    route: StoryRoutes,
   },
   {
     path: '/chats',

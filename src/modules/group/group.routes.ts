@@ -7,8 +7,6 @@ import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
 
 const router = express.Router();
 
-// Group Routes
-
 // Create a group (any authenticated user)
 router.post(
   '/',

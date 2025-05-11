@@ -4,7 +4,6 @@ import sendResponse from '../../shared/sendResponse';
 import ApiError from '../../errors/ApiError';
 import { UserService } from './user.service';
 import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
-import { uploadFile } from '../../helpers/s3Service';
 
 const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const { userId } = req.user;

@@ -1,0 +1,68 @@
+import express from 'express';
+import { StoryController } from './story.controller';
+import auth from '../../middlewares/auth';
+import validateRequest from '../../shared/validateRequest';
+import { StoryValidation } from './story.validation';
+import fileUploadHandler from '../../shared/fileUploadHandler';
+const UPLOADS_FOLDER = 'uploads/stories';
+const upload = fileUploadHandler(UPLOADS_FOLDER);
+
+const router = express.Router();
+
+// Create a story (any authenticated user)
+router.post(
+  '/',
+  auth('Common'),
+  upload.array('storyFiles', 10),
+  validateRequest(StoryValidation.createStoryValidationSchema),
+  StoryController.createStory
+);
+
+// View a story (any authenticated user with access)
+router.post(
+  '/view',
+  auth('Common'),
+  validateRequest(StoryValidation.viewStoryValidationSchema),
+  StoryController.viewStory
+);
+
+// React to a story (any authenticated user with access)
+router.post(
+  '/react',
+  auth('Common'),
+  validateRequest(StoryValidation.reactStoryValidationSchema),
+  StoryController.reactToStory
+);
+
+// Reply to a story (any authenticated user with access)
+router.post(
+  '/reply',
+  auth('Common'),
+  validateRequest(StoryValidation.replyStoryValidationSchema),
+  StoryController.replyToStory
+);
+
+// Get my stories (any authenticated user)
+router.get('/my-stories', auth('Common'), StoryController.getMyStories);
+
+// Get story feed (any authenticated user)
+router.get('/feed', auth('Common'), StoryController.getStoryFeed);
+
+// Get story viewers (creator only)
+router.get('/viewers/:id', auth('Common'), StoryController.getStoryViewers);
+
+// Get a story (any authenticated user with access)
+router
+  .route('/:id')
+  .get(
+    auth('Common'),
+    validateRequest(StoryValidation.getStoryValidationSchema),
+    StoryController.getStory
+  )
+  .delete(
+    auth('Common'),
+    validateRequest(StoryValidation.deleteStoryValidationSchema),
+    StoryController.deleteStory
+  );
+
+export const StoryRoutes = router;
