@@ -3,10 +3,10 @@ import { PaginateOptions, PaginateResult } from '../../types/paginate';
 
 export interface IGroup {
   _id: Types.ObjectId;
-  creatorId: Types.ObjectId;
+  creatorId: Types.ObjectId | string;
   name: string;
   groupImage: string | null;
-  privacy: 'public' | 'private';
+  privacy: GroupPrivacy;
   admins: Types.ObjectId[];
   coLeaders: Types.ObjectId[];
   members: Types.ObjectId[];
@@ -23,11 +23,6 @@ export interface IGroup {
 export enum GroupPrivacy {
   PUBLIC = 'public',
   PRIVATE = 'private',
-}
-
-export enum GroupCanInvite {
-  ALL = 'all',
-  ADMIN = 'admins',
 }
 
 export interface IGroupModel extends Model<IGroup> {

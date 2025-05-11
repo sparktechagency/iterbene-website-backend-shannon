@@ -1,386 +1,449 @@
-import mongoose from 'mongoose';
-import { IGroup } from './group.interface';
-import Group from './group.model';
-import { IGroupInvite } from '../groupInvite/groupInvite.interface';
-import GroupInvite from '../groupInvite/groupInvite.model';
-import { User } from '../user/user.model';
-import ApiError from '../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
+import ApiError from '../../errors/ApiError';
+import { IGroup, GroupPrivacy } from './group.interface';
+import Group from './group.model';
+import { User } from '../user/user.model';
+import { Connections } from '../connections/connections.model';
+import { ConnectionStatus } from '../connections/connections.interface';
+import { BlockedUser } from '../blockedUsers/blockedUsers.model';
+import { PaginateOptions, PaginateResult } from '../../types/paginate';
+import mongoose from 'mongoose';
+import { validateUsers } from '../../utils/validateUsers';
 
-// Creates a new travel group by a user
-const createGroup = async (payload: IGroup): Promise<IGroup> => {
-  const {
-    creatorId,
-    name,
-    privacy,
-    description,
-    location,
-    locationName,
-    groupImage,
-  } = payload;
+interface CreateGroupPayload {
+  name: string;
+  description?: string;
+  groupImage?: string;
+  privacy: GroupPrivacy;
+  location?: { latitude: number; longitude: number };
+  locationName?: string;
+  coLeaders?: string[];
+  members?: string[];
+}
 
-  // Create a new group with the provided details
-  const group = new Group({
-    creatorId,
-    name,
-    groupImage,
-    privacy,
-    admins: [creatorId],
-    members: [creatorId],
-    locationName,
-    pendingMembers: [],
-    description,
-    location,
-    participantCount:  1,
-  });
-  // Save the group to the database
-  await group.save();
-  // Populate related fields for detailed response
-  const result = await Group.findById(group._id).populate(
-    'creatorId admins members pendingMembers'
-  );
-  return result as IGroup;
-};
-
-// Allows a user to join a travel group
-const joinGroup = async (userId: string, groupId: string): Promise<IGroup> => {
-  // Fetch the group by ID
-  const group = await Group.findById(groupId);
-  if (!group) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  } else if (group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group is deleted');
+const createGroup = async (creatorId: string, payload: CreateGroupPayload): Promise<IGroup> => {
+  const user = await User.findById(creatorId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Creator not found');
   }
 
-  // Verify the user exists
-  const user = await User.findById(userId);
+  const coLeaders = payload.coLeaders || [];
+  const members = payload.members || [];
+  const uniqueUsers = [...new Set([...coLeaders, ...members])].filter(id => id !== creatorId);
+
+  for (const userId of uniqueUsers) {
+    await validateUsers(creatorId, userId, 'Add to group');
+    const targetUser = await User.findById(userId);
+    if (!targetUser || targetUser.isDeleted) {
+      throw new ApiError(StatusCodes.NOT_FOUND, `User ${userId} not found`);
+    }
+  }
+
+  const validCoLeaders = coLeaders.filter(id => id !== creatorId);
+  const validMembers = members.filter(id => id !== creatorId && !validCoLeaders.includes(id));
+
+  const group = new Group({
+    creatorId,
+    name: payload.name,
+    description: payload.description || '',
+    groupImage: payload.groupImage || null,
+    privacy: payload.privacy,
+    location: payload.location,
+    locationName: payload.locationName,
+    admins: [creatorId],
+    coLeaders: validCoLeaders.map(id => new mongoose.Types.ObjectId(id)),
+    members: [creatorId, ...validMembers.map(id => new mongoose.Types.ObjectId(id))],
+    participantCount: 1 + validMembers.length,
+  });
+
+  await group.save();
+  return group;
+};
+
+const joinGroup = async (userId: string, groupId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  await validateUsers(userId, group.creatorId.toString(), 'Join group');
+
+  if (group.members.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You are already a member');
+  }
+
+  if (group.privacy === GroupPrivacy.PUBLIC) {
+    group.members.push(new mongoose.Types.ObjectId(userId));
+    group.participantCount += 1;
+  } else {
+    if (group.pendingMembers.includes(new mongoose.Types.ObjectId(userId))) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Join request already pending');
+    }
+    group.pendingMembers.push(new mongoose.Types.ObjectId(userId));
+  }
+
+  await group.save();
+  return group;
+};
+
+const leaveGroup = async (userId: string, groupId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (group.creatorId.toString() === userId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Creator cannot leave group');
+  }
+
+  if (!group.members.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You are not a member');
+  }
+
+  group.members = group.members.filter((id) => id.toString() !== userId);
+  group.admins = group.admins.filter((id) => id.toString() !== userId);
+  group.coLeaders = group.coLeaders.filter((id) => id.toString() !== userId);
+  group.participantCount -= 1;
+
+  await group.save();
+  return group;
+};
+
+const approveJoinRequest = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can approve requests');
+  }
+
+  if (!group.pendingMembers.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending request for this user');
+  }
+
+  group.pendingMembers = group.pendingMembers.filter((id) => id.toString() !== userId);
+  group.members.push(new mongoose.Types.ObjectId(userId));
+  group.participantCount += 1;
+
+  await group.save();
+  return group;
+};
+
+const rejectJoinRequest = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can reject requests');
+  }
+
+  if (!group.pendingMembers.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending request for this user');
+  }
+
+  group.pendingMembers = group.pendingMembers.filter((id) => id.toString() !== userId);
+
+  await group.save();
+  return group;
+};
+
+const removeMember = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can remove members');
+  }
+
+  if (group.creatorId.toString() === userId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Cannot remove the creator');
+  }
+
+  if (!group.members.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not a member');
+  }
+
+  group.members = group.members.filter((id) => id.toString() !== userId);
+  group.admins = group.admins.filter((id) => id.toString() !== userId);
+  group.coLeaders = group.coLeaders.filter((id) => id.toString() !== userId);
+  group.participantCount -= 1;
+
+  await group.save();
+  return group;
+};
+
+const promoteToAdmin = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can promote members');
+  }
+
+  if (!group.members.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not a member');
+  }
+
+  if (group.admins.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already an admin');
+  }
+
+  group.admins.push(new mongoose.Types.ObjectId(userId));
+  group.coLeaders = group.coLeaders.filter((id) => id.toString() !== userId);
+
+  await group.save();
+  return group;
+};
+
+const demoteAdmin = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (group.creatorId.toString() !== adminId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only the creator can demote admins');
+  }
+
+  if (group.creatorId.toString() === userId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Cannot demote the creator');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not an admin');
+  }
+
+  group.admins = group.admins.filter((id) => id.toString() !== userId);
+
+  await group.save();
+  return group;
+};
+
+const promoteToCoLeader = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can promote members');
+  }
+
+  if (!group.members.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not a member');
+  }
+
+  if (group.coLeaders.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already a co-leader');
+  }
+
+  group.coLeaders.push(new mongoose.Types.ObjectId(userId));
+  group.admins = group.admins.filter((id) => id.toString() !== userId);
+
+  await group.save();
+  return group;
+};
+
+const demoteCoLeader = async (adminId: string, groupId: string, userId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can demote co-leaders');
+  }
+
+  if (!group.coLeaders.includes(new mongoose.Types.ObjectId(userId))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not a co-leader');
+  }
+
+  group.coLeaders = group.coLeaders.filter((id) => id.toString() !== userId);
+
+  await group.save();
+  return group;
+};
+
+const updateGroup = async (adminId: string, groupId: string, payload: Partial<IGroup>): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can update group');
+  }
+
+  const updatableFields = ['name', 'description', 'groupImage', 'privacy', 'location', 'locationName'];
+  for (const [key, value] of Object.entries(payload)) {
+    if (updatableFields.includes(key)) {
+      (group as any)[key] = value;
+    }
+  }
+
+  await group.save();
+  return group;
+};
+
+const deleteGroup = async (creatorId: string, groupId: string): Promise<IGroup> => {
+  const group = await Group.findById(groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  if (group.creatorId.toString() !== creatorId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only the creator can delete the group');
+  }
+
+  group.isDeleted = true;
+  await group.save();
+  return group;
+};
+
+const getMyGroups = async (
+  userId: string,
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IGroup>> => {
+  const query: Record<string, any> = {
+    isDeleted: false,
+    $or: [
+      { creatorId: userId },
+      { admins: userId },
+      { members: userId },
+    ],
+  };
+
+  if (filters.privacy) {
+    query.privacy = filters.privacy;
+  }
+
+  options.sortBy = options.sortBy || '-createdAt';
+  const groups = await Group.paginate(query, options);
+  return groups;
+};
+
+const getMyJoinGroups = async (
+  userId: string,
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IGroup>> => {
+  const query: Record<string, any> = {
+    isDeleted: false,
+    $or: [
+      { members: userId },
+      { pendingMembers: userId },
+    ],
+  };
+
+  if (filters.privacy) {
+    query.privacy = filters.privacy;
+  }
+
+  options.sortBy = options.sortBy || '-createdAt';
+  const groups = await Group.paginate(query, options);
+  return groups;
+};
+
+const getGroupSuggestions = async (
+  userId: string,
+  limit: number = 10,
+  options: { skip?: number; sortBy?: string } = {}
+): Promise<{ groups: Partial<IGroup>[]; total: number }> => {
+  const user = await User.findById(userId).select(
+    'city locationName profession privacySettings'
+  );
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
-  const userObjectId = new mongoose.Types.ObjectId(userId);
-  // Check if the user is already a member
-  if (group.members.some(id => id.toString() === userObjectId.toString())) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You are already a member');
-  }
+  const connections = await Connections.find({
+    $or: [{ sentBy: userId }, { receivedBy: userId }],
+    status: ConnectionStatus.ACCEPTED,
+  }).select('sentBy receivedBy');
 
-  // Handle public vs private groups
-  if (group.privacy === 'public') {
-    group.members.push(userObjectId);
-    group.participantCount += 1;
-  } else {
-    // For private groups, check if a join request is already pending
-    if (group.pendingMembers.some(id => id.equals(userObjectId))) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        'You have already sent a join request'
-      );
-    }
-    group.pendingMembers.push(userObjectId);
-  }
-
-  // Save the updated group
-  await group.save();
-  const result = await Group.findById(group._id).populate(
-    'creatorId admins members pendingMembers'
+  const friends = connections.map((conn) =>
+    conn.sentBy.toString() === userId
+      ? conn.receivedBy.toString()
+      : conn.sentBy.toString()
   );
-  return result as IGroup;
-};
 
-// Approves a user's join request for a private travel group
-const approveJoinRequest = async (
-  adminId: string,
-  groupId: string,
-  userId: string
-): Promise<IGroup> => {
-  // Fetch the group by ID
-  const group = await Group.findById(groupId);
-  if (!group) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  } else if (group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group is deleted');
-  }
+  const blockedUsers = await BlockedUser.find({
+    $or: [{ blockerId: userId }, { blockedId: userId }],
+  }).select('blockerId blockedId');
 
-  // Verify the requester is an admin
-  const adminObjectId = new mongoose.Types.ObjectId(adminId);
-  if (!group.admins.some(id => id.equals(adminObjectId))) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Only admins can approve join requests'
-    );
-  }
-
-  // Check if the user has a pending join request
-  const userObjectId = new mongoose.Types.ObjectId(userId);
-  if (!group.pendingMembers.some(id => id.equals(userObjectId))) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'User has not sent a join request'
-    );
-  }
-
-  // Remove from pending and add to members
-  group.pendingMembers = group.pendingMembers.filter(
-    id => !id.equals(userObjectId)
+  const blockedUserIds = blockedUsers.map((block) =>
+    block.blockerId.toString() === userId
+      ? block.blockedId.toString()
+      : block.blockerId.toString()
   );
-  group.members.push(userObjectId);
-  group.participantCount += 1;
-  await group.save();
 
-  const result = await Group.findById(group._id).populate(
-    'creatorId admins members pendingMembers'
-  );
-  return result as IGroup;
-};
+  const excludeGroups = await Group.find({
+    $or: [
+      { members: userId },
+      { pendingMembers: userId },
+      { creatorId: { $in: blockedUserIds } },
+    ],
+  }).select('_id');
 
-// Sends an invitation to join a travel group
-const sendGroupInvite = async (
-  fromUserId: string,
-  toUserId: string,
-  groupId: string
-): Promise<IGroupInvite> => {
-  // Fetch the group by ID
-  const group = await Group.findById(groupId);
-  if (!group) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  const query: Record<string, any> = {
+    _id: { $nin: excludeGroups.map((g) => g._id) },
+    isDeleted: false,
+    $or: [{ privacy: GroupPrivacy.PUBLIC }],
+  };
+
+  if (user.city && user.privacySettings.city === 'Public') {
+    query.$or.push({ locationName: user.city });
   }
-  if (group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group is deleted');
+  if (user.locationName && user.privacySettings.locationName === 'Public') {
+    query.$or.push({ locationName: user.locationName });
   }
 
-  // Verify both users exist
-  const fromUser = await User.findById(fromUserId);
-  if (!fromUser) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'From User not found');
-  }
-  const toUser = await User.findById(toUserId);
-  if (!toUser) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'To User not found');
+  if (friends.length > 0) {
+    query.$or.push({ members: { $in: friends } });
   }
 
-  const fromUserObjectId = new mongoose.Types.ObjectId(fromUserId);
-  const toUserObjectId = new mongoose.Types.ObjectId(toUserId);
+  const groups = await Group.find(query)
+    .select('name groupImage privacy participantCount')
+    .skip(options.skip || 0)
+    .limit(limit)
+    .sort(options.sortBy || '-participantCount');
 
-  // Verify sender is a member
-  if (!group.members.some(id => id.equals(fromUserObjectId))) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Only members can send invites'
-    );
-  }
+  const total = await Group.countDocuments(query);
 
-  // Check if recipient is already a member
-  if (group.members.some(id => id.equals(toUserObjectId))) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already a member');
-  }
+  const filteredGroups = groups.map((group) => ({
+    _id: group._id,
+    name: group.name,
+    groupImage: group.groupImage,
+    privacy: group.privacy,
+    participantCount: group.participantCount,
+  }));
 
-  // Check for existing pending invite
-  const existingInvite = await GroupInvite.findOne({
-    from: fromUserObjectId,
-    to: toUserObjectId,
-    groupId,
-    status: 'pending',
-  });
-  if (existingInvite) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite already sent');
-  }
-
-  // Create and save the invite
-  const invite = new GroupInvite({
-    from: fromUserObjectId,
-    to: toUserObjectId,
-    groupId,
-    status: 'pending',
-  });
-
-  await invite.save();
-  const result = await GroupInvite.findById(invite._id).populate(
-    'from to groupId'
-  );
-  return result as IGroupInvite;
-};
-
-// Accepts a group invitation, adding the user to the travel group
-const acceptGroupInvite = async (
-  userId: string,
-  inviteId: string
-): Promise<IGroup> => {
-  // Fetch the invite and its associated group
-  const invite = await GroupInvite.findById(inviteId).populate('groupId');
-  if (!invite) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Invite not found');
-  }
-  if (invite.status !== 'pending') {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
-  }
-  if (invite.to.toString() !== userId) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Unauthorized to accept this invite'
-    );
-  }
-
-  // Fetch the group
-  const group = await Group.findById(invite.groupId);
-  if (!group) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  }
-
-  // Update invite status
-  invite.status = 'accepted';
-  invite.updatedAt = new Date();
-  await invite.save();
-
-  // Add user to group members
-  const userObjectId = new mongoose.Types.ObjectId(userId);
-  group.members.push(userObjectId);
-  group.participantCount += 1;
-  // Remove from pending members if present
-  group.pendingMembers = group.pendingMembers.filter(
-    id => !id.equals(userObjectId)
-  );
-  await group.save();
-
-  const result = await Group.findById(group._id).populate(
-    'creatorId admins members pendingMembers'
-  );
-  return result as IGroup;
-};
-
-// Declines a group invitation
-const declineGroupInvite = async (
-  userId: string,
-  inviteId: string
-): Promise<IGroupInvite> => {
-  // Fetch the invite
-  const invite = await GroupInvite.findById(inviteId);
-  if (!invite || invite.status !== 'pending') {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Invite not found');
-  }
-
-  // Verify the user is the invite recipient
-  if (invite.to.toString() !== userId) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Unauthorized to accept this invite'
-    );
-  }
-
-  // Update invite status
-  invite.status = 'declined';
-  invite.updatedAt = new Date();
-  await invite.save();
-
-  return invite as IGroupInvite;
-};
-
-// Promotes a group member to co-leader (admin)
-const addCoLeadersInGroup = async (
-  adminId: string,
-  groupId: string,
-  coLeaders: string[]
-): Promise<IGroup> => {
-  // Fetch the group
-  const group = await Group.findById(groupId);
-  if (!group || group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  }
-
-  // Verify the requester is an admin
-  const adminObjectId = new mongoose.Types.ObjectId(adminId);
-  if (!group.admins.some(id => id.equals(adminObjectId))) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Only admins can add co-leaders'
-    );
-  }
-
-  // Add co-leaders to group admins and updated the participant count
-  group.admins.push(...coLeaders.map(id => new mongoose.Types.ObjectId(id)));
-  group.participantCount += coLeaders.length;
-
-  // Remove co-leaders from pending members if present
-  group.pendingMembers = group.pendingMembers.filter(
-    id => !coLeaders.some(coLeader => coLeader === id.toString())
-  );
-  await group.save();
-
-  const result = await Group.findById(group._id).populate(
-    'creatorId admins members pendingMembers'
-  );
-  return result as IGroup;
-};
-
-// Soft deletes a travel group (marks as deleted)
-const deleteGroup = async (adminId: string, groupId: string): Promise<void> => {
-  // Fetch the group
-  const group = await Group.findById(groupId);
-  if (!group || group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  }
-
-  // Verify the requester is the group creator
-  if (group.creatorId.toString() !== adminId) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Only group creator can delete the group'
-    );
-  }
-
-  // Mark group as deleted
-  group.isDeleted = true;
-  group.updatedAt = new Date();
-  await group.save();
-};
-
-const leaveGroup = async (userId: string, groupId: string): Promise<IGroup> => {
-  // Fetch the group
-  const group = await Group.findById(groupId);
-  if (!group || group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  }
-
-  // Remove user from group members
-  const userObjectId = new mongoose.Types.ObjectId(userId);
-
-  //if userId is creatorId . 1st off all any any user to Creator to leave group
-  if (group.creatorId.toString() === userId) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Creator cannot leave the group'
-    );
-  }
-  group.members = group.members.filter(id => !id.equals(userObjectId));
-  group.participantCount -= 1;
-  await group.save();
-
-  const result = await Group.findById(group._id).populate(
-    'creatorId admins members pendingMembers'
-  );
-  return result as IGroup;
-};
-
-// Retrieves a travel group's details
-const getGroup = async (groupId: string): Promise<IGroup> => {
-  // Fetch the group with populated fields
-  const group = await Group.findById(groupId).populate(
-    'creatorId admins members pendingMembers'
-  );
-  if (!group || group.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
-  }
-  return group as IGroup;
+  return { groups: filteredGroups, total };
 };
 
 export const GroupService = {
   createGroup,
   joinGroup,
-  approveJoinRequest,
-  sendGroupInvite,
-  acceptGroupInvite,
-  declineGroupInvite,
-  addCoLeadersInGroup,
   leaveGroup,
+  approveJoinRequest,
+  rejectJoinRequest,
+  removeMember,
+  promoteToAdmin,
+  demoteAdmin,
+  promoteToCoLeader,
+  demoteCoLeader,
+  updateGroup,
   deleteGroup,
-  getGroup,
+  getMyGroups,
+  getMyJoinGroups,
+  getGroupSuggestions,
 };

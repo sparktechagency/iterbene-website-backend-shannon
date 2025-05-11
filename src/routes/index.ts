@@ -11,6 +11,8 @@ import { CountryRoutes } from '../modules/country/country.routes';
 import { NotificationRoutes } from '../modules/notification/notification.routes';
 import { GroupRoutes } from '../modules/group/group.routes';
 import { ConnectionsRoutes } from '../modules/connections/connections.routes';
+import { BlockedUserRoutes } from '../modules/blockedUsers/blockedUsers.route';
+import { FollowerRoutes } from '../modules/followers/followers.route';
 const router = express.Router();
 
 const apiRoutes = [
@@ -25,6 +27,14 @@ const apiRoutes = [
   {
     path: '/admin',
     route: AdminRoutes,
+  },
+  {
+    path:"/blocked-users",
+    route:BlockedUserRoutes
+  },
+  {
+    path:'/followers',
+    route:FollowerRoutes
   },
   {
     path: '/connections',

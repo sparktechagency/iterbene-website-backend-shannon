@@ -1,53 +1,158 @@
 import express from 'express';
-import auth from '../../middlewares/auth'; // Authentication middleware
+import { GroupValidation } from './group.validation';
+import auth from '../../middlewares/auth';
+import validateRequest from '../../shared/validateRequest';
 import { GroupController } from './group.controllers';
+import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
 
 const router = express.Router();
 
-// Create a new travel group (accessible to all authenticated users)
-router.post('/', auth('Common'), GroupController.createGroup);
+// Group Routes
 
-// Join a travel group (accessible to all authenticated users)
-router.post('/:groupId/join', auth('Common'), GroupController.joinGroup);
-
-// Approve a join request for a private travel group (admin only)
-router.patch(
-  '/:groupId/approve/:userId',
+// Create a group (any authenticated user)
+router.post(
+  '/',
   auth('Common'),
+  validateRequest(GroupValidation.createGroupValidationSchema),
+  GroupController.createGroup
+);
+
+// Join a group (members only)
+router.post(
+  '/join',
+  auth('User'),
+  validateRequest(GroupValidation.joinGroupValidationSchema),
+  GroupController.joinGroup
+);
+
+// Leave a group (members only)
+router.post(
+  '/leave',
+  auth('User'),
+  validateRequest(GroupValidation.leaveGroupValidationSchema),
+  GroupController.leaveGroup
+);
+
+// Approve join request (admin only)
+router.post(
+  '/approve-join',
+  auth('Admin'),
+  validateRequest(GroupValidation.approveJoinValidationSchema),
   GroupController.approveJoinRequest
 );
 
-// Send an invitation to join a travel group (accessible to all authenticated members)
-router.post('/invite', auth('Common'), GroupController.sendGroupInvite);
-
-// Accept a group invitation (accessible to all authenticated users)
-router.patch(
-  '/invite/:inviteId/accept',
-  auth('Common'),
-  GroupController.acceptGroupInvite
+// Reject join request (admin only)
+router.post(
+  '/reject-join',
+  auth('Admin'),
+  validateRequest(GroupValidation.rejectJoinValidationSchema),
+  GroupController.rejectJoinRequest
 );
 
-// Decline a group invitation (accessible to all authenticated users)
-router.patch(
-  '/invite/:inviteId/decline',
-  auth('Common'),
-  GroupController.declineGroupInvite
+// Remove a member (admin only)
+router.post(
+  '/remove-member',
+  auth('Admin'),
+  validateRequest(GroupValidation.removeMemberValidationSchema),
+  GroupController.removeMember
 );
 
-// Add co-leaders to a travel group (admin only)
-router.patch(
-  '/:groupId/co-leaders',
-  auth('Common'),
-  GroupController.addCoLeadersInGroup
+// Promote member to admin (admin only)
+router.post(
+  '/promote-admin',
+  auth('Admin'),
+  validateRequest(GroupValidation.promoteAdminValidationSchema),
+  GroupController.promoteToAdmin
 );
 
-// Leave a travel group (accessible to all authenticated users)
-router.patch('/:groupId/leave', auth('Common'), GroupController.leaveGroup);
+// Demote admin (admin only, creator-specific in service)
+router.post(
+  '/demote-admin',
+  auth('Admin'),
+  validateRequest(GroupValidation.demoteAdminValidationSchema),
+  GroupController.demoteAdmin
+);
 
-// Delete a travel group (admin only, restricted to creator)
-router.delete('/:groupId', auth('Common'), GroupController.deleteGroup);
+// Promote member to co-leader (admin only)
+router.post(
+  '/promote-co-leader',
+  auth('Admin'),
+  validateRequest(GroupValidation.promoteCoLeaderValidationSchema),
+  GroupController.promoteToCoLeader
+);
 
-// Get a travel group's details (accessible to all authenticated users)
-router.get('/:groupId', auth('Common'), GroupController.getGroup);
+// Demote co-leader (admin only)
+router.post(
+  '/demote-co-leader',
+  auth('Admin'),
+  validateRequest(GroupValidation.demoteCoLeaderValidationSchema),
+  GroupController.demoteCoLeader
+);
+
+// Update group (admin only)
+router.patch(
+  '/:id',
+  auth('Admin'),
+  validateRequest(GroupValidation.updateGroupValidationSchema),
+  GroupController.updateGroup
+);
+
+// Delete group (any authenticated user, creator-specific in service)
+router.delete(
+  '/:id',
+  auth('Common'),
+  validateRequest(GroupValidation.deleteGroupValidationSchema),
+  GroupController.deleteGroup
+);
+
+// Get my groups (any authenticated user)
+router.get('/my-groups', auth('Common'), GroupController.getMyGroups);
+
+// Get my joined or pending groups (any authenticated user)
+router.get('/my-join-groups', auth('Common'), GroupController.getMyJoinGroups);
+
+// Get group suggestions (any authenticated user)
+router.get('/suggestions', auth('Common'), GroupController.getGroupSuggestions);
+
+// Group Invite Routes
+
+// Send group invite (any authenticated user, member/admin in service)
+router.post(
+  '/invites/send',
+  auth('Common'),
+  validateRequest(GroupValidation.sendInviteValidationSchema),
+  GroupInviteController.sendInvite
+);
+
+// Accept group invite (any authenticated user)
+router.post(
+  '/invites/accept',
+  auth('Common'),
+  validateRequest(GroupValidation.acceptInviteValidationSchema),
+  GroupInviteController.acceptInvite
+);
+
+// Decline group invite (any authenticated user)
+router.post(
+  '/invites/decline',
+  auth('Common'),
+  validateRequest(GroupValidation.declineInviteValidationSchema),
+  GroupInviteController.declineInvite
+);
+
+// Cancel group invite (any authenticated user, sender/admin in service)
+router.post(
+  '/invites/cancel',
+  auth('Common'),
+  validateRequest(GroupValidation.cancelInviteValidationSchema),
+  GroupInviteController.cancelInvite
+);
+
+// Get my group invites (any authenticated user)
+router.get(
+  '/invites/my-invites',
+  auth('Common'),
+  GroupInviteController.getMyInvites
+);
 
 export const GroupRoutes = router;

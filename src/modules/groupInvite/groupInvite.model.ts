@@ -1,7 +1,8 @@
 import mongoose, { Schema } from 'mongoose';
 import { IGroupInvite, IGroupInviteModel } from './groupInvite.interface';
+import paginate from '../../common/plugins/paginate';
 
-const GroupInviteSchema = new Schema<IGroupInvite,IGroupInviteModel>(
+const groupInviteSchema = new Schema<IGroupInvite,IGroupInviteModel>(
   {
     from: {
       type: Schema.Types.ObjectId,
@@ -37,9 +38,12 @@ const GroupInviteSchema = new Schema<IGroupInvite,IGroupInviteModel>(
   }
 );
 
+groupInviteSchema.plugin(paginate);
+
+
 const GroupInvite = mongoose.model<IGroupInvite,IGroupInviteModel>(
   'GroupInvite',
-  GroupInviteSchema
+  groupInviteSchema
 );
 
 export default GroupInvite;

@@ -1,99 +1,35 @@
+import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
+import pick from '../../shared/pick';
 import { GroupService } from './group.services';
 
-// Creates a new travel group
-const createGroup = catchAsync(async (req, res) => {
+const createGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  req.body.creatorId = userId;
-  req.body.groupImage = 'Uploads/groups'; // Default group image path
-  
-  const result = await GroupService.createGroup(req.body);
+  const payload = req.body;
+  const result = await GroupService.createGroup(userId, payload);
   sendResponse(res, {
-    code: StatusCodes.CREATED,
+    code: StatusCodes.OK,
     message: 'Group created successfully',
     data: result,
   });
 });
 
-// Allows a user to join a travel group
-const joinGroup = catchAsync(async (req, res) => {
+const joinGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { groupId } = req.params;
+  const { groupId } = req.body;
   const result = await GroupService.joinGroup(userId, groupId);
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Join request processed successfully',
+    message: 'Group join request sent or joined successfully',
     data: result,
   });
 });
 
-// Approves a user's join request for a private travel group
-const approveJoinRequest = catchAsync(async (req, res) => {
-  const { userId } = req.user; // Admin ID
-  const { groupId, userId: targetUserId } = req.params; // User to approve
-  const result = await GroupService.approveJoinRequest(userId, groupId, targetUserId);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Join request approved successfully',
-    data: result,
-  });
-});
-
-// Sends an invitation to join a travel group
-const sendGroupInvite = catchAsync(async (req, res) => {
-  const { userId } = req.user; // Sender ID
-  const { toUserId, groupId } = req.body;
-  const result = await GroupService.sendGroupInvite(userId, toUserId, groupId);
-  sendResponse(res, {
-    code: StatusCodes.CREATED,
-    message: 'Group invite sent successfully',
-    data: result,
-  });
-});
-
-// Accepts a group invitation
-const acceptGroupInvite = catchAsync(async (req, res) => {
+const leaveGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { inviteId } = req.params;
-  const result = await GroupService.acceptGroupInvite(userId, inviteId);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Group invite accepted successfully',
-    data: result,
-  });
-});
-
-// Declines a group invitation
-const declineGroupInvite = catchAsync(async (req, res) => {
-  const { userId } = req.user;
-  const { inviteId } = req.params;
-  const result = await GroupService.declineGroupInvite(userId, inviteId);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Group invite declined successfully',
-    data: result,
-  });
-});
-
-// Promotes group members to co-leaders
-const addCoLeadersInGroup = catchAsync(async (req, res) => {
-  const { userId } = req.user; // Admin ID
-  const { groupId } = req.params;
-  const { coLeaders } = req.body; // Array of user IDs to promote
-  const result = await GroupService.addCoLeadersInGroup(userId, groupId, coLeaders);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Co-leaders added successfully',
-    data: result,
-  });
-});
-
-// Allows a user to leave a travel group
-const leaveGroup = catchAsync(async (req, res) => {
-  const { userId } = req.user;
-  const { groupId } = req.params;
+  const { groupId } = req.body;
   const result = await GroupService.leaveGroup(userId, groupId);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -102,25 +38,152 @@ const leaveGroup = catchAsync(async (req, res) => {
   });
 });
 
-// Deletes a travel group
-const deleteGroup = catchAsync(async (req, res) => {
+const approveJoinRequest = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { groupId } = req.params;
-  await GroupService.deleteGroup(userId, groupId);
+  const { groupId, memberId } = req.body;
+  const result = await GroupService.approveJoinRequest(
+    userId,
+    groupId,
+    memberId
+  );
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Group deleted successfully',
-    data: null,
+    message: 'Join request approved successfully',
+    data: result,
   });
 });
 
-// Retrieves a travel group's details
-const getGroup = catchAsync(async (req, res) => {
-  const { groupId } = req.params;
-  const result = await GroupService.getGroup(groupId);
+const rejectJoinRequest = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { groupId, memberId } = req.body;
+  const result = await GroupService.rejectJoinRequest(
+    userId,
+    groupId,
+    memberId
+  );
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Group retrieved successfully',
+    message: 'Join request rejected successfully',
+    data: result,
+  });
+});
+
+const removeMember = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { groupId, memberId } = req.body;
+  const result = await GroupService.removeMember(userId, groupId, memberId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Member removed successfully',
+    data: result,
+  });
+});
+
+const promoteToAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { groupId, memberId } = req.body;
+  const result = await GroupService.promoteToAdmin(userId, groupId, memberId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Member promoted to admin successfully',
+    data: result,
+  });
+});
+
+const demoteAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { groupId, adminId } = req.body;
+  const result = await GroupService.demoteAdmin(userId, groupId, adminId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Admin demoted successfully',
+    data: result,
+  });
+});
+
+const promoteToCoLeader = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { groupId, memberId } = req.body;
+  const result = await GroupService.promoteToCoLeader(
+    userId,
+    groupId,
+    memberId
+  );
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Member promoted to co-leader successfully',
+    data: result,
+  });
+});
+
+const demoteCoLeader = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { groupId, coLeaderId } = req.body;
+  const result = await GroupService.demoteCoLeader(userId, groupId, coLeaderId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Co-leader demoted successfully',
+    data: result,
+  });
+});
+
+const updateGroup = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { id } = req.params;
+  const payload = req.body;
+  const result = await GroupService.updateGroup(userId, id, payload);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Group updated successfully',
+    data: result,
+  });
+});
+
+const deleteGroup = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { id } = req.params;
+  const result = await GroupService.deleteGroup(userId, id);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Group deleted successfully',
+    data: result,
+  });
+});
+
+const getMyGroups = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const filters = pick(req.query, ['name']);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
+  const result = await GroupService.getMyGroups(userId, filters, options);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'My groups retrieved successfully',
+    data: result,
+  });
+});
+
+const getMyJoinGroups = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const filters = pick(req.query, ['name']);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
+  const result = await GroupService.getMyJoinGroups(userId, filters, options);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Joined groups retrieved successfully',
+    data: result,
+  });
+});
+
+const getGroupSuggestions = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { limit = 10, skip = 0, sortBy } = req.query;
+  const result = await GroupService.getGroupSuggestions(userId, Number(limit), {
+    skip: Number(skip),
+    sortBy: sortBy as string,
+  });
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Group suggestions retrieved successfully',
     data: result,
   });
 });
@@ -128,12 +191,17 @@ const getGroup = catchAsync(async (req, res) => {
 export const GroupController = {
   createGroup,
   joinGroup,
-  approveJoinRequest,
-  sendGroupInvite,
-  acceptGroupInvite,
-  declineGroupInvite,
-  addCoLeadersInGroup,
   leaveGroup,
+  approveJoinRequest,
+  rejectJoinRequest,
+  removeMember,
+  promoteToAdmin,
+  demoteAdmin,
+  promoteToCoLeader,
+  demoteCoLeader,
+  updateGroup,
   deleteGroup,
-  getGroup,
+  getMyGroups,
+  getMyJoinGroups,
+  getGroupSuggestions,
 };

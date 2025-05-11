@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { IGroup, IGroupModel } from './group.interface';
+import { GroupPrivacy, IGroup, IGroupModel } from './group.interface';
 import paginate from '../../common/plugins/paginate';
 
 const GroupSchema = new Schema<IGroup, IGroupModel>(
@@ -13,20 +13,15 @@ const GroupSchema = new Schema<IGroup, IGroupModel>(
       type: String,
       required: true,
     },
-    locationName: {
-      type: String,
-      trim: true,
-      required: false,
-      default: '',
-    },
     groupImage: {
       type: String,
       default: null,
     },
     privacy: {
       type: String,
-      enum: ['public', 'private'],
+      enum: GroupPrivacy,
       required: true,
+      default: GroupPrivacy.PUBLIC,
     },
     admins: [
       {
@@ -66,6 +61,7 @@ const GroupSchema = new Schema<IGroup, IGroupModel>(
       latitude: { type: Number, required: false },
       longitude: { type: Number, required: false },
     },
+    locationName: { type: String },
     isDeleted: {
       type: Boolean,
       default: false,

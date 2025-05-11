@@ -17,7 +17,7 @@ interface IAdminOrSuperAdminPayload {
 }
 
 // Helper function to filter user fields based on privacy settings
-export const filterUserFields = async (
+ const filterUserFields = async (
   user: TUser,
   requesterId: string | null // null if fetching own profile
 ): Promise<Partial<TUser>> => {
