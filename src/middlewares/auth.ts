@@ -28,7 +28,6 @@ const auth = (...roles: string[]) =>
       req.get('User-Agent') || 'unknown'
     );
 
-    console.log(verifyUser)
     if (verifyUser) {
       req.user = verifyUser;
     } else {
@@ -60,10 +59,9 @@ const auth = (...roles: string[]) =>
         throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid MFA token.');
       }
     }
-
-
     if (roles.length) {
       const userRole = roleRights.get(verifyUser?.role);
+      console.log(userRole)
       const hasRole = userRole?.some(role => roles.includes(role));
       if (!hasRole) {
         throw new ApiError(

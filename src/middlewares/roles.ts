@@ -1,5 +1,5 @@
 export const roleRights = new Map<string, string[]>([
-  ['User', ['Common']],
+  ['User', ['Common', 'User']],
   ['Admin', ['Common', 'Admin']],
   ['Super_Admin', ['Common', 'Admin', 'Super_Admin']],
 ]);

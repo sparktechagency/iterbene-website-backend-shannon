@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { ConnectionsController } from './connections.controller';
 import auth from '../../middlewares/auth';
+import validateRequest from '../../shared/validateRequest';
+import { ConnectionValidation } from './connections.validations';
 
 const router = Router();
 

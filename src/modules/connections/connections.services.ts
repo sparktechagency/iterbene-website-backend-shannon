@@ -23,10 +23,18 @@ const addConnection = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot connect yourself');
   }
 
-  if (sentByUser.blockedUsers?.includes(new mongoose.Types.ObjectId(receivedByUserId))) {
+  if (
+    sentByUser.blockedUsers?.includes(
+      new mongoose.Types.ObjectId(receivedByUserId)
+    )
+  ) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You have blocked this user');
   }
-  if (receivedByUser.blockedUsers?.includes(new mongoose.Types.ObjectId(sentByUserId))) {
+  if (
+    receivedByUser.blockedUsers?.includes(
+      new mongoose.Types.ObjectId(sentByUserId)
+    )
+  ) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You are blocked by this user');
   }
 
@@ -166,18 +174,18 @@ const getMyAllConnections = async (
   return connections;
 };
 const getMyAllRequests = async (
-    filters: Record<string, any>,
-    options: PaginateOptions
-  ): Promise<PaginateResult<IConnections>> => {
-    const query: Record<string, any> = {
-      status: ConnectionStatus.PENDING,
-      receivedBy: filters.userId,
-    };
-  
-    options.sortBy = options.sortBy || '-createdAt';
-    const connections = await Connections.paginate(query, options);
-    return connections;
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IConnections>> => {
+  const query: Record<string, any> = {
+    status: ConnectionStatus.PENDING,
+    receivedBy: filters.userId,
   };
+
+  options.sortBy = options.sortBy || '-createdAt';
+  const connections = await Connections.paginate(query, options);
+  return connections;
+};
 const getSentMyRequests = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -206,7 +214,9 @@ const blockUser = async (blockerId: string, blockedUserId: string) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot block yourself');
   }
 
-  if (blocker.blockedUsers?.includes(new mongoose.Types.ObjectId(blockedUserId))) {
+  if (
+    blocker.blockedUsers?.includes(new mongoose.Types.ObjectId(blockedUserId))
+  ) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already blocked');
   }
 
@@ -223,7 +233,6 @@ const blockUser = async (blockerId: string, blockedUserId: string) => {
 
   return { message: 'User blocked successfully' };
 };
-
 
 const unblockUser = async (blockerId: string, blockedUserId: string) => {
   const blocker = await User.findById(blockerId);
@@ -281,12 +290,22 @@ const checkConnectionStatus = async (
 
   return connection ? connection.status : null;
 };
-
 const getConnectionSuggestions = async (
   userId: string,
-  limit: number = 10
-): Promise<string[]> => {
-  const user = await User.findById(userId).select('blockedUsers');
+  limit: number = 10,
+  options: { skip?: number; sortBy?: string } = {}
+): Promise<{ users: any[]; total: number }> => {
+  // Fetch the requesting user
+  const user = await User.findById(userId).select(
+    'blockedUsers city locationName profession age fullName'
+  );
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+
+  console.log(user)
+
+  // Get existing connections
   const connections = await Connections.find({
     $or: [{ sentBy: userId }, { receivedBy: userId }],
     status: ConnectionStatus.ACCEPTED,
@@ -298,30 +317,160 @@ const getConnectionSuggestions = async (
       : conn.sentBy.toString()
   );
 
-  const friendConnections = await Connections.find({
-    $or: [{ sentBy: { $in: friends } }, { receivedBy: { $in: friends } }],
-    status: ConnectionStatus.ACCEPTED,
+  // Get pending or declined connections to exclude
+  const pendingOrDeclined = await Connections.find({
+    $or: [
+      {
+        sentBy: userId,
+        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
+      },
+      {
+        receivedBy: userId,
+        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
+      },
+    ],
   }).select('sentBy receivedBy');
 
-  const suggestions: string[] = [];
-  friendConnections.forEach(conn => {
-    const otherUser =
+  const excludeUsers = [
+    userId,
+    ...friends,
+    ...(user.blockedUsers?.map(id => id.toString()) || []),
+    ...pendingOrDeclined.map(conn =>
       conn.sentBy.toString() === userId
         ? conn.receivedBy.toString()
-        : conn.sentBy.toString();
-    if (
-      otherUser !== userId &&
-      !friends.includes(otherUser) &&
-      !suggestions.includes(otherUser) &&
-      !user?.blockedUsers?.includes(new mongoose.Types.ObjectId(otherUser))
-    ) {
-      suggestions.push(otherUser);
+        : conn.sentBy.toString()
+    ),
+  ];
+
+  // Initialize suggestions array
+  let suggestedUsers: any[] = [];
+  let total = 0;
+
+  // Step 1: For new users with no connections
+  if (friends.length === 0) {
+    // Check if user has any relevant profile attributes
+    const hasAttributes =
+      user.city || user.locationName || user.profession || user.age;
+
+    // If no attributes and no connections, return empty (mimics Facebook for brand-new users)
+    if (!hasAttributes) {
+      return { users: [], total: 0 };
     }
-  });
 
-  return suggestions.slice(0, limit);
+    // Suggest based on profile attributes
+    const query: Record<string, any> = {
+      _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
+      isDeleted: false,
+      isBanned: false,
+      isBlocked: false,
+      $or: [],
+    };
+
+    // Add filters based on profile attributes
+    if (user.city) {
+      query.$or.push({ city: user.city });
+    }
+    if (user.locationName) {
+      query.$or.push({ locationName: user.locationName });
+    }
+    if (user.profession) {
+      query.$or.push({ profession: user.profession });
+    }
+    if (user.age) {
+      query.$or.push({
+        age: { $gte: user.age - 10, $lte: user.age + 10 }, 
+      });
+    }
+
+    // Fetch users matching profile attributes
+    suggestedUsers = await User.find(query)
+      .select(
+        'username firstName lastName profileImage city locationName profession age'
+      )
+      .skip(options.skip || 0)
+      .limit(limit)
+      .sort(options.sortBy || '-createdAt'); // Sort by newest users (mimics Facebook's active user bias)
+
+    total = await User.countDocuments(query);
+  } else {
+    // Step 2: For users with connections, suggest friends of friends
+    const friendConnections = await Connections.find({
+      $or: [{ sentBy: { $in: friends } }, { receivedBy: { $in: friends } }],
+      status: ConnectionStatus.ACCEPTED,
+    }).select('sentBy receivedBy');
+
+    const friendOfFriends: { [key: string]: number } = {};
+    friendConnections.forEach(conn => {
+      const otherUser =
+        conn.sentBy.toString() === userId
+          ? conn.receivedBy.toString()
+          : conn.sentBy.toString();
+      if (!excludeUsers.includes(otherUser)) {
+        friendOfFriends[otherUser] = (friendOfFriends[otherUser] || 0) + 1;
+      }
+    });
+
+    // Sort by number of mutual friends
+    const suggestedUserIds = Object.keys(friendOfFriends)
+      .sort((a, b) => friendOfFriends[b] - friendOfFriends[a])
+      .slice(0, 100); // Limit to avoid performance issues
+
+    // Step 3: Prioritize profile similarity
+    const query: Record<string, any> = {
+      _id: { $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)) },
+      isDeleted: false,
+      isBanned: false,
+      isBlocked: false,
+      $or: [],
+    };
+
+    if (user.city) {
+      query.$or.push({ city: user.city });
+    }
+    if (user.locationName) {
+      query.$or.push({ locationName: user.locationName });
+    }
+    if (user.profession) {
+      query.$or.push({ profession: user.profession });
+    }
+    if (user.age) {
+      query.$or.push({
+        age: { $gte: user.age - 10, $lte: user.age + 10 },
+      });
+    }
+
+    // Fetch users, prioritizing profile matches if attributes exist
+    if (query.$or.length > 0) {
+      suggestedUsers = await User.find(query)
+        .select(
+          'username firstName lastName profileImage city locationName profession age'
+        )
+        .skip(options.skip || 0)
+        .limit(limit)
+        .sort(options.sortBy || '-createdAt');
+      total = await User.countDocuments(query);
+    } else {
+      // Fallback to all friends of friends
+      suggestedUsers = await User.find({
+        _id: {
+          $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)),
+        },
+      })
+        .select(
+          'username firstName lastName profileImage city locationName profession age'
+        )
+        .skip(options.skip || 0)
+        .limit(limit)
+        .sort(options.sortBy || '-createdAt');
+      total = suggestedUserIds.length;
+    }
+  }
+
+  return {
+    users: suggestedUsers,
+    total,
+  };
 };
-
 export const ConnectionsService = {
   addConnection,
   acceptConnection,
