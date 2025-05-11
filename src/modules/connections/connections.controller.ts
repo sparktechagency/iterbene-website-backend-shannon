@@ -107,28 +107,6 @@ const getSentMyRequests = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const blockUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { blockedUserId } = req.body;
-  const result = await ConnectionsService.blockUser(userId, blockedUserId);
-  sendResponse(res, {
-    code: 200,
-    message: 'User blocked successfully',
-    data: result,
-  });
-});
-
-const unblockUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { blockedUserId } = req.body;
-  const result = await ConnectionsService.unblockUser(userId, blockedUserId);
-  sendResponse(res, {
-    code: 200,
-    message: 'User unblocked successfully',
-    data: result,
-  });
-});
-
 const getMutualConnections = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { userId2 } = req.params;
@@ -181,8 +159,6 @@ export const ConnectionsController = {
   getMyAllConnections,
   getMyAllRequests,
   getSentMyRequests,
-  blockUser,
-  unblockUser,
   getMutualConnections,
   checkConnectionStatus,
   getConnectionSuggestions,

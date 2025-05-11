@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { ConnectionsController } from './connections.controller';
 import auth from '../../middlewares/auth';
-import validateRequest from '../../shared/validateRequest';
-import { ConnectionValidation } from './connections.validations';
 
 const router = Router();
 
@@ -45,10 +43,6 @@ router.get(
   auth('User'),
   ConnectionsController.getSentMyRequests
 );
-
-router.post('/block', auth('User'), ConnectionsController.blockUser);
-
-router.post('/unblock', auth('User'), ConnectionsController.unblockUser);
 
 router.get(
   '/mutual/:userId2',

@@ -2,40 +2,62 @@ import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../errors/ApiError';
 import { User } from '../user/user.model';
 import { Connections } from './connections.model';
-import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import { ConnectionStatus, IConnections } from './connections.interface';
 import mongoose from 'mongoose';
+import { PaginateOptions, PaginateResult } from '../../types/paginate';
+import { UserService } from '../user/user.service';
+import { validateUsers } from '../../utils/validateUsers';
+import { ConnectionPrivacy, PrivacyVisibility } from '../user/user.interface';
+import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 
 const addConnection = async (
   sentByUserId: string,
   receivedByUserId: string
 ) => {
-  const sentByUser = await User.findById(sentByUserId);
-  if (!sentByUser) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Sent By User not found');
-  }
-  const receivedByUser = await User.findById(receivedByUserId);
-  if (!receivedByUser) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Received By User not found');
+  const { user1: sentByUser, user2: receivedByUser } = await validateUsers(
+    sentByUserId,
+    receivedByUserId,
+    'Connect'
+  );
+
+  if (receivedByUser.connectionPrivacy === ConnectionPrivacy.PUBLIC) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'This user does not accept connection requests'
+    );
   }
 
-  if (sentByUserId === receivedByUserId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot connect yourself');
-  }
+  if (receivedByUser.connectionPrivacy === ConnectionPrivacy.FRIEND_TO_FRIEND) {
+    const senderFriends = await Connections.find({
+      $or: [{ sentBy: sentByUserId }, { receivedBy: sentByUserId }],
+      status: ConnectionStatus.ACCEPTED,
+    }).select('sentBy receivedBy');
 
-  if (
-    sentByUser.blockedUsers?.includes(
-      new mongoose.Types.ObjectId(receivedByUserId)
-    )
-  ) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You have blocked this user');
-  }
-  if (
-    receivedByUser.blockedUsers?.includes(
-      new mongoose.Types.ObjectId(sentByUserId)
-    )
-  ) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You are blocked by this user');
+    const receiverFriends = await Connections.find({
+      $or: [{ sentBy: receivedByUserId }, { receivedBy: receivedByUserId }],
+      status: ConnectionStatus.ACCEPTED,
+    }).select('sentBy receivedBy');
+
+    const senderFriendIds = senderFriends.map(conn =>
+      conn.sentBy.toString() === sentByUserId
+        ? conn.receivedBy.toString()
+        : conn.sentBy.toString()
+    );
+    const receiverFriendIds = receiverFriends.map(conn =>
+      conn.sentBy.toString() === receivedByUserId
+        ? conn.receivedBy.toString()
+        : conn.sentBy.toString()
+    );
+
+    const hasMutualFriends = senderFriendIds.some(id =>
+      receiverFriendIds.includes(id)
+    );
+    if (!hasMutualFriends) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'You must have mutual friends to send a connection request'
+      );
+    }
   }
 
   const existingConnection = await Connections.findOne({
@@ -80,6 +102,7 @@ const acceptConnection = async (connectionId: string, userId: string) => {
 
   connection.status = ConnectionStatus.ACCEPTED;
   await connection.save();
+
   return connection;
 };
 
@@ -132,6 +155,7 @@ const removeConnection = async (connectionId: string, userId: string) => {
   }
 
   await Connections.findByIdAndDelete(connectionId);
+
   return { message: 'Connection removed successfully' };
 };
 
@@ -173,6 +197,7 @@ const getMyAllConnections = async (
   const connections = await Connections.paginate(query, options);
   return connections;
 };
+
 const getMyAllRequests = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -186,6 +211,7 @@ const getMyAllRequests = async (
   const connections = await Connections.paginate(query, options);
   return connections;
 };
+
 const getSentMyRequests = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -198,54 +224,6 @@ const getSentMyRequests = async (
   options.sortBy = options.sortBy || '-createdAt';
   const connections = await Connections.paginate(query, options);
   return connections;
-};
-
-const blockUser = async (blockerId: string, blockedUserId: string) => {
-  const blocker = await User.findById(blockerId);
-  if (!blocker) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Blocker user not found');
-  }
-  const blockedUser = await User.findById(blockedUserId);
-  if (!blockedUser) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Blocked user not found');
-  }
-
-  if (blockerId === blockedUserId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot block yourself');
-  }
-
-  if (
-    blocker.blockedUsers?.includes(new mongoose.Types.ObjectId(blockedUserId))
-  ) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already blocked');
-  }
-
-  blocker.blockedUsers = blocker.blockedUsers || [];
-  blocker.blockedUsers.push(new mongoose.Types.ObjectId(blockedUserId));
-  await blocker.save();
-
-  await Connections.deleteMany({
-    $or: [
-      { sentBy: blockerId, receivedBy: blockedUserId },
-      { sentBy: blockedUserId, receivedBy: blockerId },
-    ],
-  });
-
-  return { message: 'User blocked successfully' };
-};
-
-const unblockUser = async (blockerId: string, blockedUserId: string) => {
-  const blocker = await User.findById(blockerId);
-  if (!blocker) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Blocker user not found');
-  }
-
-  blocker.blockedUsers = blocker.blockedUsers?.filter(
-    id => id.toString() !== blockedUserId
-  );
-  await blocker.save();
-
-  return { message: 'User unblocked successfully' };
 };
 
 const getMutualConnections = async (
@@ -290,22 +268,19 @@ const checkConnectionStatus = async (
 
   return connection ? connection.status : null;
 };
+
 const getConnectionSuggestions = async (
   userId: string,
   limit: number = 10,
   options: { skip?: number; sortBy?: string } = {}
 ): Promise<{ users: any[]; total: number }> => {
-  // Fetch the requesting user
   const user = await User.findById(userId).select(
-    'blockedUsers city locationName profession age fullName'
+    'city locationName profession age privacySettings connectionPrivacy'
   );
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
-  console.log(user)
-
-  // Get existing connections
   const connections = await Connections.find({
     $or: [{ sentBy: userId }, { receivedBy: userId }],
     status: ConnectionStatus.ACCEPTED,
@@ -317,7 +292,6 @@ const getConnectionSuggestions = async (
       : conn.sentBy.toString()
   );
 
-  // Get pending or declined connections to exclude
   const pendingOrDeclined = await Connections.find({
     $or: [
       {
@@ -331,10 +305,20 @@ const getConnectionSuggestions = async (
     ],
   }).select('sentBy receivedBy');
 
+  const blockedUsers = await BlockedUser.find({
+    $or: [{ blockerId: userId }, { blockedId: userId }],
+  }).select('blockerId blockedId');
+
+  const blockedUserIds = blockedUsers.map(block =>
+    block.blockerId.toString() === userId
+      ? block.blockedId.toString()
+      : block.blockerId.toString()
+  );
+
   const excludeUsers = [
     userId,
     ...friends,
-    ...(user.blockedUsers?.map(id => id.toString()) || []),
+    ...blockedUserIds,
     ...pendingOrDeclined.map(conn =>
       conn.sentBy.toString() === userId
         ? conn.receivedBy.toString()
@@ -342,22 +326,22 @@ const getConnectionSuggestions = async (
     ),
   ];
 
-  // Initialize suggestions array
   let suggestedUsers: any[] = [];
   let total = 0;
 
-  // Step 1: For new users with no connections
   if (friends.length === 0) {
-    // Check if user has any relevant profile attributes
     const hasAttributes =
-      user.city || user.locationName || user.profession || user.age;
+      (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) ||
+      (user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
+        user.locationName) ||
+      (user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
+        user.profession) ||
+      (user.privacySettings.age === PrivacyVisibility.PUBLIC && user.age);
 
-    // If no attributes and no connections, return empty (mimics Facebook for brand-new users)
     if (!hasAttributes) {
       return { users: [], total: 0 };
     }
 
-    // Suggest based on profile attributes
     const query: Record<string, any> = {
       _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
       isDeleted: false,
@@ -366,34 +350,51 @@ const getConnectionSuggestions = async (
       $or: [],
     };
 
-    // Add filters based on profile attributes
-    if (user.city) {
-      query.$or.push({ city: user.city });
-    }
-    if (user.locationName) {
-      query.$or.push({ locationName: user.locationName });
-    }
-    if (user.profession) {
-      query.$or.push({ profession: user.profession });
-    }
-    if (user.age) {
+    if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
       query.$or.push({
-        age: { $gte: user.age - 10, $lte: user.age + 10 }, 
+        city: user.city,
+        'privacySettings.city': PrivacyVisibility.PUBLIC,
+      });
+    }
+    if (
+      user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
+      user.locationName
+    ) {
+      query.$or.push({
+        locationName: user.locationName,
+        'privacySettings.locationName': PrivacyVisibility.PUBLIC,
+      });
+    }
+    if (
+      user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
+      user.profession
+    ) {
+      query.$or.push({
+        profession: user.profession,
+        'privacySettings.profession': PrivacyVisibility.PUBLIC,
+      });
+    }
+    if (user.privacySettings.age === PrivacyVisibility.PUBLIC && user.age) {
+      query.$or.push({
+        age: { $gte: user.age - 10, $lte: user.age + 10 },
+        'privacySettings.age': PrivacyVisibility.PUBLIC,
       });
     }
 
-    // Fetch users matching profile attributes
+    if (query.$or.length === 0) {
+      return { users: [], total: 0 };
+    }
+
     suggestedUsers = await User.find(query)
       .select(
         'username firstName lastName profileImage city locationName profession age'
       )
       .skip(options.skip || 0)
       .limit(limit)
-      .sort(options.sortBy || '-createdAt'); // Sort by newest users (mimics Facebook's active user bias)
+      .sort(options.sortBy || '-createdAt');
 
     total = await User.countDocuments(query);
   } else {
-    // Step 2: For users with connections, suggest friends of friends
     const friendConnections = await Connections.find({
       $or: [{ sentBy: { $in: friends } }, { receivedBy: { $in: friends } }],
       status: ConnectionStatus.ACCEPTED,
@@ -410,12 +411,10 @@ const getConnectionSuggestions = async (
       }
     });
 
-    // Sort by number of mutual friends
     const suggestedUserIds = Object.keys(friendOfFriends)
       .sort((a, b) => friendOfFriends[b] - friendOfFriends[a])
-      .slice(0, 100); // Limit to avoid performance issues
+      .slice(0, 100);
 
-    // Step 3: Prioritize profile similarity
     const query: Record<string, any> = {
       _id: { $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)) },
       isDeleted: false,
@@ -424,22 +423,37 @@ const getConnectionSuggestions = async (
       $or: [],
     };
 
-    if (user.city) {
-      query.$or.push({ city: user.city });
+    if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
+      query.$or.push({
+        city: user.city,
+        'privacySettings.city': PrivacyVisibility.PUBLIC,
+      });
     }
-    if (user.locationName) {
-      query.$or.push({ locationName: user.locationName });
+    if (
+      user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
+      user.locationName
+    ) {
+      query.$or.push({
+        locationName: user.locationName,
+        'privacySettings.locationName': PrivacyVisibility.PUBLIC,
+      });
     }
-    if (user.profession) {
-      query.$or.push({ profession: user.profession });
+    if (
+      user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
+      user.profession
+    ) {
+      query.$or.push({
+        profession: user.profession,
+        'privacySettings.profession': PrivacyVisibility.PUBLIC,
+      });
     }
-    if (user.age) {
+    if (user.privacySettings.age === PrivacyVisibility.PUBLIC && user.age) {
       query.$or.push({
         age: { $gte: user.age - 10, $lte: user.age + 10 },
+        'privacySettings.age': PrivacyVisibility.PUBLIC,
       });
     }
 
-    // Fetch users, prioritizing profile matches if attributes exist
     if (query.$or.length > 0) {
       suggestedUsers = await User.find(query)
         .select(
@@ -450,7 +464,6 @@ const getConnectionSuggestions = async (
         .sort(options.sortBy || '-createdAt');
       total = await User.countDocuments(query);
     } else {
-      // Fallback to all friends of friends
       suggestedUsers = await User.find({
         _id: {
           $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)),
@@ -464,6 +477,16 @@ const getConnectionSuggestions = async (
         .sort(options.sortBy || '-createdAt');
       total = suggestedUserIds.length;
     }
+
+    suggestedUsers = await Promise.all(
+      suggestedUsers.map(async suggestedUser => {
+        const filteredUser = await UserService.filterUserFields(
+          suggestedUser,
+          userId
+        );
+        return filteredUser;
+      })
+    );
   }
 
   return {
@@ -471,6 +494,7 @@ const getConnectionSuggestions = async (
     total,
   };
 };
+
 export const ConnectionsService = {
   addConnection,
   acceptConnection,
@@ -480,8 +504,6 @@ export const ConnectionsService = {
   getMyAllConnections,
   getMyAllRequests,
   getSentMyRequests,
-  blockUser,
-  unblockUser,
   getMutualConnections,
   checkConnectionStatus,
   getConnectionSuggestions,

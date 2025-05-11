@@ -12,10 +12,12 @@ export type TUser = {
   email: string;
   aboutMe?: string;
   password: string;
-  passwordHistory: { hash: string; createdAt: Date }[];
   phoneNumber?: string;
   status: string;
-  location?: { latitude: number; longitude: number };
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
   locationName?: string;
   address?: string;
   gender?: string;
@@ -27,24 +29,49 @@ export type TUser = {
   country?: string;
   city?: string;
   state?: string;
-  isEmailVerified: boolean;
   referredAs?: string;
+  passwordHistory?: {
+    hash: string;
+    createdAt: Date;
+  }[];
+  mfaSecret?: string;
+  mfaEnabled: boolean;
+  isEmailVerified: boolean;
   isBanned: boolean;
   banUntil?: Date;
   isOnline: boolean;
   isDeleted: boolean;
   isBlocked: boolean;
   lastPasswordChange?: Date;
-
   isResetPassword: boolean;
   failedLoginAttempts: number;
-  friends: Types.ObjectId[];
-  blockedUsers: Types.ObjectId[];
   lockUntil?: Date;
-  mfaSecret?: string;
-  mfaEnabled: boolean;
+  privacySettings: {
+    age: PrivacyVisibility;
+    nickname: PrivacyVisibility;
+    gender: PrivacyVisibility;
+    location: PrivacyVisibility;
+    locationName: PrivacyVisibility;
+    city: PrivacyVisibility;
+    profession: PrivacyVisibility;
+    aboutMe: PrivacyVisibility;
+    phoneNumber: PrivacyVisibility;
+    maritalStatus: PrivacyVisibility;
+  };
+  connectionPrivacy: ConnectionPrivacy;
 };
 
+export enum PrivacyVisibility {
+  ONLY_ME = 'Only Me',
+  PUBLIC = 'Public',
+  FRIENDS = 'Friends',
+}
+
+// Define connection privacy options
+export enum ConnectionPrivacy {
+  PUBLIC = 'Public',
+  FRIEND_TO_FRIEND = 'Friend to Friend',
+}
 export interface UserModal extends Model<TUser> {
   paginate: (
     filter: object,

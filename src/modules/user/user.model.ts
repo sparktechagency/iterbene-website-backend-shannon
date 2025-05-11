@@ -1,11 +1,16 @@
 import { model, Schema } from 'mongoose';
-import { TUser, UserModal } from './user.interface';
+import {
+  ConnectionPrivacy,
+  PrivacyVisibility,
+  TUser,
+  UserModal,
+} from './user.interface';
 import paginate from '../../common/plugins/paginate';
 import bcrypt from 'bcrypt';
 import { config } from '../../config';
 import { Gender, MaritalStatus, UserStatus } from './user.constant';
 import { Roles } from '../../middlewares/roles';
-// User Schema Definition
+
 const userSchema = new Schema<TUser, UserModal>(
   {
     firstName: {
@@ -88,8 +93,6 @@ const userSchema = new Schema<TUser, UserModal>(
       },
       required: [false, 'Marital status is required'],
     },
-    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     description: { type: String },
     role: {
       type: String,
@@ -154,6 +157,63 @@ const userSchema = new Schema<TUser, UserModal>(
       default: 0,
     },
     lockUntil: { type: Date },
+    privacySettings: {
+      age: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      nickname: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      gender: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      location: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      locationName: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      city: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      profession: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      aboutMe: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      phoneNumber: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.ONLY_ME,
+      },
+      maritalStatus: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+    },
+    connectionPrivacy: {
+      type: String,
+      enum: ConnectionPrivacy,
+      default: ConnectionPrivacy.PUBLIC,
+    },
   },
   {
     timestamps: true,
@@ -197,5 +257,13 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Export the User model
+// Indexes for frequent queries
+userSchema.index({ username: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ city: 1 });
+
+userSchema.index({ locationName: 1 });
+userSchema.index({ profession: 1 });
+userSchema.index({ age: 1 });
+
 export const User = model<TUser, UserModal>('User', userSchema);
