@@ -13,6 +13,7 @@ import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 import { ConnectionStatus } from '../connections/connections.interface';
 import { Connections } from '../connections/connections.model';
 import { Follower } from '../followers/followers.model';
+import { User } from '../user/user.model';
 
 interface CreatePostPayload {
   userId: Types.ObjectId;
@@ -217,6 +218,28 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
   }
 
   return post.populate('media itinerary userId sourceId');
+}
+
+async function getPostById(postId: string): Promise<IPost> {
+  const post = await Post.findById(postId);
+  if (!post) throw new ApiError(404, 'Post not found');
+  return post.populate('media itinerary userId sourceId');
+}
+
+async function updatePost(
+  postId: string,
+  payload: Partial<CreatePostPayload>
+): Promise<IPost | null> {
+  const { userId, content, privacy } = payload;
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, 'User not found');
+  const post = await Post.findById(postId);
+  if (!post) throw new ApiError(404, 'Post not found');
+  if (!userId || post.userId.toString() !== userId.toString()) {
+    throw new ApiError(403, 'Not authorized to update this post');
+  }
+  await Post.updateOne({ _id: postId }, { $set: { content, privacy } });
+  return Post.findById(postId).populate('media itinerary userId sourceId');
 }
 
 async function sharePost(payload: SharePostPayload): Promise<IPost> {

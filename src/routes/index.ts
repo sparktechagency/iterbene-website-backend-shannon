@@ -16,6 +16,7 @@ import { FollowerRoutes } from '../modules/followers/followers.route';
 import { EventRoutes } from '../modules/event/event.routes';
 import { StoryRoutes } from '../modules/story/story.route';
 import { PostRoutes } from '../modules/post/post.routes';
+import { ItineraryRoutes } from '../modules/Itinerary/itinerary.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -58,6 +59,10 @@ const apiRoutes = [
   {
     path: '/posts',
     route: PostRoutes,
+  },
+  {
+    path:"/itinerary",
+    route:ItineraryRoutes
   },
   {
     path: '/chats',

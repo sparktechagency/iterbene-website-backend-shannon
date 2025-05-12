@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
 import pick from '../../shared/pick';
-import { Types } from 'mongoose';
 import { ItineraryService } from './itinerary.service';
 
 const createItinerary = catchAsync(async (req: Request, res: Response) => {
@@ -20,9 +19,8 @@ const createItinerary = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getItinerary = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  const result = await ItineraryService.getItinerary(id);
+  const { itineraryId } = req.params;
+  const result = await ItineraryService.getItinerary(itineraryId);
 
   sendResponse(res, {
     code: StatusCodes.OK,

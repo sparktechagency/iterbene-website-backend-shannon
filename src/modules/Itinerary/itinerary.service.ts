@@ -5,10 +5,10 @@ import ApiError from '../../errors/ApiError';
 
  async function createItinerary(
   userId: Types.ObjectId,
-  input: Omit<IItinerary, 'userId' | 'postId' | 'createdAt' | 'updatedAt'>
+  payload: Partial<IItinerary>
 ): Promise<IItinerary> {
   const itinerary = await Itinerary.create({
-    ...input,
+    ...payload,
     userId,
     postId: new Types.ObjectId(), 
   });
