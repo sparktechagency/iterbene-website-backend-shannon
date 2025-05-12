@@ -242,6 +242,12 @@ async function updatePost(
   return Post.findById(postId).populate('media itinerary userId sourceId');
 }
 
+async function deletePost(postId: string): Promise<IPost> {
+  const post = await Post.findById(postId);
+  if (!post) throw new ApiError(404, 'Post not found');
+  await Post.deleteOne({ _id: postId });
+  return post.populate('media itinerary userId sourceId');
+}
 async function sharePost(payload: SharePostPayload): Promise<IPost> {
   const { userId, originalPostId, content, privacy } = payload;
 

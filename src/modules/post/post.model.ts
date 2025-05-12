@@ -1,6 +1,12 @@
 import { Schema, model } from 'mongoose';
 import paginate from '../../common/plugins/paginate';
-import { IPost, IPostModel, PostPrivacy, PostType, ReactionType } from './post.interface';
+import {
+  IPost,
+  IPostModel,
+  PostPrivacy,
+  PostType,
+  ReactionType,
+} from './post.interface';
 
 const sortedReactionSchema = new Schema({
   type: { type: String, enum: Object.values(ReactionType), required: true },
@@ -29,31 +35,63 @@ const commentSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-const postSchema = new Schema<IPost,IPostModel>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  sourceId: { type: Schema.Types.ObjectId, refPath: 'postType' },
-  postType: { type: String, enum: Object.values(PostType), required: true },
-  content: { type: String, default: '' },
-  media: [{ type: Schema.Types.ObjectId, ref: 'Media' }],
+const postSchema = new Schema<IPost, IPostModel>({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  sourceId: {
+    type: Schema.Types.ObjectId,
+    refPath: 'postType',
+  },
+  postType: {
+    type: String,
+    enum: Object.values(PostType),
+    required: true,
+  },
+  content: {
+    type: String,
+    default: '',
+  },
+  media: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'Media',
+    },
+  ],
   sortedReactions: [sortedReactionSchema],
   visitedLocation: {
     latitude: Number,
     longitude: Number,
   },
   visitedLocationName: String,
-  privacy: { type: String, enum: Object.values(PostPrivacy), required: true },
-  itinerary: { type: Schema.Types.ObjectId, ref: 'Itinerary' },
-  hashtags: [{ type: String, index: true }],
+  privacy: {
+    type: String,
+    enum: Object.values(PostPrivacy),
+    required: true,
+  },
+  itinerary: {
+    type: Schema.Types.ObjectId,
+    ref: 'Itinerary',
+  },
+  hashtags: [
+    {
+      type: String,
+      index: true,
+    },
+  ],
   shareCount: { type: Number, default: 0 },
   isShared: { type: Boolean, default: false },
   originalPostId: { type: Schema.Types.ObjectId, ref: 'Post' },
   itineraryViewCount: { type: Number, default: 0 },
   reactions: [reactionSchema],
   comments: [commentSchema],
+  isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
-
+//add paginate plugin
 postSchema.plugin(paginate);
 
-export const Post = model<IPost,IPostModel>('Post', postSchema);
+export const Post = model<IPost, IPostModel>('Post', postSchema);

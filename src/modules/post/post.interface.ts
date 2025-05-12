@@ -47,6 +47,7 @@ export interface IPost {
   itineraryViewCount: number;
   reactions: IReaction[];
   comments: IComment[];
+  isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
