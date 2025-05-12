@@ -10,10 +10,7 @@ const createItinerary = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const payload = req.body;
 
-  const result = await ItineraryService.createItinerary(
-    new Types.ObjectId(userId),
-    payload
-  );
+  const result = await ItineraryService.createItinerary(userId, payload);
 
   sendResponse(res, {
     code: StatusCodes.CREATED,
@@ -51,4 +48,4 @@ const getUserItineraries = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export { createItinerary, getItinerary, getUserItineraries };
+export const ItineraryController = { createItinerary, getItinerary, getUserItineraries };

@@ -23,12 +23,12 @@ router.post('/reaction', auth('User'), PostController.addOrRemoveReaction);
 // Comment routes
 router.post('/comment', auth('User'), PostController.createComment);
 router.patch(
-  '/comment/:postId/:commentId',
+  '/comment/:commentId',
   auth('User'),
   PostController.updateComment
 );
 router.delete(
-  '/comment/:postId/:commentId',
+  '/comment/:commentId',
   auth('User'),
   PostController.deleteComment
 );

@@ -63,7 +63,7 @@ const sharePost = catchAsync(async (req: Request, res: Response) => {
   const { originalPostId, content, privacy } = req.body;
 
   const result = await PostServices.sharePost({
-    userId: new Types.ObjectId(userId),
+    userId,
     originalPostId,
     content,
     privacy,
@@ -114,8 +114,8 @@ const createComment = catchAsync(async (req: Request, res: Response) => {
 
 const updateComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { postId, commentId } = req.params;
-  const { comment } = req.body;
+  const { commentId } = req.params;
+  const { postId, comment } = req.body;
 
   const result = await PostServices.updateComment({
     userId: new Types.ObjectId(userId),
@@ -133,7 +133,8 @@ const updateComment = catchAsync(async (req: Request, res: Response) => {
 
 const deleteComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { postId, commentId } = req.params;
+  const { commentId } = req.params;
+  const { postId } = req.body;
 
   const result = await PostServices.deleteComment({
     userId: new Types.ObjectId(userId),
@@ -181,12 +182,9 @@ const feedPosts = catchAsync(async (req: Request, res: Response) => {
 
 const getTimelinePosts = catchAsync(async (req: Request, res: Response) => {
   const filter = pick(req.query, ['userId']);
-  const options = pick(req.query, ['page', 'limit']);
+  const options = pick(req.query, ["page", "limit"]);
 
-  const result = await PostServices.getTimelinePosts(filter, {
-    page: parseInt(options.page as string) || 1,
-    limit: parseInt(options.limit as string) || 10,
-  });
+  const result = await PostServices.getTimelinePosts(filter, options);
 
   sendResponse(res, {
     code: StatusCodes.OK,

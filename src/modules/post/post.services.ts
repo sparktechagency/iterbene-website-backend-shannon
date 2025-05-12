@@ -423,76 +423,108 @@ async function feedPosts(
 ): Promise<PaginateResult<IPost>> {
   const { userId } = filters;
 
-  // Validate userId
-  if (!Types.ObjectId.isValid(userId)) {
-    throw new ApiError(400, 'Invalid user ID');
+  // Initialize variables
+  let currentUserId: Types.ObjectId | null = null;
+  let connectedUserIds: Types.ObjectId[] = [];
+  let followedUserIds: Types.ObjectId[] = [];
+  let eligibleUserIds: Types.ObjectId[] = [];
+  let groupIds: Types.ObjectId[] = [];
+  let eventIds: Types.ObjectId[] = [];
+  let blockedUserIds: Types.ObjectId[] = [];
+
+  if (userId) {
+    // Validate userId
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new ApiError(400, 'Invalid user ID');
+    }
+    currentUserId = new Types.ObjectId(userId);
+
+    // Get connected users
+    const connections = await Connections.find({
+      status: ConnectionStatus.ACCEPTED,
+      $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
+    });
+    connectedUserIds = connections.map(
+      c =>
+        new Types.ObjectId(
+          c.sentBy.toString() === userId
+            ? c.receivedBy.toString()
+            : c.sentBy.toString()
+        )
+    );
+
+    // Get followed users
+    const followers = await Follower.find({ followerId: currentUserId });
+    followedUserIds = followers.map(f => f.followedId);
+
+    // Combine user IDs (include current user)
+    eligibleUserIds = [
+      ...new Set([
+        ...connectedUserIds.map(id => id.toString()),
+        ...followedUserIds.map(id => id.toString()),
+        userId,
+      ]),
+    ].map(id => new Types.ObjectId(id));
+
+    // Get groups and events the user is part of (assuming members field exists)
+    const groups = await Group.find({ members: currentUserId });
+    const events = await Event.find({ members: currentUserId });
+    groupIds = groups.map(g => g._id);
+    eventIds = events.map(e => e._id);
+
+    // Get blocked users
+    const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
+    blockedUserIds = blockedUsers.map(b => b.blockedId);
   }
-
-  const currentUserId = new Types.ObjectId(userId);
-
-  // Get connected users
-  const connections = await Connections.find({
-    status: ConnectionStatus.ACCEPTED,
-    $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
-  });
-  const connectedUserIds = connections.map(c =>
-    c.sentBy.toString() === userId ? c.receivedBy : c.sentBy
-  );
-
-  // Get followed users
-  const followers = await Follower.find({ followerId: currentUserId });
-  const followedUserIds = followers.map(f => f.followedId);
-
-  // Combine user IDs (include current user)
-  const eligibleUserIds = [
-    ...new Set([
-      ...connectedUserIds.map(id => id.toString()),
-      ...followedUserIds.map(id => id.toString()),
-      userId,
-    ]),
-  ].map(id => new Types.ObjectId(id));
-
-  // Get groups and events the user is part of (assuming members field exists)
-  const groups = await Group.find({ members: currentUserId });
-  const events = await Event.find({ members: currentUserId });
-  const groupIds = groups.map(g => g._id);
-  const eventIds = events.map(e => e._id);
-
-  // Get blocked users
-  const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
-  const blockedUserIds = blockedUsers.map(b => b.blockedId);
 
   // Build query
   const query: Record<string, any> = {
-    $or: [
-      // Timeline posts from eligible users
-      {
-        userId: { $in: eligibleUserIds },
-        postType: PostType.TIMELINE,
-      },
-      // Group posts from groups the user is in
-      {
-        postType: PostType.GROUP,
-        sourceId: { $in: groupIds },
-      },
-      // Event posts from events the user is in
-      {
-        postType: PostType.EVENT,
-        sourceId: { $in: eventIds },
-      },
-    ],
+    $or: userId
+      ? [
+          // Timeline posts from eligible users
+          {
+            userId: { $in: eligibleUserIds },
+            postType: PostType.TIMELINE,
+          },
+          // Group posts from groups the user is in
+          {
+            postType: PostType.GROUP,
+            sourceId: { $in: groupIds },
+          },
+          // Event posts from events the user is in
+          {
+            postType: PostType.EVENT,
+            sourceId: { $in: eventIds },
+          },
+        ]
+      : [
+          // Public posts for unauthenticated users
+          {
+            privacy: PostPrivacy.PUBLIC,
+          },
+        ],
     // Exclude posts from blocked users
     userId: { $nin: blockedUserIds },
-    // Privacy filtering
-    privacy: {
-      $in: [PostPrivacy.PUBLIC, PostPrivacy.FRIENDS, PostPrivacy.PRIVATE],
-    },
   };
+
+  // Privacy filtering for authenticated users
+  if (userId) {
+    query.$or.push({
+      privacy: PostPrivacy.FRIENDS,
+      userId: { $in: connectedUserIds },
+    });
+    query.$or.push({
+      privacy: PostPrivacy.PRIVATE,
+      userId: currentUserId,
+    });
+  }
 
   // Optional: Exclude seen posts (uncomment to use SeenPost model)
   /*
-    const seenPosts = await SeenPost.find({ userId: currentUserId }).distinct('postId');
-    query._id = { $nin: seenPosts };
+    if (currentUserId) {
+      const seenPosts = await SeenPost.find({ userId: currentUserId }).distinct('postId');
+      query._id = { $nin: seenPosts };
+    }
     */
 
   options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
@@ -519,6 +551,15 @@ async function feedPosts(
       post.shareCount * 2;
     score += engagementScore * 30; // Weight: 30%
 
+    // Affinity score (only for authenticated users)
+    if (userId) {
+      if (connectedUserIds.some(id => id.equals(post.userId))) {
+        score *= 1.2; // Boost 20% for connections
+      } else if (followedUserIds.some(id => id.equals(post.userId))) {
+        score *= 1.1; // Boost 10% for followed users
+      }
+    }
+
     // Content type score
     if (
       post.media.some((m: any) =>
@@ -533,11 +574,11 @@ async function feedPosts(
 
   // Optional: Save seen posts (uncomment to use SeenPost model)
   /*
-    const seenPostDocs = posts.docs.map(post => ({
-      userId: currentUserId,
-      postId: post._id,
-    }));
-    if (seenPostDocs.length) {
+    if (currentUserId && posts.docs.length) {
+      const seenPostDocs = posts.docs.map(post => ({
+        userId: currentUserId,
+        postId: post._id,
+      }));
       await SeenPost.insertMany(seenPostDocs, { ordered: false });
     }
     */
