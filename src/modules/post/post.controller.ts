@@ -76,7 +76,79 @@ const sharePost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getPosts = catchAsync(async (req: Request, res: Response) => {
+const addOrRemoveReaction = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { postId, reactionType } = req.body;
+
+  const result = await PostServices.addOrRemoveReaction({
+    userId: new Types.ObjectId(userId),
+    postId,
+    reactionType,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Reaction updated successfully',
+    data: result,
+  });
+});
+
+const createComment = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { postId, comment, replyTo, parentCommentId } = req.body;
+
+  const result = await PostServices.createComment({
+    userId: new Types.ObjectId(userId),
+    postId,
+    comment,
+    replyTo,
+    parentCommentId,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.CREATED,
+    message: 'Comment created successfully',
+    data: result,
+  });
+});
+
+const updateComment = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { postId, commentId } = req.params;
+  const { comment } = req.body;
+
+  const result = await PostServices.updateComment({
+    userId: new Types.ObjectId(userId),
+    postId,
+    commentId,
+    comment,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Comment updated successfully',
+    data: result,
+  });
+});
+
+const deleteComment = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { postId, commentId } = req.params;
+
+  const result = await PostServices.deleteComment({
+    userId: new Types.ObjectId(userId),
+    postId,
+    commentId,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Comment deleted successfully',
+    data: result,
+  });
+});
+
+const feedPosts = catchAsync(async (req: Request, res: Response) => {
   const filter = pick(req.query, [
     'mediaType',
     'hashtag',
@@ -86,7 +158,7 @@ const getPosts = catchAsync(async (req: Request, res: Response) => {
   ]);
   const options = pick(req.query, ['page', 'limit']);
 
-  const result = await PostServices.getPosts(
+  const result = await PostServices.feedPosts(
     {
       mediaType: filter.mediaType as MediaType,
       hashtag: filter.hashtag as string,
@@ -107,19 +179,56 @@ const getPosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getPostsByHashtag = catchAsync(async (req: Request, res: Response) => {
-  const { hashtag } = req.params;
+const getTimelinePosts = catchAsync(async (req: Request, res: Response) => {
+  const filter = pick(req.query, ['userId']);
   const options = pick(req.query, ['page', 'limit']);
 
-  const result = await PostServices.getPostsByHashtag(
-    hashtag,
-    parseInt(options.page as string) || 1,
-    parseInt(options.limit as string) || 10
+  const result = await PostServices.getTimelinePosts(filter, {
+    page: parseInt(options.page as string) || 1,
+    limit: parseInt(options.limit as string) || 10,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Timeline posts retrieved successfully',
+    data: result,
+  });
+});
+
+const getGroupPosts = catchAsync(async (req: Request, res: Response) => {
+  const { groupId } = req.params;
+  const options = pick(req.query, ['page', 'limit']);
+
+  const result = await PostServices.getGroupPosts(
+    { groupId },
+    {
+      page: parseInt(options.page as string) || 1,
+      limit: parseInt(options.limit as string) || 10,
+    }
   );
 
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Posts by hashtag retrieved successfully',
+    message: 'Group posts retrieved successfully',
+    data: result,
+  });
+});
+
+const getEventPosts = catchAsync(async (req: Request, res: Response) => {
+  const { eventId } = req.params;
+  const options = pick(req.query, ['page', 'limit']);
+
+  const result = await PostServices.getEventPosts(
+    { eventId },
+    {
+      page: parseInt(options.page as string) || 1,
+      limit: parseInt(options.limit as string) || 10,
+    }
+  );
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Event posts retrieved successfully',
     data: result,
   });
 });
@@ -127,6 +236,12 @@ const getPostsByHashtag = catchAsync(async (req: Request, res: Response) => {
 export const PostController = {
   createPost,
   sharePost,
-  getPosts,
-  getPostsByHashtag,
+  feedPosts,
+  getTimelinePosts,
+  getGroupPosts,
+  getEventPosts,
+  addOrRemoveReaction,
+  createComment,
+  updateComment,
+  deleteComment,
 };

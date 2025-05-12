@@ -15,6 +15,7 @@ export interface IReaction {
 }
 
 export interface IComment {
+  _id: Types.ObjectId;
   userId: Types.ObjectId;
   postId: Types.ObjectId;
   replyTo?: Types.ObjectId;
@@ -39,13 +40,13 @@ export interface IPost {
   visitedLocationName?: string;
   privacy: PostPrivacy;
   itinerary?: Types.ObjectId; // Optional itinerary reference
-  hashtags: string[]; 
+  hashtags: string[];
   shareCount: number;
   isShared: boolean;
   originalPostId?: Types.ObjectId; // For shared posts
   itineraryViewCount: number;
   reactions: IReaction[];
-  comments: Types.ObjectId[];
+  comments: IComment[];
   createdAt: Date;
   updatedAt: Date;
 }

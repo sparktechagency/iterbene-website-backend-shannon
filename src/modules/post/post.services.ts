@@ -1,14 +1,20 @@
 import { Types } from 'mongoose';
-import { MediaType, SourceType } from '../media/media.interface';
-import { IPost, PostPrivacy, PostType } from './post.interface';
+import { MediaType } from '../media/media.interface';
+import { IPost, PostPrivacy, PostType, ReactionType } from './post.interface';
 import ApiError from '../../errors/ApiError';
 import Group from '../group/group.model';
 import { Event } from '../event/event.model';
 import { Itinerary } from '../Itinerary/itinerary.model';
-import { Hashtag } from '../hastag/hashtag.model';
 import { Media } from '../media/media.model';
+import { Hashtag } from '../hastag/hashtag.model';
 import { Post } from './post.model';
-interface CreatePostInput {
+import { PaginateOptions, PaginateResult } from '../../types/paginate';
+import { BlockedUser } from '../blockedUsers/blockedUsers.model';
+import { ConnectionStatus } from '../connections/connections.interface';
+import { Connections } from '../connections/connections.model';
+import { Follower } from '../followers/followers.model';
+
+interface CreatePostPayload {
   userId: Types.ObjectId;
   content?: string;
   files?: Express.Multer.File[];
@@ -20,14 +26,48 @@ interface CreatePostInput {
   visitedLocationName?: string;
 }
 
-interface SharePostInput {
+interface SharePostPayload {
   userId: Types.ObjectId;
   originalPostId: string;
   content?: string;
   privacy: PostPrivacy;
 }
 
-async function createPost(payload: CreatePostInput): Promise<IPost> {
+interface AddOrRemoveReactionPayload {
+  userId: Types.ObjectId;
+  postId: string;
+  reactionType: ReactionType;
+}
+
+interface CreateCommentPayload {
+  userId: Types.ObjectId;
+  postId: string;
+  comment: string;
+  replyTo?: string;
+  parentCommentId?: string;
+}
+
+interface UpdateCommentPayload {
+  userId: Types.ObjectId;
+  postId: string;
+  commentId: string;
+  comment: string;
+}
+
+interface DeleteCommentPayload {
+  userId: Types.ObjectId;
+  postId: string;
+  commentId: string;
+}
+
+interface GetUserMediaAndItinerariesPayload {
+  userId: string;
+  postType?: PostType;
+  page: number;
+  limit: number;
+}
+
+async function createPost(payload: CreatePostPayload): Promise<IPost> {
   const {
     userId,
     content,
@@ -73,29 +113,32 @@ async function createPost(payload: CreatePostInput): Promise<IPost> {
 
   // Prepare media data
   let mediaData: any[] = [];
-
-  mediaData = await Promise.all(
-    files!.map(async file => {
-      const mediaUrl = `uploads/posts/${file.filename}`;
-      const thumbnailUrl = file.mimetype.startsWith('video')
-        ? `uploads/posts/thumbnails/placeholder.jpg`
-        : `uploads/posts/${file.filename}`;
-      const fileMediaType = file.mimetype.startsWith('image')
-        ? MediaType.IMAGE
-        : file.mimetype.startsWith('video')
-        ? MediaType.VIDEO
-        : file.mimetype.startsWith('audio')
-        ? MediaType.AUDIO
-        : MediaType.DOCUMENT;
-      return {
-        sourceId: new Types.ObjectId(), // Temporary
-        sourceType: postType,
-        mediaType: fileMediaType,
-        mediaUrl,
-        thumbnailUrl,
-      };
-    })
-  );
+  if (files?.length) {
+    mediaData = await Promise.all(
+      files.map(async file => {
+        const mediaUrl = `uploads/posts/${file.filename}`;
+        const thumbnailUrl = file.mimetype.startsWith('video')
+          ? `uploads/posts/thumbnails/placeholder.jpg`
+          : `uploads/posts/${file.filename}`;
+        const fileMediaType = file.mimetype.startsWith('image')
+          ? MediaType.IMAGE
+          : file.mimetype.startsWith('video')
+          ? MediaType.VIDEO
+          : file.mimetype.startsWith('audio')
+          ? MediaType.AUDIO
+          : MediaType.DOCUMENT;
+        return {
+          sourceId: new Types.ObjectId(), // Temporary
+          sourceType: postType,
+          mediaType: fileMediaType,
+          mediaUrl,
+          thumbnailUrl,
+          isDeleted: false,
+          metadata: { fileSize: file.size },
+        };
+      })
+    );
+  }
 
   // Create media
   const mediaDocs = await Media.insertMany(mediaData);
@@ -131,6 +174,12 @@ async function createPost(payload: CreatePostInput): Promise<IPost> {
     privacy,
     visitedLocation,
     visitedLocationName,
+    shareCount: 0,
+    isShared: false,
+    itineraryViewCount: 0,
+    sortedReactions: [],
+    reactions: [],
+    comments: [],
   });
 
   // Update itinerary with postId
@@ -145,6 +194,7 @@ async function createPost(payload: CreatePostInput): Promise<IPost> {
       { $addToSet: { posts: post._id } }
     );
   }
+
   // Update media sourceIds
   await Promise.all(
     mediaDocs.map(media =>
@@ -169,8 +219,8 @@ async function createPost(payload: CreatePostInput): Promise<IPost> {
   return post.populate('media itinerary userId sourceId');
 }
 
-async function sharePost(input: SharePostInput): Promise<IPost> {
-  const { userId, originalPostId, content, privacy } = input;
+async function sharePost(payload: SharePostPayload): Promise<IPost> {
+  const { userId, originalPostId, content, privacy } = payload;
 
   const originalPost = await Post.findById(originalPostId);
   if (!originalPost) {
@@ -196,42 +246,344 @@ async function sharePost(input: SharePostInput): Promise<IPost> {
   return sharedPost.populate('media itinerary userId originalPostId');
 }
 
-async function getPosts(
-  filter: {
-    mediaType?: MediaType;
-    hashtag?: string;
-    itinerary?: boolean;
-    postType?: PostType;
-    userId?: string;
-  },
-  options: { page: number; limit: number }
-): Promise<any> {
-  const { mediaType, hashtag, itinerary, postType, userId } = filter;
-  const { page, limit } = options;
-
-  const query: any = {};
-  if (postType) query.postType = postType;
-  if (hashtag) query.hashtags = hashtag.toLowerCase();
-  if (itinerary) query.itinerary = { $exists: true };
-  if (userId) query.userId = userId;
-  if (mediaType) {
-    const mediaIds = await Media.find({ mediaType }).distinct('_id');
-    query.media = { $in: mediaIds };
+async function addOrRemoveReaction(
+  payload: AddOrRemoveReactionPayload
+): Promise<IPost> {
+  const { userId, postId, reactionType } = payload;
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, 'Post not found');
   }
 
-  return Post.paginate(query, {
-    page,
-    limit,
-    populate: ['media', 'itinerary', 'userId', 'sourceId'],
-  });
+  if (!Object.values(ReactionType).includes(reactionType)) {
+    throw new ApiError(400, 'Invalid reaction type');
+  }
+
+  // Check if user already reacted
+  const existingReaction = post.reactions.find(
+    r => r.userId.toString() === userId.toString()
+  );
+
+  if (existingReaction) {
+    if (existingReaction.reactionType === reactionType) {
+      // Same reaction, remove it
+      await Post.updateOne(
+        { _id: postId },
+        { $pull: { reactions: { userId } } }
+      );
+    } else {
+      // Different reaction, update it
+      await Post.updateOne(
+        { _id: postId, 'reactions.userId': userId },
+        {
+          $set: {
+            'reactions.$.reactionType': reactionType,
+            'reactions.$.updatedAt': new Date(),
+          },
+        }
+      );
+    }
+  } else {
+    // No existing reaction, add new one
+    await Post.updateOne(
+      { _id: postId },
+      {
+        $push: {
+          reactions: {
+            userId,
+            postId,
+            reactionType,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      }
+    );
+  }
+
+  // Update sortedReactions
+  const reactions = await Post.findById(postId).select('reactions');
+  const reactionCounts = Object.values(ReactionType).map(type => ({
+    type,
+    count: reactions!.reactions.filter(r => r.reactionType === type).length,
+  }));
+  await Post.updateOne(
+    { _id: postId },
+    { $set: { sortedReactions: reactionCounts } }
+  );
+
+  return Post.findById(postId).populate(
+    'media itinerary userId sourceId'
+  ) as Promise<IPost>;
 }
 
-async function getPostsByHashtag(
-  hashtag: string,
-  page: number,
-  limit: number
-): Promise<any> {
-  return getPosts({ hashtag }, { page, limit });
+async function createComment(payload: CreateCommentPayload): Promise<IPost> {
+  const { userId, postId, comment, replyTo, parentCommentId } = payload;
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, 'Post not found');
+  }
+
+  // Validate replyTo/parentCommentId
+  if (replyTo || parentCommentId) {
+    const commentExists = post.comments.some(
+      c => c._id.toString() === (replyTo || parentCommentId)
+    );
+    if (!commentExists) {
+      throw new ApiError(404, 'Parent comment not found');
+    }
+  }
+
+  const newComment = {
+    _id: new Types.ObjectId(),
+    userId,
+    postId,
+    replyTo: replyTo ? new Types.ObjectId(replyTo) : undefined,
+    parentCommentId: parentCommentId
+      ? new Types.ObjectId(parentCommentId)
+      : undefined,
+    comment,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  await Post.updateOne({ _id: postId }, { $push: { comments: newComment } });
+
+  return Post.findById(postId).populate(
+    'media itinerary userId sourceId'
+  ) as Promise<IPost>;
+}
+
+async function updateComment(payload: UpdateCommentPayload): Promise<IPost> {
+  const { userId, postId, commentId, comment } = payload;
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, 'Post not found');
+  }
+
+  // Verify comment exists and user owns it
+  const existingComment = post.comments.find(
+    c => c._id.toString() === commentId
+  );
+  if (!existingComment) {
+    throw new ApiError(404, 'Comment not found');
+  }
+  if (existingComment.userId.toString() !== userId.toString()) {
+    throw new ApiError(403, 'Not authorized to update this comment');
+  }
+
+  // Update comment
+  await Post.updateOne(
+    { _id: postId, 'comments._id': new Types.ObjectId(commentId) },
+    {
+      $set: {
+        'comments.$.comment': comment,
+        'comments.$.updatedAt': new Date(),
+      },
+    }
+  );
+
+  return Post.findById(postId).populate(
+    'media itinerary userId sourceId'
+  ) as Promise<IPost>;
+}
+
+async function deleteComment(payload: DeleteCommentPayload): Promise<IPost> {
+  const { userId, postId, commentId } = payload;
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, 'Post not found');
+  }
+
+  // Verify user owns the comment
+  const comment = post.comments.find(c => c._id.toString() === commentId);
+  if (!comment) {
+    throw new ApiError(404, 'Comment not found');
+  }
+  if (comment.userId.toString() !== userId.toString()) {
+    throw new ApiError(403, 'Not authorized to delete this comment');
+  }
+
+  // Remove comment
+  await Post.updateOne(
+    { _id: postId },
+    { $pull: { comments: { _id: new Types.ObjectId(commentId) } } }
+  );
+
+  return Post.findById(postId).populate(
+    'media itinerary userId sourceId'
+  ) as Promise<IPost>;
+}
+async function feedPosts(
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IPost>> {
+  const { userId } = filters;
+
+  // Validate userId
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, 'Invalid user ID');
+  }
+
+  const currentUserId = new Types.ObjectId(userId);
+
+  // Get connected users
+  const connections = await Connections.find({
+    status: ConnectionStatus.ACCEPTED,
+    $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
+  });
+  const connectedUserIds = connections.map(c =>
+    c.sentBy.toString() === userId ? c.receivedBy : c.sentBy
+  );
+
+  // Get followed users
+  const followers = await Follower.find({ followerId: currentUserId });
+  const followedUserIds = followers.map(f => f.followedId);
+
+  // Combine user IDs (include current user)
+  const eligibleUserIds = [
+    ...new Set([
+      ...connectedUserIds.map(id => id.toString()),
+      ...followedUserIds.map(id => id.toString()),
+      userId,
+    ]),
+  ].map(id => new Types.ObjectId(id));
+
+  // Get groups and events the user is part of (assuming members field exists)
+  const groups = await Group.find({ members: currentUserId });
+  const events = await Event.find({ members: currentUserId });
+  const groupIds = groups.map(g => g._id);
+  const eventIds = events.map(e => e._id);
+
+  // Get blocked users
+  const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
+  const blockedUserIds = blockedUsers.map(b => b.blockedId);
+
+  // Build query
+  const query: Record<string, any> = {
+    $or: [
+      // Timeline posts from eligible users
+      {
+        userId: { $in: eligibleUserIds },
+        postType: PostType.TIMELINE,
+      },
+      // Group posts from groups the user is in
+      {
+        postType: PostType.GROUP,
+        sourceId: { $in: groupIds },
+      },
+      // Event posts from events the user is in
+      {
+        postType: PostType.EVENT,
+        sourceId: { $in: eventIds },
+      },
+    ],
+    // Exclude posts from blocked users
+    userId: { $nin: blockedUserIds },
+    // Privacy filtering
+    privacy: {
+      $in: [PostPrivacy.PUBLIC, PostPrivacy.FRIENDS, PostPrivacy.PRIVATE],
+    },
+  };
+
+  // Optional: Exclude seen posts (uncomment to use SeenPost model)
+  /*
+    const seenPosts = await SeenPost.find({ userId: currentUserId }).distinct('postId');
+    query._id = { $nin: seenPosts };
+    */
+
+  options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
+  options.sortBy = options.sortBy || '-createdAt';
+
+  // Fetch posts
+  const posts = await Post.paginate(query, options);
+
+  // Rank posts (simplified scoring)
+  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  const now = Date.now();
+  posts.results = posts.results.map(post => {
+    let score = 0;
+
+    // Recency score (0 to 1, higher for newer posts)
+    const age = now - new Date(post.createdAt).getTime();
+    const recencyScore = Math.max(0, 1 - age / maxAge);
+    score += recencyScore * 50; // Weight: 50%
+
+    // Engagement score
+    const engagementScore =
+      post.reactions.length * 0.5 +
+      post.comments.length * 1 +
+      post.shareCount * 2;
+    score += engagementScore * 30; // Weight: 30%
+
+    // Content type score
+    if (
+      post.media.some((m: any) =>
+        [MediaType.IMAGE, MediaType.VIDEO].includes(m.mediaType)
+      )
+    ) {
+      score *= 1.15; // Boost 15% for image/video
+    }
+
+    return { ...post, score };
+  });
+
+  // Optional: Save seen posts (uncomment to use SeenPost model)
+  /*
+    const seenPostDocs = posts.docs.map(post => ({
+      userId: currentUserId,
+      postId: post._id,
+    }));
+    if (seenPostDocs.length) {
+      await SeenPost.insertMany(seenPostDocs, { ordered: false });
+    }
+    */
+
+  return posts;
+}
+
+async function getTimelinePosts(
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IPost>> {
+  const query: Record<string, any> = {
+    postType: PostType.TIMELINE,
+  };
+  if (filters.userId) {
+    query.$and = [{ userId: filters.userId }, { sourceId: filters.userId }];
+  }
+  options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
+  options.sortBy = options.sortBy || '-createdAt';
+  return Post.paginate(query, options);
+}
+
+async function getGroupPosts(
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IPost>> {
+  const query: Record<string, any> = {
+    postType: PostType.GROUP,
+    sourceId: filters.groupId,
+  };
+  options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
+  options.sortBy = options.sortBy || '-createdAt';
+  return Post.paginate(query, options);
+}
+
+async function getEventPosts(
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IPost>> {
+  const query: Record<string, any> = {
+    postType: PostType.EVENT,
+    sourceId: filters.eventId,
+  };
+  options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
+  options.sortBy = options.sortBy || '-createdAt';
+  return Post.paginate(query, options);
 }
 
 function extractHashtags(content: string): string[] {
@@ -243,6 +595,12 @@ function extractHashtags(content: string): string[] {
 export const PostServices = {
   createPost,
   sharePost,
-  getPosts,
-  getPostsByHashtag,
+  addOrRemoveReaction,
+  createComment,
+  updateComment,
+  deleteComment,
+  feedPosts,
+  getTimelinePosts,
+  getGroupPosts,
+  getEventPosts,
 };
