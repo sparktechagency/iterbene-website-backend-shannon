@@ -1,22 +1,24 @@
 import { Types } from 'mongoose';
 
 export interface IMedia {
-  _id?: Types.ObjectId;
+  _id: Types.ObjectId;
   sourceId: Types.ObjectId;
-  sourceType: string;
-  mediaType: string;
-  mediaUrl?: string;
+  sourceType: SourceType;
+  mediaType: MediaType;
+  mediaUrl: string;
   thumbnailUrl?: string;
   duration?: number;
   textContent?: string;
+  altText?: string;
+  caption?: string;
   metadata?: {
     resolution?: string;
     fileSize?: number;
   };
   expiresAt?: Date;
   isDeleted: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export enum MediaType {
@@ -29,7 +31,7 @@ export enum MediaType {
 }
 
 export enum SourceType {
-  USER = 'user',
+  TIMELINE = 'timeline',
   COMMENT = 'comment',
   GROUP = 'group',
   EVENT = 'event',

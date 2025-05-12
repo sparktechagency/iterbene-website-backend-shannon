@@ -15,6 +15,7 @@ import { BlockedUserRoutes } from '../modules/blockedUsers/blockedUsers.route';
 import { FollowerRoutes } from '../modules/followers/followers.route';
 import { EventRoutes } from '../modules/event/event.routes';
 import { StoryRoutes } from '../modules/story/story.route';
+import { PostRoutes } from '../modules/post/post.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -53,6 +54,10 @@ const apiRoutes = [
   {
     path: '/stories',
     route: StoryRoutes,
+  },
+  {
+    path: '/posts',
+    route: PostRoutes,
   },
   {
     path: '/chats',

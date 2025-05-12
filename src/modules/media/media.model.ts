@@ -36,9 +36,17 @@ const mediaSchema = new Schema<IMedia>(
       resolution: { type: String },
       fileSize: { type: Number },
     },
+    altText: {
+      type: String,
+      trim: true,
+    },
+    caption: {
+      type: String,
+      trim: true,
+    },
+
     expiresAt: {
       type: Date,
-      required: true, // Ensure expiresAt is set
     },
     isDeleted: {
       type: Boolean,
