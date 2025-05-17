@@ -5,7 +5,6 @@ import app from './app';
 import { errorLogger, logger } from './shared/logger';
 import { socketHelper } from './helpers/socket';
 import { config } from './config';
-import { NodeSchedulerService } from './nodeScheduler/nodeScheduler';
 
 //uncaught exception
 process.on('uncaughtException', error => {
@@ -37,7 +36,6 @@ async function main() {
     socketHelper.socket(io);
     // @ts-ignore
     global.io = io;
-    NodeSchedulerService.autoUnbanUsers();
   } catch (error) {
     errorLogger.error(colors.red('🤢 Failed to connect Database'));
   }

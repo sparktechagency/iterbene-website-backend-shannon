@@ -32,12 +32,12 @@ const userSchema = new Schema<TUser, UserModal>(
     profileImage: {
       type: String,
       required: false,
-      default: '/uploads/users/user.png',
+      default: 'https://marray-meet.s3.eu-north-1.amazonaws.com/user.iter-bene.webp',
     },
     coverImage: {
       type: String,
       required: false,
-      default: '/uploads/users/user.png',
+      default: 'https://marray-meet.s3.eu-north-1.amazonaws.com/cover.iter-bene.webp',
     },
     email: {
       type: String,

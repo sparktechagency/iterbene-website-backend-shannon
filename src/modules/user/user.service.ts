@@ -17,7 +17,7 @@ interface IAdminOrSuperAdminPayload {
 }
 
 // Helper function to filter user fields based on privacy settings
- const filterUserFields = async (
+const filterUserFields = async (
   user: TUser,
   requesterId: string | null // null if fetching own profile
 ): Promise<Partial<TUser>> => {
@@ -42,15 +42,22 @@ interface IAdminOrSuperAdminPayload {
     isFriend = !!connection;
   }
 
-  const filteredUser: Partial<TUser> = {
+  const filteredUser: Record<string, any> = {
     _id: user._id,
+    fullName: user.fullName,
+    nickname: user.nickname,
     username: user.username,
     profileImage: user.profileImage,
     coverImage: user.coverImage,
     email: user.email,
+    phoneNumber: user.phoneNumber,
+    referredAs: user.referredAs,
+    age: user.age,
+    profession: user.profession,
+    maritalStatus: user.maritalStatus,
     role: user.role,
-    isEmailVerified: user.isEmailVerified,
     isOnline: user.isOnline,
+    createdAt: user.createdAt,
   };
 
   const privateFields: (keyof TUser)[] = [
@@ -67,7 +74,8 @@ interface IAdminOrSuperAdminPayload {
   ];
 
   privateFields.forEach(field => {
-    const visibility = user.privacySettings[field as keyof typeof user.privacySettings];
+    const visibility =
+      user.privacySettings[field as keyof typeof user.privacySettings];
     if (
       isSelf ||
       visibility === PrivacyVisibility.PUBLIC ||
@@ -76,6 +84,19 @@ interface IAdminOrSuperAdminPayload {
       (filteredUser as Partial<Record<keyof TUser, any>>)[field] = user[field];
     }
   });
+
+  //followers count
+  const followersCount = await Connections.countDocuments({
+    receivedBy: user._id,
+    status: ConnectionStatus.ACCEPTED,
+  });
+  //following count
+  const followingCount = await Connections.countDocuments({
+    sentBy: user._id,
+    status: ConnectionStatus.ACCEPTED,
+  });
+  filteredUser.followersCount = followersCount;
+  filteredUser.followingCount = followingCount;
 
   return filteredUser;
 };
@@ -117,19 +138,19 @@ const createAdminOrSuperAdmin = async (
 };
 
 const getSingleUser = async (
-  userId: string,
-  requesterId: string
+  userName: string,
+  requesterId?: string
 ): Promise<Partial<TUser> | null> => {
-  if (!Types.ObjectId.isValid(userId)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
-  }
-  const user = await User.findById(userId).select(
+  const user = await User.findOne({ username: userName }).select(
     '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -isBanned -isDeleted -__v'
   );
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  return filterUserFields(user, requesterId);
+  return filterUserFields(
+    user,
+    requesterId ? requesterId : user._id.toString()
+  );
 };
 
 const setUserLatestLocation = async (
@@ -159,9 +180,6 @@ const setUserLatestLocation = async (
 };
 
 const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
-  if (!Types.ObjectId.isValid(userId)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
-  }
   const user = await User.findById(userId);
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
@@ -267,6 +285,7 @@ const getMyProfile = async (userId: string): Promise<Partial<TUser> | null> => {
     '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -isBanned -isDeleted -__v'
   );
   if (!user || user.isDeleted) {
+
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
   return filterUserFields(user, userId);

@@ -9,7 +9,7 @@ const UPLOADS_FOLDER = 'uploads/users';
 
 const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const superAdmin = await UserService.getSingleUser(userId);
+  const superAdmin = await UserService.getSingleUser(userId,userId);
   if (superAdmin?.role !== 'super_admin') {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
@@ -38,19 +38,8 @@ const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
 });
 
 const getSingleUser = catchAsync(async (req, res) => {
-  const { userId } = req.params;
-  const result = await UserService.getSingleUser(userId);
-
-  await UserInteractionLogService.createLog(
-    req.user?.userId,
-    'user_fetched',
-    `/user/${userId}`,
-    'GET',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown',
-    { userId }
-  );
-
+  const { userName } = req.params;
+  const result = await UserService.getSingleUser(userName);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,

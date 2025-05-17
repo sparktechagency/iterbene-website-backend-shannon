@@ -58,6 +58,8 @@ export type TUser = {
     maritalStatus: PrivacyVisibility;
   };
   connectionPrivacy: ConnectionPrivacy;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export enum PrivacyVisibility {

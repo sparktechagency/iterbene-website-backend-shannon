@@ -16,6 +16,9 @@ router.get(
   UserController.checkUserNameAlreadyExists
 );
 
+//get single user by username
+router.get('/username/:userName', auth('Common'), UserController.getSingleUser);
+
 // Get and fill up User Profile
 router
   .route('/profile')
@@ -45,13 +48,10 @@ router.post(
 );
 
 // Get Single User by ID, Update User Profile, Change User Status
-router
-  .route('/:userId')
-  .get(UserController.getSingleUser) // Get user by ID
-  .patch(
-    auth('Admin'),
-    UserController.updateUserStatus // Admin can change user status
-  );
+router.route('/:userId').patch(
+  auth('Admin'),
+  UserController.updateUserStatus // Admin can change user status
+);
 
 // Export User Routes
 export const UserRoutes = router;

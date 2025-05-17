@@ -46,7 +46,6 @@ const auth = (...roles: string[]) =>
         'Your account is blocked or banned.'
       );
     }
-
     if (user.mfaEnabled && !req.body.mfaToken) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'MFA token required.');
     }
@@ -61,7 +60,6 @@ const auth = (...roles: string[]) =>
     }
     if (roles.length) {
       const userRole = roleRights.get(verifyUser?.role);
-      console.log(userRole)
       const hasRole = userRole?.some(role => roles.includes(role));
       if (!hasRole) {
         throw new ApiError(
@@ -70,7 +68,6 @@ const auth = (...roles: string[]) =>
         );
       }
     }
-
     next();
   });
 
