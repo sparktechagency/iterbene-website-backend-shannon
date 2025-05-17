@@ -44,35 +44,16 @@ const getAllMessagesByReceiverId = async (
 };
 
 // View all messages in a chat
-const viewAllMessages = async (
-  chatId: string,
-  options: PaginateOptions
-): Promise<PaginateResult<IMessage>> => {
-  const query = {
-    chatId: new Types.ObjectId(chatId),
-    isDeleted: false,
-  };
-
-  options.populate = [
+const viewAllMessages = async (chatId: string, userId: string) => {
+  const result = await Message.find(
     {
-      path: 'senderId',
-      select: 'fullName profileImage email',
+      chatId: new Types.ObjectId(chatId),
+      isDeleted: false,
+      receiverId: new Types.ObjectId(userId),
     },
-    {
-      path: 'receiverId',
-      select: 'fullName profileImage email',
-    },
-    {
-      path: 'replyTo',
-      select: 'content senderId',
-    },
-    {
-      path: 'forwardedFrom',
-      select: 'content senderId',
-    },
-  ];
-  options.sortBy = options.sortBy || 'createdAt';
-  const result = await Message.paginate(query, options);
+    { seenBy: new Types.ObjectId(userId), deliveryStatus: 'seen' },
+    { new: true }
+  );
   return result;
 };
 
@@ -96,10 +77,7 @@ const unviewedMessagesCount = async (
 
 // Send a message
 const sendMessage = async (payload: IMessage): Promise<IMessage> => {
-  const newMessage = await Message.create({
-    ...payload,
-    deliveryStatus: 'sent',
-  });
+  const newMessage = await Message.create(payload);
 
   if (payload.chatId) {
     const chat = await Chat.findOne({ _id: payload.chatId, isDeleted: false });
@@ -122,7 +100,10 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
 };
 
 // Update message
-const updateMessage = async (messageId: string, text: string): Promise<IMessage | null> => {
+const updateMessage = async (
+  messageId: string,
+  text: string
+): Promise<IMessage | null> => {
   const message = await Message.findById(messageId);
   if (!message) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Message not found');
@@ -133,7 +114,10 @@ const updateMessage = async (messageId: string, text: string): Promise<IMessage 
 };
 
 // Delete message
-const deleteMessage = async (userId: string, messageId: string): Promise<IMessage | null> => {
+const deleteMessage = async (
+  userId: string,
+  messageId: string
+): Promise<IMessage | null> => {
   const user = await User.findById(userId);
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
@@ -143,7 +127,10 @@ const deleteMessage = async (userId: string, messageId: string): Promise<IMessag
     throw new ApiError(StatusCodes.NOT_FOUND, 'Message not found');
   }
   if (message.senderId.toString() !== userId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'You are not allowed to delete this message');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'You are not allowed to delete this message'
+    );
   }
   message.isDeleted = true;
   await message.save();
@@ -151,7 +138,10 @@ const deleteMessage = async (userId: string, messageId: string): Promise<IMessag
 };
 
 // Mark message as seen
-const markMessageSeen = async (messageId: string, userId: string): Promise<IMessage | null> => {
+const markMessageSeen = async (
+  messageId: string,
+  userId: string
+): Promise<IMessage | null> => {
   const message = await Message.findByIdAndUpdate(
     messageId,
     {

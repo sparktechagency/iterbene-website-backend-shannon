@@ -8,72 +8,70 @@ const upload = fileUploadHandler(UPLOADS_FOLDER);
 
 const router = Router();
 
+
+router.get(
+  '/unviewed-count',
+  auth('User'),
+  MessageController.unviewedMessagesCount
+);
+
 router
   .route('/')
-  .post(
-    auth('common'),
-    upload.array('files', 10),
-    MessageController.sendMessage
-  );
+  .post(auth('User'), upload.array('files', 10), MessageController.sendMessage);
 
 router.get(
   '/:receiverId',
-  auth('common'),
+  auth('User'),
   MessageController.getAllMessagesByReceiverId
 );
 
 router
   .route('/:messageId')
-  .put(auth('common'), MessageController.updateMessage)
-  .patch(auth('common'), MessageController.markMessageSeen)
-  .delete(auth('common'), MessageController.deleteMessage);
+  .put(auth('User'), MessageController.updateMessage)
+  .patch(auth('User'), MessageController.markMessageSeen)
+  .delete(auth('User'), MessageController.deleteMessage);
 
 // Additional routes for new features
-router.get(
-  '/:chatId/messages',
-  auth('common'),
+router.patch(
+  '/view-all-messages/:chatId',
+  auth('User'),
   MessageController.viewAllMessages
 );
-router.get(
-  '/unviewed-count',
-  auth('common'),
-  MessageController.unviewedMessagesCount
-);
 router.post(
-  '/:messageId/reaction',
-  auth('common'),
+  '/reaction/:messageId',
+  auth('User'),
   MessageController.addReaction
 );
 router.delete(
-  '/:messageId/reaction',
-  auth('common'),
+  '/reaction/:messageId',
+  auth('User'),
   MessageController.removeReaction
 );
-router.post('/reply', auth('common'), MessageController.replyToMessage);
+router.post('/reply', auth('User'), MessageController.replyToMessage);
 router.post(
   '/:messageId/forward',
-  auth('common'),
+  auth('User'),
   MessageController.forwardMessage
 );
 router.post(
   '/:messageId/pin/:chatId',
-  auth('common'),
+  auth('User'),
   MessageController.pinMessage
 );
 router.post(
   '/:messageId/unpin/:chatId',
-  auth('common'),
+  auth('User'),
   MessageController.unpinMessage
 );
-router.get('/:chatId/search', auth('common'), MessageController.searchMessages);
+router.get('/:chatId/search', auth('User'), MessageController.searchMessages);
 router.post(
   '/:chatId/typing',
-  auth('common'),
+  auth('User'),
   MessageController.sendTypingIndicator
 );
 router.post(
   '/:chatId/stop-typing',
-  auth('common'),
+  auth('User'),
   MessageController.stopTypingIndicator
 );
 

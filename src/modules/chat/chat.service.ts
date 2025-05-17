@@ -91,6 +91,18 @@ const createSingleChat = async (
   return chatData;
 };
 
+const checkSenderIdExistInChat = async (
+  senderId: string,
+  receiverId: string
+) => {
+  //chekc
+  const chat = await Chat.findOne({
+    chatType: 'single',
+    participants: { $all: [senderId, receiverId] },
+    isDeleted: false,
+  });
+  return chat;
+};
 const createGroupChatService = async (
   chatName: string,
   participantIds: string[],
@@ -212,6 +224,7 @@ export const ChatService = {
   getAllChatsByUserId,
   getChatById,
   createSingleChat,
+  checkSenderIdExistInChat,
   createGroupChatService,
   deleteChat,
   addParticipantToGroup,
