@@ -1,20 +1,11 @@
-import multer from 'multer';
-import multerS3 from 'multer-s3';
-import { S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import sharp from 'sharp';
-import fs from 'fs';
+import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
-
-// Initialize AWS S3 client
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1', // Use your region
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'your-access-key', // Use your access key
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'your-secret-key', // Use your secret key
-  },
-});
+import { s3Client } from '../aws/awsConfig';
+import { config } from '../config';
 
 // Helper function to get video duration
 const getVideoDuration = (filePath: string): Promise<number> => {
@@ -37,18 +28,24 @@ const compressImage = async (
   mimetype: string
 ): Promise<Buffer> => {
   try {
-    const compressedImage = await sharp(filePath)
-      .jpeg({ quality: 80 }) // Reduce JPEG quality
-      .png({ compressionLevel: 8 }) // Reduce PNG compression
-      .webp({ quality: 80 }) // Reduce WebP quality
-      .toBuffer();
-    return compressedImage;
-  } catch (err) {
-    if (err instanceof Error) {
-      throw new Error(`Failed to compress image: ${err.message}`);
-    } else {
-      throw new Error('Failed to compress image due to an unknown error.');
+    const image = sharp(filePath);
+    switch (mimetype) {
+      case 'image/jpeg':
+      case 'image/jpg':
+        return await image.jpeg({ quality: 80 }).toBuffer();
+      case 'image/png':
+        return await image.png({ compressionLevel: 8 }).toBuffer();
+      case 'image/webp':
+        return await image.webp({ quality: 80 }).toBuffer();
+      default:
+        return await image.toBuffer(); // Fallback for other formats
     }
+  } catch (err) {
+    throw new Error(
+      `Failed to compress image: ${
+        err instanceof Error ? err.message : 'Unknown error'
+      }`
+    );
   }
 };
 
@@ -78,87 +75,101 @@ const compressVideo = (filePath: string): Promise<Buffer> => {
   });
 };
 
-// Updated uploadFile function with multer-s3 for S3 upload
-export const uploadFile = async (
-  file: Express.Multer.File,
+// Upload multiple files to S3
+export const uploadFilesToS3 = async (
+  files: Express.Multer.File[],
   uploadsFolder: string
-): Promise<string> => {
-  if (!file) {
-    throw new Error('No file provided');
+): Promise<string[]> => {
+  if (!files || files.length === 0) {
+    throw new Error('No files provided');
   }
 
-  // Validate file type and size
-  const allowedTypes = [
-    'image/jpg',
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/heic',
-    'image/heif',
-    'text/csv',
-    'video/mp4',
-    'audio/mpeg',
-  ];
+  const fileUrls: string[] = [];
   const maxSize = 100 * 1024 * 1024; // 100MB
 
-  if (!allowedTypes.includes(file.mimetype)) {
+  for (const file of files) {
+    const filePath = path.join(uploadsFolder, file.filename);
+    let uploadBuffer: Buffer;
+
+    try {
+      // Check video duration if it's a video file
+      if (file.mimetype === 'video/mp4' || file.mimetype === 'audio/mpeg') {
+        const duration = await getVideoDuration(filePath);
+        const minDuration = 2 * 60; // 2 minutes in seconds
+        const maxDuration = 3 * 60; // 3 minutes in seconds
+
+        if (duration < minDuration || duration > maxDuration) {
+          throw new Error(
+            `Video duration must be between 2 and 3 minutes for file: ${file.originalname}`
+          );
+        }
+
+        // Compress video
+        uploadBuffer = await compressVideo(filePath);
+      } else if (
+        file.mimetype.startsWith('image/') &&
+        !['image/heic', 'image/heif'].includes(file.mimetype)
+      ) {
+        // Compress image (skip HEIC/HEIF)
+        uploadBuffer = await compressImage(filePath, file.mimetype);
+      } else {
+        // For CSV or HEIC/HEIF, use original file
+        uploadBuffer = await fs.readFile(filePath);
+      }
+
+      // Check size after compression
+      if (uploadBuffer.length > maxSize) {
+        throw new Error(
+          `Compressed file size exceeds 100MB limit for file: ${file.originalname}`
+        );
+      }
+
+      // S3 upload
+      const fileExtension = path
+        .extname(file.originalname)
+        .toLowerCase()
+        .slice(1);
+      const fileName = `${uuidv4()}.${fileExtension}`;
+      const key = `${uploadsFolder}/${fileName}`;
+
+      const command = new PutObjectCommand({
+        Bucket: config.aws.bucketName,
+        Key: key,
+        Body: uploadBuffer,
+        ContentType: file.mimetype,
+      });
+
+      await s3Client.send(command);
+      // Generate the file URL
+      const fileUrl = `https://${config.aws.bucketName}.s3.${config.aws.region}.amazonaws.com/${key}`;
+      fileUrls.push(fileUrl);
+    } catch (error) {
+      throw new Error(
+        `File upload failed for ${file.originalname}: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
+  }
+
+  return fileUrls;
+};
+
+// Delete file from S3
+export const deleteFileFromS3 = async (fileKey: string): Promise<void> => {
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: config.aws.bucketName,
+      Key: fileKey,
+    });
+
+    await s3Client.send(command);
+    console.log(`File deleted from S3: ${fileKey}`);
+  } catch (error) {
     throw new Error(
-      'Invalid file type. Only jpg, jpeg, png, gif, webp, heic, heif, csv, mp4, and mpeg formats are allowed.'
+      `Failed to delete file from S3: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
     );
   }
-
-  if (file.size > maxSize) {
-    throw new Error('File size exceeds 100MB limit.');
-  }
-
-  const filePath = path.join(uploadsFolder, file.filename);
-  // Check video duration if it's a video file
-  let uploadBuffer: Buffer;
-  if (file.mimetype === 'video/mp4' || file.mimetype === 'audio/mpeg') {
-    const duration = await getVideoDuration(filePath);
-    const minDuration = 2 * 60; // 2 minutes in seconds
-    const maxDuration = 3 * 60; // 3 minutes in seconds
-
-    if (duration < minDuration || duration > maxDuration) {
-      fs.unlinkSync(filePath); // Delete file if duration is invalid
-      throw new Error('Video duration must be between 2 and 3 minutes.');
-    }
-
-    // Compress video
-    uploadBuffer = await compressVideo(filePath);
-  } else if (
-    file.mimetype.startsWith('image/') &&
-    !['image/heic', 'image/heif'].includes(file.mimetype)
-  ) {
-    // Compress image (skip HEIC/HEIF for now)
-    uploadBuffer = await compressImage(filePath, file.mimetype);
-  } else {
-    // For CSV or HEIC/HEIF, use original file
-    uploadBuffer = fs.readFileSync(filePath);
-  }
-
-  // Check size after compression
-  if (uploadBuffer.length > maxSize) {
-    throw new Error('Compressed file size exceeds 100MB limit.');
-  }
-
-  // S3 upload using multer-s3
-  const fileExtension = path.extname(file.originalname).toLowerCase().slice(1);
-  const fileName = `${uuidv4()}.${fileExtension}`;
-  const key = `uploads/${fileName}`;
-
-  const upload = multer({
-    storage: multerS3({
-      s3: s3,
-      bucket: process.env.AWS_S3_BUCKET_NAME || 'your-bucket-name',
-      acl: 'public-read',
-      key: function (req, file, cb) {
-        cb(null, key); // Set the file path in S3
-      },
-    }),
-  });
-  // Generate the file URL dynamically after upload
-  const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-  return fileUrl;
 };

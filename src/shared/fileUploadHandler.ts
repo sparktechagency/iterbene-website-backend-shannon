@@ -1,13 +1,21 @@
 import multer, { StorageEngine, FileFilterCallback } from 'multer';
 import path from 'path';
-import fs from 'fs';
+import fs from 'fs/promises';
+import { v4 as uuidv4 } from 'uuid';
 import { Request } from 'express';
 
-export default function fileUploadHandler(UPLOADS_FOLDER: string) {
+const fileUploadHandler = (UPLOADS_FOLDER: string) => {
   // Ensure the upload folder exists
-  if (!fs.existsSync(UPLOADS_FOLDER)) {
-    fs.mkdirSync(UPLOADS_FOLDER, { recursive: true });
-  }
+  const ensureFolder = async () => {
+    try {
+      await fs.mkdir(UPLOADS_FOLDER, { recursive: true });
+    } catch (err) {
+      console.error(`Failed to create upload folder: ${err}`);
+      throw new Error('Unable to create upload folder');
+    }
+  };
+
+  ensureFolder();
 
   // Configure multer storage
   const storage: StorageEngine = multer.diskStorage({
@@ -15,17 +23,9 @@ export default function fileUploadHandler(UPLOADS_FOLDER: string) {
       cb(null, UPLOADS_FOLDER); // Use the provided destination folder
     },
     filename: (req, file, cb) => {
-      const fileExt = path.extname(file.originalname); // Get the file extension
-      const filename =
-        file.originalname
-          .replace(fileExt, '') // Remove extension
-          .toLowerCase()
-          .split(' ')
-          .join('-') +
-        '-' +
-        Date.now(); // Append a timestamp
-
-      cb(null, filename + fileExt); // Set the final filename
+      const fileExt = path.extname(file.originalname).toLowerCase();
+      const filename = `${uuidv4()}${fileExt}`; // Use UUID for unique filename
+      cb(null, filename);
     },
   });
 
@@ -54,7 +54,7 @@ export default function fileUploadHandler(UPLOADS_FOLDER: string) {
       console.error(`File rejected: ${file.originalname}`);
       cb(
         new Error(
-          'Only jpg, jpeg, png, gif, webp, mp4, and mpeg formats are allowed!'
+          'Only jpg, jpeg, png, gif, webp, heic, heif, csv, mp4, and mpeg formats are allowed!'
         )
       );
     }
@@ -68,4 +68,5 @@ export default function fileUploadHandler(UPLOADS_FOLDER: string) {
     },
     fileFilter,
   });
-}
+};
+export default fileUploadHandler;
