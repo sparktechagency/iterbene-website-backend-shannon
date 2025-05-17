@@ -33,6 +33,7 @@ export interface IItinerary {
   arrival: string;
   days: IDay[];
   overAllRating: number;
+  isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import auth from '../../middlewares/auth';
 import { MessageController } from './message.controller';
 import fileUploadHandler from '../../shared/fileUploadHandler';
+
 const UPLOADS_FOLDER = 'uploads/messages';
 const upload = fileUploadHandler(UPLOADS_FOLDER);
 
@@ -23,8 +24,57 @@ router.get(
 
 router
   .route('/:messageId')
-  // .get(auth('common'), MessageController.getSingleMessage)
-  .patch(auth('common'), MessageController.markMessageSeen);
-// .delete(auth('common'), MessageController.deleteMessage);
+  .put(auth('common'), MessageController.updateMessage)
+  .patch(auth('common'), MessageController.markMessageSeen)
+  .delete(auth('common'), MessageController.deleteMessage);
+
+// Additional routes for new features
+router.get(
+  '/:chatId/messages',
+  auth('common'),
+  MessageController.viewAllMessages
+);
+router.get(
+  '/unviewed-count',
+  auth('common'),
+  MessageController.unviewedMessagesCount
+);
+router.post(
+  '/:messageId/reaction',
+  auth('common'),
+  MessageController.addReaction
+);
+router.delete(
+  '/:messageId/reaction',
+  auth('common'),
+  MessageController.removeReaction
+);
+router.post('/reply', auth('common'), MessageController.replyToMessage);
+router.post(
+  '/:messageId/forward',
+  auth('common'),
+  MessageController.forwardMessage
+);
+router.post(
+  '/:messageId/pin/:chatId',
+  auth('common'),
+  MessageController.pinMessage
+);
+router.post(
+  '/:messageId/unpin/:chatId',
+  auth('common'),
+  MessageController.unpinMessage
+);
+router.get('/:chatId/search', auth('common'), MessageController.searchMessages);
+router.post(
+  '/:chatId/typing',
+  auth('common'),
+  MessageController.sendTypingIndicator
+);
+router.post(
+  '/:chatId/stop-typing',
+  auth('common'),
+  MessageController.stopTypingIndicator
+);
 
 export const MessageRoutes = router;

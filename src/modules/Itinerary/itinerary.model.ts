@@ -32,6 +32,7 @@ const itinerarySchema = new Schema<IItinerary, ItineraryModel>({
   departure: { type: String, required: true },
   arrival: { type: String, required: true },
   days: [daySchema],
+  isDeleted: { type: Boolean, default: false },
   overAllRating: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

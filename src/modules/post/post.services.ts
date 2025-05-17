@@ -14,6 +14,7 @@ import { ConnectionStatus } from '../connections/connections.interface';
 import { Connections } from '../connections/connections.model';
 import { Follower } from '../followers/followers.model';
 import { User } from '../user/user.model';
+import { Maps } from '../maps/maps.model';
 
 interface CreatePostPayload {
   userId: Types.ObjectId;
@@ -183,6 +184,33 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     comments: [],
   });
 
+  //add visited location to user
+  const mapsUser = await Maps.findOne({ userId });
+  if (mapsUser) {
+    mapsUser.visitedLocation.push({
+      latitude: visitedLocation?.latitude || 0,
+      longitude: visitedLocation?.longitude || 0,
+      visitedLocationName: visitedLocationName as string,
+    });
+    await mapsUser.save();
+  } else {
+    await Maps.create({
+      userId,
+      visitedLocation: [
+        {
+          latitude: visitedLocation?.latitude || 0,
+          longitude: visitedLocation?.longitude || 0,
+          visitedLocationName: visitedLocationName as string,
+        },
+      ],
+      interestedLocation: [],
+      latitude: visitedLocation?.latitude || 0,
+      longitude: visitedLocation?.longitude || 0,
+      visitedLocationName: visitedLocationName as string,
+      interestedLocationName: '',
+    });
+  }
+
   // Update itinerary with postId
   if (itinerary) {
     await Itinerary.updateOne({ _id: itinerary }, { postId: post._id });
@@ -244,8 +272,21 @@ async function updatePost(
 
 async function deletePost(postId: string): Promise<IPost> {
   const post = await Post.findById(postId);
-  if (!post) throw new ApiError(404, 'Post not found');
-  await Post.deleteOne({ _id: postId });
+  if (!post) {
+    throw new ApiError(404, 'Post not found');
+  }
+  //soft delete
+  post.isDeleted = true;
+  await post.save();
+  //add this post under all media and itineraries deleted
+  await Media.updateMany(
+    { postId: new Types.ObjectId(postId) },
+    { isDeleted: true }
+  );
+  await Itinerary.updateMany(
+    { postId: new Types.ObjectId(postId) },
+    { isDeleted: true }
+  );
   return post.populate('media itinerary userId sourceId');
 }
 async function sharePost(payload: SharePostPayload): Promise<IPost> {
@@ -665,9 +706,12 @@ function extractHashtags(content: string): string[] {
 export const PostServices = {
   createPost,
   sharePost,
+  getPostById,
   addOrRemoveReaction,
   createComment,
   updateComment,
+  deletePost,
+  updatePost,
   deleteComment,
   feedPosts,
   getTimelinePosts,

@@ -28,10 +28,10 @@ export interface IComment {
 export interface IPost {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
-  sourceId?: Types.ObjectId; // Group or Event ID
+  sourceId?: Types.ObjectId; 
   postType: PostType;
   content: string;
-  media: Types.ObjectId[]; // References to IMedia
+  media: Types.ObjectId[];
   sortedReactions: ISortedReaction[];
   visitedLocation?: {
     latitude: number;
@@ -39,11 +39,11 @@ export interface IPost {
   };
   visitedLocationName?: string;
   privacy: PostPrivacy;
-  itinerary?: Types.ObjectId; // Optional itinerary reference
+  itinerary?: Types.ObjectId;
   hashtags: string[];
   shareCount: number;
   isShared: boolean;
-  originalPostId?: Types.ObjectId; // For shared posts
+  originalPostId?: Types.ObjectId; 
   itineraryViewCount: number;
   reactions: IReaction[];
   comments: IComment[];

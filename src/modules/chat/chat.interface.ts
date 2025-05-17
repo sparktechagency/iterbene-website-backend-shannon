@@ -7,14 +7,19 @@ export enum ChatType {
 }
 
 export interface IChat {
-  _id: string;
+  _id?: string;
   chatType: ChatType;
   participants: Types.ObjectId[];
   chatName?: string;
-  lastMessage: Types.ObjectId;
+  lastMessage?: Types.ObjectId;
   isGroupChat?: boolean;
   groupAdmin?: Types.ObjectId;
   isDeleted: boolean;
+  pinnedMessages?: Types.ObjectId[];
+  groupSettings?: {
+    allowAddParticipants: boolean;
+    allowRemoveParticipants: boolean;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }

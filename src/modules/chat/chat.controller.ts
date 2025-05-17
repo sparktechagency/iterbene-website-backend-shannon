@@ -3,10 +3,11 @@ import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
 import { ChatService } from './chat.service';
 import pick from '../../shared/pick';
+import { Request, Response } from 'express';
 import { User } from '../user/user.model';
 import ApiError from '../../errors/ApiError';
 
-const getAllChatsByUserId = catchAsync(async (req, res) => {
+const getAllChatsByUserId = catchAsync(async (req: Request, res: Response) => {
   const senderId = req.user.userId;
   const filters = pick(req.query, ['userName']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
@@ -19,7 +20,7 @@ const getAllChatsByUserId = catchAsync(async (req, res) => {
   });
 });
 
-const getSingleChat = catchAsync(async (req, res) => {
+const getSingleChat = catchAsync(async (req: Request, res: Response) => {
   const { chatId } = req.params;
   const result = await ChatService.getChatById(chatId);
   sendResponse(res, {
@@ -28,11 +29,12 @@ const getSingleChat = catchAsync(async (req, res) => {
     data: result,
   });
 });
-const createSingleChat = catchAsync(async (req, res) => {
+
+const createSingleChat = catchAsync(async (req: Request, res: Response) => {
   const senderId = req.user.userId;
   const { receiverId } = req.body;
   if (!receiverId) {
-    throw new Error('Receiver ID is required');
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Receiver ID is required');
   }
   const user = await User.findById(receiverId);
   if (!user) {
@@ -41,33 +43,65 @@ const createSingleChat = catchAsync(async (req, res) => {
   const chat = await ChatService.createSingleChat(senderId, receiverId);
   sendResponse(res, {
     code: StatusCodes.CREATED,
-    message: 'new chat created successfully',
+    message: 'New chat created successfully',
     data: chat,
   });
 });
 
-const createGroupChat = catchAsync(async (req, res) => {
+const createGroupChat = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.userId;
   const { chatName, participantIds } = req.body;
-  const chat = await ChatService.createGroupChatService(
-    chatName,
-    participantIds,
-    userId
-  );
+  const chat = await ChatService.createGroupChatService(chatName, participantIds, userId);
   sendResponse(res, {
     code: StatusCodes.CREATED,
-    message: 'new group chat created successfully',
+    message: 'New group chat created successfully',
     data: chat,
   });
 });
 
-const deleteChat = catchAsync(async (req, res) => {
+const deleteChat = catchAsync(async (req: Request, res: Response) => {
   const { chatId } = req.params;
-  await ChatService.deleteChat(chatId);
+  const chat = await ChatService.deleteChat(chatId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Chat deleted successfully',
-    data: {},
+    data: chat,
+  });
+});
+
+const addParticipantToGroup = catchAsync(async (req: Request, res: Response) => {
+  const { chatId } = req.params;
+  const { userId } = req.body;
+  const adminId = req.user.userId;
+  const chat = await ChatService.addParticipantToGroup(chatId, userId, adminId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Participant added successfully',
+    data: chat,
+  });
+});
+
+const removeParticipantFromGroup = catchAsync(async (req: Request, res: Response) => {
+  const { chatId } = req.params;
+  const { userId } = req.body;
+  const adminId = req.user.userId;
+  const chat = await ChatService.removeParticipantFromGroup(chatId, userId, adminId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Participant removed successfully',
+    data: chat,
+  });
+});
+
+const updateGroupSettings = catchAsync(async (req: Request, res: Response) => {
+  const { chatId } = req.params;
+  const settings = pick(req.body, ['allowAddParticipants', 'allowRemoveParticipants']);
+  const adminId = req.user.userId;
+  const chat = await ChatService.updateGroupSettings(chatId, settings, adminId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Group settings updated successfully',
+    data: chat,
   });
 });
 
@@ -77,4 +111,7 @@ export const ChatController = {
   createGroupChat,
   getSingleChat,
   deleteChat,
+  addParticipantToGroup,
+  removeParticipantFromGroup,
+  updateGroupSettings,
 };

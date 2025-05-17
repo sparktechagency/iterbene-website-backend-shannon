@@ -5,6 +5,7 @@ import { EventInviteStatus, IEventInvite } from './eventInvite.interface';
 import { EventInvite } from './eventInvite.model';
 import { Types } from 'mongoose';
 import { Event } from '../event/event.model';
+import { Maps } from '../maps/maps.model';
 
 const sendInvite = async (
   userId: string,
@@ -72,6 +73,28 @@ const acceptInvite = async (
     event.pendingInterestedUsers.push(invite.to);
   }
   await Promise.all([invite.save(), event.save()]);
+
+  //update or add maps user interested locations
+  const mapsUser = await Maps.findOne({ userId });
+  if (mapsUser) {
+    mapsUser.interestedLocation.push({
+      latitude: event.location.latitude,
+      longitude: event.location.longitude,
+      interestedLocationName: event.locationName,
+    });
+    await mapsUser.save();
+  } else {
+    await Maps.create({
+      userId,
+      interestedLocation: [
+        {
+          latitude: event.location.latitude,
+          longitude: event.location.longitude,
+          interestedLocationName: event.locationName,
+        },
+      ],
+    });
+  }
   return invite;
 };
 

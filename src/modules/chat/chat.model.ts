@@ -23,7 +23,7 @@ const chatSchema = new Schema<IChat, IChatModel>(
     },
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Message'
+      ref: 'Message',
     },
     isGroupChat: {
       type: Boolean,
@@ -36,11 +36,26 @@ const chatSchema = new Schema<IChat, IChatModel>(
     isDeleted: {
       type: Boolean,
       default: false,
-    }
+    },
+    pinnedMessages: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Message',
+      },
+    ],
+    groupSettings: {
+      allowAddParticipants: {
+        type: Boolean,
+        default: true,
+      },
+      allowRemoveParticipants: {
+        type: Boolean,
+        default: true,
+      },
+    },
   },
   { timestamps: true }
 );
-
 
 chatSchema.plugin(paginate);
 

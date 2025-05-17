@@ -6,14 +6,14 @@ export enum MessageType {
   IMAGE = 'image',
   AUDIO = 'audio',
   VIDEO = 'video',
-  DOCUMENT = 'document', // PDF, Word, etc.
-  MIXED = 'mixed', // Text + Media (Image, Audio, Video, PDF, etc.)
+  DOCUMENT = 'document',
+  MIXED = 'mixed',
 }
 
 export interface IContent {
-  text?: string; // Optional: Message can contain text
+  text?: string;
   messageType: MessageType;
-  fileUrls?: string[]; // Array to support multiple files (Images, Audio, Video, PDFs, etc.)
+  fileUrls?: string[];
 }
 
 export interface IMessage {
@@ -25,8 +25,14 @@ export interface IMessage {
   seenBy?: Types.ObjectId[];
   deletedBy?: Types.ObjectId[];
   unsentBy?: Types.ObjectId[];
+  isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  reactions?: { userId: Types.ObjectId; emoji: string }[];
+  replyTo?: Types.ObjectId;
+  forwardedFrom?: Types.ObjectId;
+  isPinned?: boolean;
+  deliveryStatus?: 'sent' | 'delivered' | 'seen';
 }
 
 export interface IMessageModel extends Model<IMessage> {
