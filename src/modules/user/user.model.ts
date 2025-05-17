@@ -13,19 +13,14 @@ import { Roles } from '../../middlewares/roles';
 
 const userSchema = new Schema<TUser, UserModal>(
   {
-    firstName: {
+    fullName: {
       type: String,
-      required: [false, 'First name is required'],
-      trim: true,
-    },
-    lastName: {
-      type: String,
-      required: [false, 'Last name is required'],
+      required: [true, 'Full name is required'],
       trim: true,
     },
     username: {
       type: String,
-      required: [true, 'Username is required'],
+      required: [false, 'Username is required'],
       unique: true,
       trim: true,
     },
@@ -224,12 +219,6 @@ const userSchema = new Schema<TUser, UserModal>(
 
 // Apply the paginate plugin
 userSchema.plugin(paginate);
-
-// Virtual field for full name
-userSchema.virtual('fullName').get(function (this: TUser) {
-  return `${this.firstName || ''} ${this.lastName || ''}`.trim();
-});
-
 // Static methods
 userSchema.statics.isExistUserById = async function (id: string) {
   return await this.findById(id);
@@ -257,13 +246,5 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Indexes for frequent queries
-userSchema.index({ username: 1 });
-userSchema.index({ email: 1 });
-userSchema.index({ city: 1 });
-
-userSchema.index({ locationName: 1 });
-userSchema.index({ profession: 1 });
-userSchema.index({ age: 1 });
 
 export const User = model<TUser, UserModal>('User', userSchema);

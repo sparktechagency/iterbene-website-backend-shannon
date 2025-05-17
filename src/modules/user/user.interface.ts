@@ -3,9 +3,8 @@ import { PaginateOptions, PaginateResult } from '../../types/paginate';
 
 export type TUser = {
   _id: Types.ObjectId;
-  firstName?: string;
-  lastName?: string;
-  username: string;
+  fullName?: string;
+  username?: string;
   nickname?: string;
   profileImage?: string;
   coverImage?: string;

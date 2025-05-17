@@ -140,7 +140,7 @@ const resetPassword = async (email: string, password: string) => {
   }
 
   const isReused = await Promise.all(
-    user.passwordHistory.map(entry => bcrypt.compare(password, entry.hash))
+    (user.passwordHistory ?? []).map(entry => bcrypt.compare(password, entry.hash))
   );
   if (isReused.includes(true)) {
     throw new ApiError(
@@ -195,7 +195,7 @@ const changePassword = async (
   }
 
   const isReused = await Promise.all(
-    user.passwordHistory.map(entry => bcrypt.compare(newPassword, entry.hash))
+    (user.passwordHistory ?? []).map(entry => bcrypt.compare(newPassword, entry.hash))
   );
   if (isReused.includes(true)) {
     throw new ApiError(

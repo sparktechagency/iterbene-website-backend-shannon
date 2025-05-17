@@ -39,14 +39,14 @@ router.post(
 
 router.post(
   '/login',
-  loginLimiter,
+  // loginLimiter,
   validateRequest(AuthValidation.loginValidationSchema),
   AuthController.login
 );
 
 router.post(
   '/verify-email',
-  verifyEmailLimiter,
+  // verifyEmailLimiter,
   auth('Common'),
   validateRequest(AuthValidation.verifyEmailValidationSchema),
   AuthController.verifyEmail
@@ -56,7 +56,7 @@ router.post('/resend-otp', resendOtpLimiter, AuthController.resendOtp);
 
 router.post(
   '/forgot-password',
-  forgotPasswordLimiter,
+  // forgotPasswordLimiter,
   validateRequest(AuthValidation.forgotPasswordValidationSchema),
   AuthController.forgotPassword
 );

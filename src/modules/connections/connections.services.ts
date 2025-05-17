@@ -1,14 +1,14 @@
 import { StatusCodes } from 'http-status-codes';
-import ApiError from '../../errors/ApiError';
-import { User } from '../user/user.model';
-import { Connections } from './connections.model';
-import { ConnectionStatus, IConnections } from './connections.interface';
 import mongoose from 'mongoose';
+import ApiError from '../../errors/ApiError';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
-import { UserService } from '../user/user.service';
 import { validateUsers } from '../../utils/validateUsers';
-import { ConnectionPrivacy, PrivacyVisibility } from '../user/user.interface';
 import { BlockedUser } from '../blockedUsers/blockedUsers.model';
+import { ConnectionPrivacy, PrivacyVisibility } from '../user/user.interface';
+import { User } from '../user/user.model';
+import { UserService } from '../user/user.service';
+import { ConnectionStatus, IConnections } from './connections.interface';
+import { Connections } from './connections.model';
 
 const addConnection = async (
   sentByUserId: string,
@@ -386,9 +386,7 @@ const getConnectionSuggestions = async (
     }
 
     suggestedUsers = await User.find(query)
-      .select(
-        'username firstName lastName profileImage city locationName profession age'
-      )
+      .select('username fullName profileImage city locationName profession age')
       .skip(options.skip || 0)
       .limit(limit)
       .sort(options.sortBy || '-createdAt');
@@ -457,7 +455,7 @@ const getConnectionSuggestions = async (
     if (query.$or.length > 0) {
       suggestedUsers = await User.find(query)
         .select(
-          'username firstName lastName profileImage city locationName profession age'
+          'username fullName profileImage city locationName profession age'
         )
         .skip(options.skip || 0)
         .limit(limit)
@@ -470,7 +468,7 @@ const getConnectionSuggestions = async (
         },
       })
         .select(
-          'username firstName lastName profileImage city locationName profession age'
+          'username fullName profileImage city locationName profession age'
         )
         .skip(options.skip || 0)
         .limit(limit)
