@@ -21,10 +21,6 @@ const mediaSchema = new Schema<IMedia>(
       type: String,
       trim: true,
     },
-    thumbnailUrl: {
-      type: String,
-      trim: true,
-    },
     duration: {
       type: Number,
     },

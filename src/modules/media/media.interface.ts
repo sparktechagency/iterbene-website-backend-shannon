@@ -6,7 +6,6 @@ export interface IMedia {
   sourceType: SourceType;
   mediaType: MediaType;
   mediaUrl: string;
-  thumbnailUrl?: string;
   duration?: number;
   textContent?: string;
   altText?: string;

@@ -24,7 +24,7 @@ const storySchema = new Schema<IStory, IStoryModel>(
     privacy: {
       type: String,
       enum: Object.values(StoryPrivacy),
-      default: StoryPrivacy.FOLLOWERS,
+      default: StoryPrivacy.PUBLIC,
     },
     viewedBy: [
       {

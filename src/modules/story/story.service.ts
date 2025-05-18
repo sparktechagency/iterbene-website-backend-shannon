@@ -1,47 +1,19 @@
+import { ClientSession, Types } from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
-import { Types } from 'mongoose';
-import ApiError from '../../errors/ApiError';
+import { IStory, StoryPrivacy, StoryStatus } from './story.interface';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
-import { ConnectionStatus } from '../connections/connections.interface';
+import ApiError from '../../errors/ApiError';
+import { Media } from '../media/media.model';
+import { MediaType, SourceType } from '../media/media.interface';
+import { Story } from './story.model';
 import { Connections } from '../connections/connections.model';
 import { Follower } from '../followers/followers.model';
-import { MediaType, SourceType } from '../media/media.interface';
-import { Media } from '../media/media.model';
 import { User } from '../user/user.model';
-import { IStory, StoryPrivacy, StoryStatus } from './story.interface';
-import { Story } from './story.model';
+import { ConnectionStatus } from '../connections/connections.interface';
+import { uploadFilesToS3 } from '../../helpers/s3Service';
 
-// // Initialize S3 client (placeholder)
-// const s3 = new S3({
-//   accessKeyId: config.awsAccessKeyId,
-//   secretAccessKey: config.awsSecretAccessKey,
-//   region: config.awsRegion,
-// });
 
-// // Helper to upload file to S3 and return URLs
-// const uploadToS3 = async (
-//   file: Express.Multer.File
-// ): Promise<{ mediaUrl: string; thumbnailUrl?: string }> => {
-//   const key = `stories/${Date.now()}-${file.originalname}`;
-//   const params = {
-//     Bucket: config.s3Bucket,
-//     Key: key,
-//     Body: file.buffer,
-//     ContentType: file.mimetype,
-//   };
-
-//   const { Location } = await s3.upload(params).promise();
-//   let thumbnailUrl: string | undefined;
-
-//   // Generate thumbnail for videos (placeholder logic)
-//   if (file.mimetype.startsWith('video')) {
-//     // Assume a thumbnail generation service (e.g., AWS Elastic Transcoder)
-//     thumbnailUrl = `${Location}-thumbnail.jpg`;
-//   }
-
-//   return { mediaUrl: Location, thumbnailUrl };
-// };
-
+const UPLOADS_FOLDER = 'uploads/stories';
 const createStory = async (
   userId: string,
   payload: any,
@@ -75,10 +47,7 @@ const createStory = async (
   if (hasFiles) {
     mediaData = await Promise.all(
       files!.map(async file => {
-        const mediaUrl = `uploads/stories/${file.filename}`;
-        const thumbnailUrl = file.mimetype.startsWith('video')
-          ? `uploads/stories/thumbnails/placeholder.jpg`
-          : `uploads/stories/${file.filename}`;
+        const mediaUrl = await uploadFilesToS3([file], UPLOADS_FOLDER);
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         const fileMediaType = file.mimetype.startsWith('image')
           ? MediaType.IMAGE
@@ -92,8 +61,7 @@ const createStory = async (
           sourceType: SourceType.STORY,
           mediaType:
             mediaType === MediaType.MIXED ? MediaType.MIXED : fileMediaType,
-          mediaUrl,
-          thumbnailUrl,
+          mediaUrl: mediaUrl[0],
           duration: payload.duration || 0,
           textContent: payload.textContent || null,
           expiresAt,
@@ -114,7 +82,6 @@ const createStory = async (
         sourceType: SourceType.STORY,
         mediaType: MediaType.TEXT,
         mediaUrl: null,
-        thumbnailUrl: null,
         duration: payload.duration || 0,
         textContent: payload.textContent,
         expiresAt,
@@ -193,7 +160,7 @@ const getStory = async (storyId: string, userId: string): Promise<IStory> => {
     },
     {
       path: 'userId',
-      select: 'fullName username nickname profileImage coverImage',
+      select: 'firstName lastName username nickname profileImage coverImage',
     },
   ]);
   if (!story || story.isDeleted || story.status === StoryStatus.DELETED) {
@@ -411,19 +378,19 @@ const getMyStories = async (
     },
     {
       path: 'userId',
-      select: 'fullName username nickname profileImage coverImage',
+      select: 'firstName lastName username nickname profileImage coverImage',
     },
     {
       path: 'viewedBy',
-      select: 'fullName username nickname profileImage coverImage',
+      select: 'firstName lastName username nickname profileImage coverImage',
     },
     {
       path: 'reactions.userId',
-      select: 'fullName username nickname profileImage coverImage',
+      select: 'firstName lastName username nickname profileImage coverImage',
     },
     {
       path: 'replies.userId',
-      select: 'fullName username nickname profileImage coverImage',
+      select: 'firstName lastName username nickname profileImage coverImage',
     },
   ];
   options.sortBy = options.sortBy || '-createdAt';
@@ -499,7 +466,8 @@ const getStoryFeed = async (
         },
         {
           path: 'userId',
-          select: 'fullName username nickname profileImage coverImage',
+          select:
+            'firstName lastName username nickname profileImage coverImage',
         },
       ],
     });
@@ -532,7 +500,7 @@ const getStoryFeed = async (
       },
       {
         path: 'userId',
-        select: 'fullName username nickname profileImage coverImage',
+        select: 'firstName lastName username nickname profileImage coverImage',
       },
     ],
   });
@@ -544,7 +512,7 @@ const getStoryViewers = async (
 ): Promise<Types.ObjectId[]> => {
   const story = await Story.findById(storyId).populate({
     path: 'viewedBy',
-    select: 'fullName username  profileImage',
+    select: 'firstName lastName username  profileImage',
   });
   if (!story || story.isDeleted || story.status === StoryStatus.DELETED) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found');
