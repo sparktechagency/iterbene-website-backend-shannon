@@ -19,18 +19,27 @@ router.get(
 //get single user by username
 router.get('/username/:userName', auth('Common'), UserController.getSingleUser);
 
+//update profile image
+router.post(
+  '/profile-image',
+  auth('Common'),
+  upload.single('profileImage'),
+  UserController.updateProfileImage
+);
+
+//update cover image
+router.post(
+  '/cover-image',
+  auth('Common'),
+  upload.single('coverImage'),
+  UserController.updateCoverImage
+);
+
 // Get and fill up User Profile
 router
   .route('/profile')
   .get(auth('Common'), UserController.getMyProfile)
-  .patch(
-    auth('Common'),
-    upload.fields([
-      { name: 'profileImage', maxCount: 1 },
-      { name: 'coverImage', maxCount: 1 },
-    ]),
-    UserController.updateMyProfile
-  )
+  .patch(auth('Common'), UserController.updateMyProfile)
   .delete(auth('Common'), UserController.deleteMyProfile);
 
 // Set Latest User Location

@@ -9,7 +9,7 @@ const UPLOADS_FOLDER = 'uploads/users';
 
 const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const superAdmin = await UserService.getSingleUser(userId,userId);
+  const superAdmin = await UserService.getSingleUser(userId, userId);
   if (superAdmin?.role !== 'super_admin') {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
@@ -89,19 +89,7 @@ const checkUserNameAlreadyExists = catchAsync(async (req, res) => {
 
 const updateMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  if (files && files.profileImage) {
-    const fileUrl = await uploadFilesToS3(files.profileImage, UPLOADS_FOLDER);
-    req.body.profileImage = fileUrl[0];
-  }
-
-  if (files && files.coverImage) {
-    const fileUrl = await uploadFilesToS3(files.coverImage, UPLOADS_FOLDER);
-    req.body.coverImage = fileUrl[0];
-  }
-
   const result = await UserService.updateMyProfile(userId, req.body);
-
   await UserInteractionLogService.createLog(
     userId,
     'profile_updated',
@@ -119,6 +107,36 @@ const updateMyProfile = catchAsync(async (req, res) => {
   });
 });
 
+const updateProfileImage = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const file = req.file as Express.Multer.File;
+  const result = await uploadFilesToS3(
+    [file],
+    UPLOADS_FOLDER
+  );
+
+ const updatedResult = await UserService.updateProfileImage(userId, result[0]);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: updatedResult,
+    message: 'Profile image updated successfully.',
+  });
+});
+const updateCoverImage = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const file = req.file as Express.Multer.File;
+  const result = await uploadFilesToS3(
+    [file],
+    UPLOADS_FOLDER
+  );
+
+ const updatedResult = await UserService.updateCoverImage(userId, result[0]);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: updatedResult,
+    message: 'Cover image updated successfully.',
+  });
+})
 const updateUserStatus = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const { status } = req.body;
@@ -188,6 +206,8 @@ export const UserController = {
   setUserLatestLocation,
   updateUserStatus,
   getMyProfile,
+  updateProfileImage,
+  updateCoverImage,
   updateMyProfile,
   deleteMyProfile,
 };

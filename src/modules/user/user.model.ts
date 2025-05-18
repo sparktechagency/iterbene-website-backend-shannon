@@ -10,6 +10,7 @@ import bcrypt from 'bcrypt';
 import { config } from '../../config';
 import { Gender, MaritalStatus, UserStatus } from './user.constant';
 import { Roles } from '../../middlewares/roles';
+import { string } from 'zod';
 
 const userSchema = new Schema<TUser, UserModal>(
   {
@@ -32,12 +33,14 @@ const userSchema = new Schema<TUser, UserModal>(
     profileImage: {
       type: String,
       required: false,
-      default: 'https://marray-meet.s3.eu-north-1.amazonaws.com/user.iter-bene.webp',
+      default:
+        'https://marray-meet.s3.eu-north-1.amazonaws.com/user.iter-bene.webp',
     },
     coverImage: {
       type: String,
       required: false,
-      default: 'https://marray-meet.s3.eu-north-1.amazonaws.com/cover.iter-bene.webp',
+      default:
+        'https://marray-meet.s3.eu-north-1.amazonaws.com/cover.iter-bene.webp',
     },
     email: {
       type: String,
@@ -99,7 +102,7 @@ const userSchema = new Schema<TUser, UserModal>(
       default: 'User',
     },
     profession: { type: String },
-    age: { type: Number },
+    ageRange: { type: String },
     country: { type: String },
     city: { type: String },
     state: { type: String },
@@ -245,6 +248,5 @@ userSchema.pre('save', async function (next) {
   }
   next();
 });
-
 
 export const User = model<TUser, UserModal>('User', userSchema);

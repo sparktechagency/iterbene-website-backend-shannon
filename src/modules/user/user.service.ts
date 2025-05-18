@@ -52,7 +52,11 @@ const filterUserFields = async (
     email: user.email,
     phoneNumber: user.phoneNumber,
     referredAs: user.referredAs,
-    age: user.age,
+    ageRange: user.ageRange,
+    address: user.address,
+    country: user.country,
+    city: user.city,
+    state: user.state,
     profession: user.profession,
     maritalStatus: user.maritalStatus,
     role: user.role,
@@ -61,7 +65,7 @@ const filterUserFields = async (
   };
 
   const privateFields: (keyof TUser)[] = [
-    'age',
+    'ageRange',
     'nickname',
     'gender',
     'location',
@@ -237,6 +241,26 @@ const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
   return filterUserFields(user, userId);
 };
 
+const updateProfileImage = async (userId: string, profileImage: string) => {
+  const user = await User.findById(userId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+  user.profileImage = profileImage;
+  await user.save();
+  return filterUserFields(user, userId);
+};
+
+const updateCoverImage = async (userId: string, coverImage: string) => {
+  const user = await User.findById(userId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+  user.coverImage = coverImage;
+  await user.save();
+  return filterUserFields(user, userId);
+};
+
 const checkUserNameAlreadyExists = async (
   userName: string
 ): Promise<boolean> => {
@@ -285,7 +309,6 @@ const getMyProfile = async (userId: string): Promise<Partial<TUser> | null> => {
     '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -isBanned -isDeleted -__v'
   );
   if (!user || user.isDeleted) {
-
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
   return filterUserFields(user, userId);
@@ -308,6 +331,8 @@ export const UserService = {
   createAdminOrSuperAdmin,
   getSingleUser,
   setUserLatestLocation,
+  updateProfileImage,
+  updateCoverImage,
   updateMyProfile,
   checkUserNameAlreadyExists,
   updateUserStatus,

@@ -24,7 +24,7 @@ export type TUser = {
   description?: string;
   role: string;
   profession?: string;
-  age?: number;
+  ageRange?: string;
   country?: string;
   city?: string;
   state?: string;
