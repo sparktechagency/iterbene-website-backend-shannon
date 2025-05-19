@@ -15,7 +15,9 @@ import { Connections } from '../connections/connections.model';
 import { Follower } from '../followers/followers.model';
 import { User } from '../user/user.model';
 import { Maps } from '../maps/maps.model';
+import { uploadFilesToS3 } from '../../helpers/s3Service';
 
+const UPLOADS_FOLDER = 'uploads/posts';
 interface CreatePostPayload {
   userId: Types.ObjectId;
   content?: string;
@@ -82,13 +84,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     visitedLocationName,
   } = payload;
 
-  // Validate input
-  if (!Object.values(PostType).includes(postType)) {
-    throw new ApiError(400, 'Invalid post type');
-  }
-  if (!Object.values(PostPrivacy).includes(privacy)) {
-    throw new ApiError(400, 'Invalid privacy setting');
-  }
+  console.log("payload", payload);
 
   // Validate sourceId
   if (sourceId && postType === PostType.GROUP) {
@@ -99,7 +95,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     const event = await Event.findById(sourceId);
     if (!event || event.isDeleted) throw new ApiError(404, 'Event not found');
   }
-  if (postType !== PostType.TIMELINE && !sourceId) {
+  if (postType !== PostType.USER && !sourceId) {
     throw new ApiError(400, `${postType} posts require a sourceId`);
   }
 
@@ -118,10 +114,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
   if (files?.length) {
     mediaData = await Promise.all(
       files.map(async file => {
-        const mediaUrl = `uploads/posts/${file.filename}`;
-        const thumbnailUrl = file.mimetype.startsWith('video')
-          ? `uploads/posts/thumbnails/placeholder.jpg`
-          : `uploads/posts/${file.filename}`;
+        const mediaUrl = await uploadFilesToS3([file], UPLOADS_FOLDER);
         const fileMediaType = file.mimetype.startsWith('image')
           ? MediaType.IMAGE
           : file.mimetype.startsWith('video')
@@ -133,8 +126,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
           sourceId: new Types.ObjectId(), // Temporary
           sourceType: postType,
           mediaType: fileMediaType,
-          mediaUrl,
-          thumbnailUrl,
+          mediaUrl:mediaUrl[0],
           isDeleted: false,
           metadata: { fileSize: file.size },
         };
@@ -170,7 +162,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     sourceId: sourceId ? new Types.ObjectId(sourceId) : undefined,
     postType,
     content: content || '',
-    media: mediaDocs.map(m => m._id),
+    media: mediaDocs?.map(m => m._id),
     itinerary,
     hashtags: normalizedHashtags,
     privacy,
@@ -300,7 +292,7 @@ async function sharePost(payload: SharePostPayload): Promise<IPost> {
   const sharedPost = await Post.create({
     userId,
     content: content || '',
-    postType: PostType.TIMELINE,
+    postType: PostType.USER,
     privacy,
     isShared: true,
     originalPostId: new Types.ObjectId(originalPostId),
@@ -554,7 +546,7 @@ async function feedPosts(
           // Timeline posts from eligible users
           {
             userId: { $in: eligibleUserIds },
-            postType: PostType.TIMELINE,
+            postType: PostType.USER,
           },
           // Group posts from groups the user is in
           {
@@ -661,7 +653,7 @@ async function getTimelinePosts(
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> {
   const query: Record<string, any> = {
-    postType: PostType.TIMELINE,
+    postType: PostType.USER,
   };
   if (filters.userId) {
     query.$and = [{ userId: filters.userId }, { sourceId: filters.userId }];

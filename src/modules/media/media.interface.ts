@@ -30,7 +30,7 @@ export enum MediaType {
 }
 
 export enum SourceType {
-  TIMELINE = 'timeline',
+  USER = 'User',
   COMMENT = 'comment',
   GROUP = 'group',
   EVENT = 'event',

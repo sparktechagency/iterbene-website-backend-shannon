@@ -3,7 +3,7 @@ import paginate from '../../common/plugins/paginate';
 import { IItinerary, ItineraryModel } from './Itinerary.interface';
 
 const activitySchema = new Schema({
-  time: { type: Date, required: true },
+  time: { type: String, required: true },
   description: { type: String, required: true },
   link: String,
   rating: Number,

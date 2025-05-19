@@ -1,8 +1,7 @@
 import { Model, Types } from 'mongoose';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
-
 export interface IActivity {
-  time: Date;
+  time: string;
   description: string;
   link?: string;
   rating?: number;

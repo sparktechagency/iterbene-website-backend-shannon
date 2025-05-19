@@ -38,7 +38,6 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
   } else {
     console.log('visitedLocation is not a string:', visitedLocation);
   }
-
   const result = await PostServices.createPost({
     userId,
     content,

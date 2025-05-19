@@ -28,10 +28,10 @@ export interface IComment {
 export interface IPost {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
-  sourceId?: Types.ObjectId; 
+  sourceId?: Types.ObjectId; // Group or Event ID
   postType: PostType;
   content: string;
-  media: Types.ObjectId[];
+  media: Types.ObjectId[]; // References to IMedia
   sortedReactions: ISortedReaction[];
   visitedLocation?: {
     latitude: number;
@@ -39,11 +39,11 @@ export interface IPost {
   };
   visitedLocationName?: string;
   privacy: PostPrivacy;
-  itinerary?: Types.ObjectId;
+  itinerary?: Types.ObjectId; // Optional itinerary reference
   hashtags: string[];
   shareCount: number;
   isShared: boolean;
-  originalPostId?: Types.ObjectId; 
+  originalPostId?: Types.ObjectId; // For shared posts
   itineraryViewCount: number;
   reactions: IReaction[];
   comments: IComment[];
@@ -73,7 +73,7 @@ export enum PostPrivacy {
 }
 
 export enum PostType {
-  TIMELINE = 'timeline',
-  GROUP = 'group',
-  EVENT = 'event',
+  USER = 'User',
+  GROUP = 'Group',
+  EVENT = 'Event',
 }
