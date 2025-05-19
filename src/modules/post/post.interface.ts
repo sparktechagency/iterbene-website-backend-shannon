@@ -30,8 +30,8 @@ export interface IPost {
   userId: Types.ObjectId;
   sourceId?: Types.ObjectId; // Group or Event ID
   postType: PostType;
-  content: string;
-  media: Types.ObjectId[]; // References to IMedia
+  content?: string;
+  media: Types.ObjectId[];
   sortedReactions: ISortedReaction[];
   visitedLocation?: {
     latitude: number;

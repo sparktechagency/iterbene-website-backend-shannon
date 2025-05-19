@@ -8,12 +8,7 @@ export interface IMedia {
   mediaUrl: string;
   duration?: number;
   textContent?: string;
-  altText?: string;
   caption?: string;
-  metadata?: {
-    resolution?: string;
-    fileSize?: number;
-  };
   expiresAt?: Date;
   isDeleted: boolean;
   createdAt: Date;

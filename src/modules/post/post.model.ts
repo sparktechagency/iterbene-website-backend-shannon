@@ -35,6 +35,11 @@ const commentSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
+const visitedLocationSchema = new Schema({
+  latitude: { type: Number, required: false },
+  longitude: { type: Number, required: false },
+});
+
 const postSchema = new Schema<IPost, IPostModel>({
   userId: {
     type: Schema.Types.ObjectId,
@@ -61,11 +66,10 @@ const postSchema = new Schema<IPost, IPostModel>({
     },
   ],
   sortedReactions: [sortedReactionSchema],
-  visitedLocation: {
-    latitude: Number,
-    longitude: Number,
+  visitedLocation: visitedLocationSchema,
+  visitedLocationName: {
+    type: String,
   },
-  visitedLocationName: String,
   privacy: {
     type: String,
     enum: Object.values(PostPrivacy),

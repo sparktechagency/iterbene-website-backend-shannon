@@ -84,8 +84,6 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     visitedLocationName,
   } = payload;
 
-  console.log("payload", payload);
-
   // Validate sourceId
   if (sourceId && postType === PostType.GROUP) {
     const group = await Group.findById(sourceId);
@@ -127,8 +125,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
           sourceType: postType,
           mediaType: fileMediaType,
           mediaUrl:mediaUrl[0],
-          isDeleted: false,
-          metadata: { fileSize: file.size },
+          isDeleted: false
         };
       })
     );
@@ -631,7 +628,7 @@ async function feedPosts(
       score *= 1.15; // Boost 15% for image/video
     }
 
-    return { ...post, score };
+    return { ...(post as any).toObject(), score };
   });
 
   // Optional: Save seen posts (uncomment to use SeenPost model)

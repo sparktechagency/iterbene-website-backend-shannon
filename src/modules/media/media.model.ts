@@ -1,4 +1,4 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model } from 'mongoose';
 import { IMedia, MediaType, SourceType } from './media.interface';
 
 const mediaSchema = new Schema<IMedia>(
@@ -25,14 +25,6 @@ const mediaSchema = new Schema<IMedia>(
       type: Number,
     },
     textContent: {
-      type: String,
-      trim: true,
-    },
-    metadata: {
-      resolution: { type: String },
-      fileSize: { type: Number },
-    },
-    altText: {
       type: String,
       trim: true,
     },
