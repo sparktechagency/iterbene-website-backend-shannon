@@ -66,9 +66,13 @@ const postSchema = new Schema<IPost, IPostModel>({
     },
   ],
   sortedReactions: [sortedReactionSchema],
-  visitedLocation: visitedLocationSchema,
+  visitedLocation: {
+    type: visitedLocationSchema,
+    required: false,
+  },
   visitedLocationName: {
     type: String,
+    required: false,
   },
   privacy: {
     type: String,

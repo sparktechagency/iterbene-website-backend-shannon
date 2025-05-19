@@ -124,8 +124,8 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
           sourceId: new Types.ObjectId(), // Temporary
           sourceType: postType,
           mediaType: fileMediaType,
-          mediaUrl:mediaUrl[0],
-          isDeleted: false
+          mediaUrl: mediaUrl[0],
+          isDeleted: false,
         };
       })
     );
@@ -173,31 +173,33 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     comments: [],
   });
 
-  //add visited location to user
-  const mapsUser = await Maps.findOne({ userId });
-  if (mapsUser) {
-    mapsUser.visitedLocation.push({
-      latitude: visitedLocation?.latitude || 0,
-      longitude: visitedLocation?.longitude || 0,
-      visitedLocationName: visitedLocationName as string,
-    });
-    await mapsUser.save();
-  } else {
-    await Maps.create({
-      userId,
-      visitedLocation: [
-        {
-          latitude: visitedLocation?.latitude || 0,
-          longitude: visitedLocation?.longitude || 0,
-          visitedLocationName: visitedLocationName as string,
-        },
-      ],
-      interestedLocation: [],
-      latitude: visitedLocation?.latitude || 0,
-      longitude: visitedLocation?.longitude || 0,
-      visitedLocationName: visitedLocationName as string,
-      interestedLocationName: '',
-    });
+  if (visitedLocation && visitedLocationName) {
+    //add visited location to user
+    const mapsUser = await Maps.findOne({ userId });
+    if (mapsUser) {
+      mapsUser.visitedLocation.push({
+        latitude: visitedLocation?.latitude || 0,
+        longitude: visitedLocation?.longitude || 0,
+        visitedLocationName: visitedLocationName as string,
+      });
+      await mapsUser.save();
+    } else {
+      await Maps.create({
+        userId,
+        visitedLocation: [
+          {
+            latitude: visitedLocation?.latitude || 0,
+            longitude: visitedLocation?.longitude || 0,
+            visitedLocationName: visitedLocationName as string,
+          },
+        ],
+        interestedLocation: [],
+        latitude: visitedLocation?.latitude || 0,
+        longitude: visitedLocation?.longitude || 0,
+        visitedLocationName: visitedLocationName as string,
+        interestedLocationName: '',
+      });
+    }
   }
 
   // Update itinerary with postId
@@ -577,70 +579,21 @@ async function feedPosts(
       userId: currentUserId,
     });
   }
-
-  // Optional: Exclude seen posts (uncomment to use SeenPost model)
-  /*
-    if (currentUserId) {
-      const seenPosts = await SeenPost.find({ userId: currentUserId }).distinct('postId');
-      query._id = { $nin: seenPosts };
-    }
-    */
-
-  options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
+  options.populate = [
+    {
+      path: 'media',
+      select: 'mediaType mediaUrl',
+    },
+    { path: 'itinerary' },
+    {
+      path: 'userId',
+      select: 'fullName username  profileImage',
+    },
+  ];
   options.sortBy = options.sortBy || '-createdAt';
 
   // Fetch posts
   const posts = await Post.paginate(query, options);
-
-  // Rank posts (simplified scoring)
-  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-  const now = Date.now();
-  posts.results = posts.results.map(post => {
-    let score = 0;
-
-    // Recency score (0 to 1, higher for newer posts)
-    const age = now - new Date(post.createdAt).getTime();
-    const recencyScore = Math.max(0, 1 - age / maxAge);
-    score += recencyScore * 50; // Weight: 50%
-
-    // Engagement score
-    const engagementScore =
-      post.reactions.length * 0.5 +
-      post.comments.length * 1 +
-      post.shareCount * 2;
-    score += engagementScore * 30; // Weight: 30%
-
-    // Affinity score (only for authenticated users)
-    if (userId) {
-      if (connectedUserIds.some(id => id.equals(post.userId))) {
-        score *= 1.2; // Boost 20% for connections
-      } else if (followedUserIds.some(id => id.equals(post.userId))) {
-        score *= 1.1; // Boost 10% for followed users
-      }
-    }
-
-    // Content type score
-    if (
-      post.media.some((m: any) =>
-        [MediaType.IMAGE, MediaType.VIDEO].includes(m.mediaType)
-      )
-    ) {
-      score *= 1.15; // Boost 15% for image/video
-    }
-
-    return { ...(post as any).toObject(), score };
-  });
-
-  // Optional: Save seen posts (uncomment to use SeenPost model)
-  /*
-    if (currentUserId && posts.docs.length) {
-      const seenPostDocs = posts.docs.map(post => ({
-        userId: currentUserId,
-        postId: post._id,
-      }));
-      await SeenPost.insertMany(seenPostDocs, { ordered: false });
-    }
-    */
 
   return posts;
 }
