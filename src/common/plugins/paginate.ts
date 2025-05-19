@@ -1,5 +1,6 @@
 import { FilterQuery, Schema } from 'mongoose';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
+
 // Plugin function for pagination
 const paginate = <T>(schema: Schema<T>) => {
   schema.statics.paginate = async function (
@@ -10,11 +11,21 @@ const paginate = <T>(schema: Schema<T>) => {
     const page = options.page ?? 1;
     const skip = (page - 1) * limit;
     const sort = options.sortBy ?? 'createdAt';
+    const select = options.select; // Get select option
+
     const countPromise = this.countDocuments(filter).exec();
     let query = this.find(filter).sort(sort).skip(skip).limit(limit);
+
+    // Apply select if provided
+    if (select) {
+      query = query.select(select);
+    }
+
+    // Apply populate if provided
     if (options.populate) {
       query = query.populate(options.populate);
     }
+
     const [totalResults, results] = await Promise.all([
       countPromise,
       query.exec(),

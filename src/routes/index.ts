@@ -17,6 +17,7 @@ import { EventRoutes } from '../modules/event/event.routes';
 import { StoryRoutes } from '../modules/story/story.route';
 import { PostRoutes } from '../modules/post/post.routes';
 import { ItineraryRoutes } from '../modules/Itinerary/itinerary.routes';
+import { HashtagRoutes } from '../modules/hastag/hashtag.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -63,6 +64,10 @@ const apiRoutes = [
   {
     path:"/itinerary",
     route:ItineraryRoutes
+  },
+  {
+    path: '/hashtag',
+    route: HashtagRoutes,
   },
   {
     path: '/chats',

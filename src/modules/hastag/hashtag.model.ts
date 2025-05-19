@@ -1,6 +1,6 @@
-import { Schema, model, Types } from 'mongoose';
+import { model, Schema, Types } from 'mongoose';
 import paginate from '../../common/plugins/paginate';
-import { IHashtag, IHashtagModel } from './hastag.interface';
+import { IHashtag, IHashtagModel } from './hashtag.interface';
 
 const hashtagSchema = new Schema<IHashtag, IHashtagModel>({
   _id: { type: String, required: true },

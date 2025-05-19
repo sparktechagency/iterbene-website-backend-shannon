@@ -135,12 +135,13 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
   const mediaDocs = await Media.insertMany(mediaData);
 
   // Process hashtags
-  const normalizedHashtags = extractHashtags(content || '').map(tag =>
-    tag.toLowerCase()
-  );
-  if (normalizedHashtags.length) {
+  const hashtags = extractHashtags(content || '');
+  const uniqueHashtags = [
+    ...new Set(hashtags.map(tag => tag.replace(/^#/, ''))),
+  ]; // Remove duplicates and normalize
+  if (uniqueHashtags.length) {
     await Promise.all(
-      normalizedHashtags.map(async tag => {
+      uniqueHashtags.map(async tag => {
         await Hashtag.findOneAndUpdate(
           { _id: tag },
           {
@@ -161,7 +162,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     content: content || '',
     media: mediaDocs?.map(m => m._id),
     itinerary,
-    hashtags: normalizedHashtags,
+    hashtags: uniqueHashtags,
     privacy,
     visitedLocation,
     visitedLocationName,
@@ -174,7 +175,7 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
   });
 
   if (visitedLocation && visitedLocationName) {
-    //add visited location to user
+    // Add visited location to user
     const mapsUser = await Maps.findOne({ userId });
     if (mapsUser) {
       mapsUser.visitedLocation.push({
@@ -208,9 +209,9 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
   }
 
   // Update hashtags with postId
-  if (normalizedHashtags.length) {
+  if (uniqueHashtags.length) {
     await Hashtag.updateMany(
-      { _id: { $in: normalizedHashtags } },
+      { _id: { $in: uniqueHashtags } },
       { $addToSet: { posts: post._id } }
     );
   }
@@ -642,7 +643,7 @@ async function getEventPosts(
 function extractHashtags(content: string): string[] {
   const regex = /#(\w+)/g;
   const matches = content.match(regex) || [];
-  return matches.map(tag => tag.slice(1).toLowerCase());
+  return matches;
 }
 
 export const PostServices = {

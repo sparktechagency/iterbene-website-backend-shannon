@@ -2,6 +2,7 @@ export interface PaginateOptions {
   limit?: number;
   page?: number;
   sortBy?: string;
+  select?: string;
   populate?: any; 
 }
 
