@@ -95,7 +95,7 @@ export const uploadFilesToS3 = async (
       // Check video duration if it's a video file
       if (file.mimetype === 'video/mp4' || file.mimetype === 'audio/mpeg') {
         const duration = await getVideoDuration(filePath);
-        const minDuration = 2 * 60; // 2 minutes in seconds
+        const minDuration = 2 * 60; 
         const maxDuration = 3 * 60; // 3 minutes in seconds
 
         if (duration < minDuration || duration > maxDuration) {

@@ -6,7 +6,6 @@ export interface IActivity {
   description: string;
   link?: string;
   rating?: number;
-  comments?: string;
   duration?: number;
   cost: number;
 }
@@ -19,7 +18,7 @@ export interface IDay {
   };
   activities: IActivity[];
   locationName: string;
-  comments?: string;
+  comment?: string;
   weather?: string;
 }
 

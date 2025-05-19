@@ -7,9 +7,8 @@ const activitySchema = new Schema({
   description: { type: String, required: true },
   link: String,
   rating: Number,
-  comments: String,
   duration: Number,
-  cost: { type: Number, required: true },
+  cost: { type: Number, required: false },
 });
 
 const daySchema = new Schema({
@@ -20,7 +19,7 @@ const daySchema = new Schema({
   },
   activities: [activitySchema],
   locationName: { type: String, required: true },
-  comments: String,
+  comment: String,
   weather: String,
 });
 
