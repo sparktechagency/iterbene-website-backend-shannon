@@ -485,7 +485,6 @@ async function feedPosts(
 ): Promise<PaginateResult<IPost>> {
   const { userId } = filters;
 
-  // Initialize variables
   let currentUserId: Types.ObjectId | null = null;
   let connectedUserIds: Types.ObjectId[] = [];
   let followedUserIds: Types.ObjectId[] = [];
@@ -495,13 +494,11 @@ async function feedPosts(
   let blockedUserIds: Types.ObjectId[] = [];
 
   if (userId) {
-    // Validate userId
     if (!Types.ObjectId.isValid(userId)) {
       throw new ApiError(400, 'Invalid user ID');
     }
     currentUserId = new Types.ObjectId(userId);
 
-    // Get connected users
     const connections = await Connections.find({
       status: ConnectionStatus.ACCEPTED,
       $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
@@ -515,11 +512,9 @@ async function feedPosts(
         )
     );
 
-    // Get followed users
     const followers = await Follower.find({ followerId: currentUserId });
     followedUserIds = followers.map(f => f.followedId);
 
-    // Combine user IDs (include current user)
     eligibleUserIds = [
       ...new Set([
         ...connectedUserIds.map(id => id.toString()),
@@ -528,48 +523,39 @@ async function feedPosts(
       ]),
     ].map(id => new Types.ObjectId(id));
 
-    // Get groups and events the user is part of (assuming members field exists)
     const groups = await Group.find({ members: currentUserId });
     const events = await Event.find({ members: currentUserId });
     groupIds = groups.map(g => g._id);
     eventIds = events.map(e => e._id);
 
-    // Get blocked users
     const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
     blockedUserIds = blockedUsers.map(b => b.blockedId);
   }
 
-  // Build query
   const query: Record<string, any> = {
     $or: userId
       ? [
-          // Timeline posts from eligible users
           {
             userId: { $in: eligibleUserIds },
             postType: PostType.USER,
           },
-          // Group posts from groups the user is in
           {
             postType: PostType.GROUP,
             sourceId: { $in: groupIds },
           },
-          // Event posts from events the user is in
           {
             postType: PostType.EVENT,
             sourceId: { $in: eventIds },
           },
         ]
       : [
-          // Public posts for unauthenticated users
           {
             privacy: PostPrivacy.PUBLIC,
           },
         ],
-    // Exclude posts from blocked users
     userId: { $nin: blockedUserIds },
   };
 
-  // Privacy filtering for authenticated users
   if (userId) {
     query.$or.push({
       privacy: PostPrivacy.FRIENDS,
@@ -580,6 +566,7 @@ async function feedPosts(
       userId: currentUserId,
     });
   }
+
   options.populate = [
     {
       path: 'media',
@@ -588,13 +575,45 @@ async function feedPosts(
     { path: 'itinerary' },
     {
       path: 'userId',
-      select: 'fullName username  profileImage',
+      select: 'fullName username profileImage',
+    },
+    {
+      path: 'reactions',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
+    {
+      path: 'comments',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
     },
   ];
   options.sortBy = options.sortBy || '-createdAt';
 
-  // Fetch posts
   const posts = await Post.paginate(query, options);
+
+  // Manually sort comments and reactions for each post
+  posts.results = posts.results.map(post => {
+    // Sort reactions by createdAt in descending order
+    if (post.reactions) {
+      post.reactions.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    // Sort comments by createdAt in descending order
+    if (post.comments) {
+      post.comments.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    return post;
+  });
 
   return posts;
 }
