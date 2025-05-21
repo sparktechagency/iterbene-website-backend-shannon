@@ -58,6 +58,7 @@ const postSchema = new Schema<IPost, IPostModel>({
   content: {
     type: String,
     default: '',
+    trim: true,
   },
   media: [
     {

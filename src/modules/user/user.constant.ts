@@ -1,3 +1,2 @@
-export const Gender = ['Male', 'Female', 'Other'];
-export const MaritalStatus = ['Single', 'Married', 'Divorced', 'Widowed'];
+export const Gender = ['Male', 'Female'];
 export const UserStatus = ['Active', 'Banned', 'Block', 'Delete'];

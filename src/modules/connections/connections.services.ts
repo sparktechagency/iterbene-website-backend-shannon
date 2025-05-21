@@ -4,11 +4,15 @@ import ApiError from '../../errors/ApiError';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import { validateUsers } from '../../utils/validateUsers';
 import { BlockedUser } from '../blockedUsers/blockedUsers.model';
-import { ConnectionPrivacy, PrivacyVisibility } from '../user/user.interface';
+import {
+  ConnectionPrivacy,
+  PrivacyVisibility,
+  TUser,
+} from '../user/user.interface';
 import { User } from '../user/user.model';
-import { UserService } from '../user/user.service';
 import { ConnectionStatus, IConnections } from './connections.interface';
 import { Connections } from './connections.model';
+import { RemovedConnection } from '../removeConnections/removedConnections.model';
 
 const addConnection = async (
   sentByUserId: string,
@@ -19,13 +23,6 @@ const addConnection = async (
     receivedByUserId,
     'Connect'
   );
-
-  if (receivedByUser.connectionPrivacy === ConnectionPrivacy.PUBLIC) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'This user does not accept connection requests'
-    );
-  }
 
   if (receivedByUser.connectionPrivacy === ConnectionPrivacy.FRIEND_TO_FRIEND) {
     const senderFriends = await Connections.find({
@@ -131,7 +128,7 @@ const declineConnection = async (connectionId: string, userId: string) => {
   return connection;
 };
 
-const removeConnection = async (connectionId: string, userId: string) => {
+const deleteConnection = async (connectionId: string, userId: string) => {
   const connection = await Connections.findById(connectionId);
   if (!connection) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Connection not found');
@@ -159,28 +156,23 @@ const removeConnection = async (connectionId: string, userId: string) => {
   return { message: 'Connection removed successfully' };
 };
 
-const cancelRequest = async (connectionId: string, userId: string) => {
-  const connection = await Connections.findById(connectionId);
-  if (!connection) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Connection not found');
-  }
-
-  if (connection.sentBy.toString() !== userId) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'You are not authorized to cancel this request'
-    );
-  }
-
-  if (connection.status !== ConnectionStatus.PENDING) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      `Only pending requests can be cancelled`
-    );
-  }
-
-  await Connections.findByIdAndDelete(connectionId);
-  return { message: 'Connection request cancelled successfully' };
+const removeConnection = async (
+  sentByUserId: string,
+  removedByUserId: string
+) => {
+  const result = await RemovedConnection.create({
+    userId: sentByUserId,
+    removedUserId: removedByUserId,
+  });
+  return result;
+};
+const cancelRequest = async (userId: string, friendId: string) => {
+  const result = await Connections.findOneAndDelete({
+    sentBy: userId,
+    receivedBy: friendId,
+    status: ConnectionStatus.PENDING,
+  });
+  return result;
 };
 
 const getMyAllConnections = async (
@@ -201,7 +193,7 @@ const getMyAllConnections = async (
 const getMyAllRequests = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IConnections>> => {
+) => {
   const query: Record<string, any> = {
     status: ConnectionStatus.PENDING,
     receivedBy: filters.userId,
@@ -209,7 +201,8 @@ const getMyAllRequests = async (
 
   options.sortBy = options.sortBy || '-createdAt';
   const connections = await Connections.paginate(query, options);
-  return connections;
+  const requestCount = await Connections.countDocuments(query);
+  return { ...connections, requestCount };
 };
 
 const getSentMyRequests = async (
@@ -225,7 +218,17 @@ const getSentMyRequests = async (
   const connections = await Connections.paginate(query, options);
   return connections;
 };
-
+const checkIsSentConnectionExists = async (
+  userId: string,
+  friendId: string
+) => {
+  const result = await Connections.findOne({
+    sentBy: userId,
+    receivedBy: friendId,
+    status: ConnectionStatus.PENDING,
+  });
+  return result;
+};
 const getMutualConnections = async (
   userId1: string,
   userId2: string
@@ -271,9 +274,9 @@ const checkConnectionStatus = async (
 
 const getConnectionSuggestions = async (
   userId: string,
-  limit: number = 10,
-  options: { skip?: number; sortBy?: string } = {}
-): Promise<{ users: any[]; total: number }> => {
+  filters: Record<string, any>,
+  options: PaginateOptions
+) => {
   const user = await User.findById(userId).select(
     'city locationName profession age privacySettings connectionPrivacy'
   );
@@ -296,11 +299,11 @@ const getConnectionSuggestions = async (
     $or: [
       {
         sentBy: userId,
-        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
+        status: { $in: [ConnectionStatus.DECLINED] },
       },
       {
         receivedBy: userId,
-        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
+        status: { $in: [ConnectionStatus.DECLINED] },
       },
     ],
   }).select('sentBy receivedBy');
@@ -315,6 +318,15 @@ const getConnectionSuggestions = async (
       : block.blockerId.toString()
   );
 
+  // Fetch recently removed connections
+  const removedConnections = await RemovedConnection.find({
+    userId,
+  }).select('removedUserId');
+
+  const removedUserIds = removedConnections.map(conn =>
+    conn.removedUserId.toString()
+  );
+
   const excludeUsers = [
     userId,
     ...friends,
@@ -324,10 +336,14 @@ const getConnectionSuggestions = async (
         ? conn.receivedBy.toString()
         : conn.sentBy.toString()
     ),
+    ...removedUserIds, // Add removed users to the exclusion list
   ];
 
-  let suggestedUsers: any[] = [];
-  let total = 0;
+  let suggestedUsers: TUser[] = [];
+  let page = 1;
+  let limit = 10;
+  let totalPages = 0;
+  let totalResults = 0;
 
   if (friends.length === 0) {
     const hasAttributes =
@@ -335,8 +351,7 @@ const getConnectionSuggestions = async (
       (user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
         user.locationName) ||
       (user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
-        user.profession) ||
-      (user.privacySettings.age === PrivacyVisibility.PUBLIC && user.age);
+        user.profession);
 
     if (!hasAttributes) {
       return { users: [], total: 0 };
@@ -374,24 +389,23 @@ const getConnectionSuggestions = async (
         'privacySettings.profession': PrivacyVisibility.PUBLIC,
       });
     }
-    if (user.privacySettings.age === PrivacyVisibility.PUBLIC && user.age) {
-      query.$or.push({
-        age: { $gte: user.age - 10, $lte: user.age + 10 },
-        'privacySettings.age': PrivacyVisibility.PUBLIC,
-      });
-    }
 
     if (query.$or.length === 0) {
-      return { users: [], total: 0 };
+      return {
+        results: [],
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+        totalResults: 0,
+      };
     }
-
-    suggestedUsers = await User.find(query)
-      .select('username fullName profileImage city locationName profession age')
-      .skip(options.skip || 0)
-      .limit(limit)
-      .sort(options.sortBy || '-createdAt');
-
-    total = await User.countDocuments(query);
+    options.select = '_id fullName profileImage username';
+    const paginatedResult = await User.paginate(query, options);
+    suggestedUsers = paginatedResult.results;
+    page = paginatedResult.page;
+    limit = paginatedResult.limit;
+    totalPages = paginatedResult.totalPages;
+    totalResults = paginatedResult.totalResults;
   } else {
     const friendConnections = await Connections.find({
       $or: [{ sentBy: { $in: friends } }, { receivedBy: { $in: friends } }],
@@ -445,52 +459,33 @@ const getConnectionSuggestions = async (
         'privacySettings.profession': PrivacyVisibility.PUBLIC,
       });
     }
-    if (user.privacySettings.age === PrivacyVisibility.PUBLIC && user.age) {
-      query.$or.push({
-        age: { $gte: user.age - 10, $lte: user.age + 10 },
-        'privacySettings.age': PrivacyVisibility.PUBLIC,
-      });
-    }
 
+    options.select = '_id fullName profileImage username';
     if (query.$or.length > 0) {
-      suggestedUsers = await User.find(query)
-        .select(
-          'username fullName profileImage city locationName profession age'
-        )
-        .skip(options.skip || 0)
-        .limit(limit)
-        .sort(options.sortBy || '-createdAt');
-      total = await User.countDocuments(query);
+      const paginatedResult = await User.paginate(query, options);
+      suggestedUsers = paginatedResult.results;
+      page = paginatedResult.page;
+      limit = paginatedResult.limit;
+      totalPages = paginatedResult.totalPages;
+      totalResults = paginatedResult.totalResults;
     } else {
-      suggestedUsers = await User.find({
+      const suggestedUserQuery: Record<string, any> = {
         _id: {
           $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)),
         },
-      })
-        .select(
-          'username fullName profileImage city locationName profession age'
-        )
-        .skip(options.skip || 0)
-        .limit(limit)
-        .sort(options.sortBy || '-createdAt');
-      total = suggestedUserIds.length;
+        isDeleted: false,
+        isBanned: false,
+        isBlocked: false,
+      };
+      const suggestedUsers = await User.paginate(suggestedUserQuery, options);
+      page = suggestedUsers.page;
+      limit = suggestedUsers.limit;
+      totalPages = suggestedUsers.totalPages;
+      totalResults = suggestedUsers.totalResults;
     }
-
-    suggestedUsers = await Promise.all(
-      suggestedUsers.map(async suggestedUser => {
-        const filteredUser = await UserService.filterUserFields(
-          suggestedUser,
-          userId
-        );
-        return filteredUser;
-      })
-    );
   }
 
-  return {
-    users: suggestedUsers,
-    total,
-  };
+  return { results: suggestedUsers, page, limit, totalPages, totalResults };
 };
 
 export const ConnectionsService = {
@@ -499,9 +494,11 @@ export const ConnectionsService = {
   declineConnection,
   removeConnection,
   cancelRequest,
+  deleteConnection,
   getMyAllConnections,
   getMyAllRequests,
   getSentMyRequests,
+  checkIsSentConnectionExists,
   getMutualConnections,
   checkConnectionStatus,
   getConnectionSuggestions,

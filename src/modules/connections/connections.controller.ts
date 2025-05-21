@@ -45,10 +45,10 @@ const declineConnection = catchAsync(async (req: Request, res: Response) => {
 
 const removeConnection = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { connectionId } = req.params;
+  const { removedByUserId } = req.params;
   const result = await ConnectionsService.removeConnection(
-    connectionId,
-    userId
+    userId,
+    removedByUserId
   );
   sendResponse(res, {
     code: 200,
@@ -59,8 +59,8 @@ const removeConnection = catchAsync(async (req: Request, res: Response) => {
 
 const cancelRequest = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { connectionId } = req.params;
-  const result = await ConnectionsService.cancelRequest(connectionId, userId);
+  const { friendId } = req.params;
+  const result = await ConnectionsService.cancelRequest(userId,friendId);
   sendResponse(res, {
     code: 200,
     message: 'Connection request cancelled successfully',
@@ -68,6 +68,19 @@ const cancelRequest = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const deleteConnection = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { connectionId } = req.params;
+  const result = await ConnectionsService.deleteConnection(
+    connectionId,
+    userId
+  );
+  sendResponse(res, {
+    code: 200,
+    message: 'Connection deleted successfully',
+    data: result,
+  });
+});
 const getMyAllConnections = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const filters = pick(req.query, ['fullName']);
@@ -83,7 +96,7 @@ const getMyAllConnections = catchAsync(async (req: Request, res: Response) => {
 
 const getMyAllRequests = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filters = pick(req.query, ["fullName"]);
+  const filters = pick(req.query, ['fullName']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   filters.userId = userId;
   const result = await ConnectionsService.getMyAllRequests(filters, options);
@@ -137,10 +150,12 @@ const checkConnectionStatus = catchAsync(
 const getConnectionSuggestions = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const filters = pick(req.query, ['fullName']);
+    const options = pick(req.query, ['page', 'limit', 'populate', 'sortBy']);
     const result = await ConnectionsService.getConnectionSuggestions(
       userId,
-      limit
+      filters,
+      options
     );
     sendResponse(res, {
       code: 200,
@@ -150,12 +165,29 @@ const getConnectionSuggestions = catchAsync(
   }
 );
 
+const checkIsSentConnectionExists = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const { friendId } = req.params;
+    const result = await ConnectionsService.checkIsSentConnectionExists(
+      userId,
+      friendId
+    );
+    sendResponse(res, {
+      code: 200,
+      message: 'Connection sent retrieved successfully',
+      data: result,
+    });
+  }
+);
 export const ConnectionsController = {
   addConnection,
   acceptConnection,
   declineConnection,
   removeConnection,
   cancelRequest,
+  deleteConnection,
+  checkIsSentConnectionExists,
   getMyAllConnections,
   getMyAllRequests,
   getSentMyRequests,

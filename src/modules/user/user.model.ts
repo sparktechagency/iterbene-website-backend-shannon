@@ -8,9 +8,8 @@ import {
 import paginate from '../../common/plugins/paginate';
 import bcrypt from 'bcrypt';
 import { config } from '../../config';
-import { Gender, MaritalStatus, UserStatus } from './user.constant';
+import { Gender, UserStatus } from './user.constant';
 import { Roles } from '../../middlewares/roles';
-import { string } from 'zod';
 
 const userSchema = new Schema<TUser, UserModal>(
   {
@@ -48,11 +47,6 @@ const userSchema = new Schema<TUser, UserModal>(
       unique: true,
       lowercase: true,
     },
-    aboutMe: {
-      type: String,
-      required: [false, 'About me is required'],
-      trim: true,
-    },
     password: {
       type: String,
       required: [true, 'Password is required'],
@@ -85,10 +79,6 @@ const userSchema = new Schema<TUser, UserModal>(
     },
     maritalStatus: {
       type: String,
-      enum: {
-        values: MaritalStatus,
-        message: '{VALUE} is not a valid marital status',
-      },
       required: [false, 'Marital status is required'],
     },
     description: { type: String },
@@ -156,10 +146,10 @@ const userSchema = new Schema<TUser, UserModal>(
     },
     lockUntil: { type: Date },
     privacySettings: {
-      age: {
+      ageRange: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.ONLY_ME,
       },
       nickname: {
         type: String,
@@ -169,7 +159,7 @@ const userSchema = new Schema<TUser, UserModal>(
       gender: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.ONLY_ME,
       },
       location: {
         type: String,
@@ -179,12 +169,12 @@ const userSchema = new Schema<TUser, UserModal>(
       locationName: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+       default: PrivacyVisibility.PUBLIC,
       },
       city: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+         default: PrivacyVisibility.PUBLIC,
       },
       profession: {
         type: String,

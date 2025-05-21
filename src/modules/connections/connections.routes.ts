@@ -6,6 +6,11 @@ const router = Router();
 
 router.post('/add', auth('User'), ConnectionsController.addConnection);
 
+router.get(
+  '/check-sent-connection/:friendId',
+  auth('User'),
+  ConnectionsController.checkIsSentConnectionExists
+);
 router.patch(
   '/accept/:connectionId',
   auth('User'),
@@ -19,15 +24,21 @@ router.patch(
 );
 
 router.delete(
-  '/remove/:connectionId',
+  '/remove/:removedByUserId',
   auth('User'),
   ConnectionsController.removeConnection
 );
 
 router.delete(
-  '/cancel/:connectionId',
+  '/cancel/:friendId',
   auth('User'),
   ConnectionsController.cancelRequest
+);
+
+router.delete(
+  '/delete/:connectionId',
+  auth('User'),
+  ConnectionsController.deleteConnection
 );
 
 router.get('/', auth('User'), ConnectionsController.getMyAllConnections);

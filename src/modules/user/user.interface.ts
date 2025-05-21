@@ -9,7 +9,6 @@ export type TUser = {
   profileImage?: string;
   coverImage?: string;
   email: string;
-  aboutMe?: string;
   password: string;
   phoneNumber?: string;
   status: string;
@@ -46,7 +45,7 @@ export type TUser = {
   failedLoginAttempts: number;
   lockUntil?: Date;
   privacySettings: {
-    age: PrivacyVisibility;
+    ageRange: PrivacyVisibility;
     nickname: PrivacyVisibility;
     gender: PrivacyVisibility;
     location: PrivacyVisibility;
