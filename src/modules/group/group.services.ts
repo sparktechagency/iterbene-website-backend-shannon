@@ -9,7 +9,6 @@ import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import mongoose from 'mongoose';
 import { validateUsers } from '../../utils/validateUsers';
-import { UserService } from '../user/user.service';
 
 interface CreateGroupPayload {
   name: string;
@@ -26,45 +25,83 @@ const createGroup = async (
   creatorId: string,
   payload: CreateGroupPayload
 ): Promise<IGroup> => {
+  // Validate creator exists
   const user = await User.findById(creatorId);
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Creator not found');
   }
 
-  const coLeaders = payload.coLeaders || [];
-  const members = payload.members || [];
-  const uniqueUsers = [...new Set([...coLeaders, ...members])].filter(
-    id => id !== creatorId
-  );
-
-  for (const userId of uniqueUsers) {
-    await validateUsers(creatorId, userId, 'Add to group');
-    const targetUser = await User.findById(userId);
-    if (!targetUser || targetUser.isDeleted) {
-      throw new ApiError(StatusCodes.NOT_FOUND, `User ${userId} not found`);
-    }
+  // Validate required fields
+  if (!payload.name?.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Group name is required');
+  }
+  if (!payload.location || !payload.locationName?.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Location is required');
   }
 
+  const coLeaders = payload.coLeaders || [];
+  const members = payload.members || [];
+
+  // Remove creator from co-leaders and members (creator is automatically admin)
   const validCoLeaders = coLeaders.filter(id => id !== creatorId);
   const validMembers = members.filter(
     id => id !== creatorId && !validCoLeaders.includes(id)
   );
 
+  // Get all unique user IDs to validate
+  const allUserIds = [...new Set([...validCoLeaders, ...validMembers])];
+
+  // Validate all users exist in a single query (better performance)
+  if (allUserIds.length > 0) {
+    const existingUsers = await User.find({
+      _id: { $in: allUserIds },
+      isDeleted: { $ne: true },
+    }).select('_id');
+
+    const existingUserIds = existingUsers.map(user => user._id.toString());
+    const invalidUsers = allUserIds.filter(id => !existingUserIds.includes(id));
+
+    if (invalidUsers.length > 0) {
+      throw new ApiError(
+        StatusCodes.NOT_FOUND,
+        `Users not found: ${invalidUsers.join(', ')}`
+      );
+    }
+
+    // Validate connections (if this validation is needed)
+    for (const userId of allUserIds) {
+      await validateUsers(creatorId, userId, 'Add to group');
+    }
+  }
+
+  // Convert all IDs to ObjectId consistently
+  const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
+  const coLeaderObjectIds = validCoLeaders.map(
+    id => new mongoose.Types.ObjectId(id)
+  );
+  const memberObjectIds = validMembers.map(
+    id => new mongoose.Types.ObjectId(id)
+  );
+
+  // Calculate total participants: creator + coLeaders + members
+  const totalParticipants = 1 + validCoLeaders.length + validMembers.length;
+
   const group = new Group({
-    creatorId,
-    name: payload.name,
-    description: payload.description || '',
+    creatorId: creatorObjectId,
+    name: payload.name.trim(),
+    description: payload.description?.trim() || '',
     groupImage: payload.groupImage || null,
     privacy: payload.privacy,
     location: payload.location,
-    locationName: payload.locationName,
-    admins: [creatorId],
-    coLeaders: validCoLeaders.map(id => new mongoose.Types.ObjectId(id)),
+    locationName: payload.locationName.trim(),
+    admins: [creatorObjectId], // Creator is admin
+    coLeaders: coLeaderObjectIds,
     members: [
-      creatorId,
-      ...validMembers.map(id => new mongoose.Types.ObjectId(id)),
+      creatorObjectId, // Creator is also a member
+      ...coLeaderObjectIds, // Co-leaders are also members
+      ...memberObjectIds, // Regular members
     ],
-    participantCount: 1 + validMembers.length,
+    participantCount: totalParticipants,
   });
 
   await group.save();
@@ -342,13 +379,27 @@ const demoteCoLeader = async (
   return group;
 };
 const getGroup = async (
-  groupId: string,
-  userId: string
+  userId: string,
+  groupId: string
 ): Promise<Partial<IGroup>> => {
-  const group = await Group.findById(groupId).populate(
-    'creatorId admins coLeaders members pendingMembers',
-    'username profileImage'
-  );
+  const group = await Group.findById(groupId).populate([
+    {
+      path: 'creatorId',
+      select: 'fullName  profileImage username createdAt description',
+    },
+    {
+      path: 'admins',
+      select: 'fullName  profileImage username',
+    },
+    {
+      path: 'coLeaders',
+      select: 'fullName  profileImage username',
+    },
+     {
+      path: 'members',
+      select: 'fullName  profileImage username',
+    },
+  ]);
   if (!group || group.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
@@ -431,6 +482,24 @@ const getMyGroups = async (
   if (filters.privacy) {
     query.privacy = filters.privacy;
   }
+  options.populate = [
+    {
+      path: 'creatorId',
+      select: 'fullName  profileImage username createdAt description',
+    },
+    {
+      path: 'admins',
+      select: 'fullName  profileImage username',
+    },
+    {
+      path: 'coLeaders',
+      select: 'fullName  profileImage username',
+    },
+    {
+      path: 'members',
+      select: 'fullName  profileImage username',
+    },
+  ];
 
   options.sortBy = options.sortBy || '-createdAt';
   const groups = await Group.paginate(query, options);
@@ -450,7 +519,20 @@ const getMyJoinGroups = async (
   if (filters.privacy) {
     query.privacy = filters.privacy;
   }
-
+  options.populate = [
+    {
+      path: 'creatorId',
+      select: 'fullName  profileImage username createdAt description',
+    },
+    {
+      path: 'admins',
+      select: 'fullName  profileImage username',
+    },
+    {
+      path: 'coLeaders',
+      select: 'fullName  profileImage username',
+    },
+  ];
   options.sortBy = options.sortBy || '-createdAt';
   const groups = await Group.paginate(query, options);
   return groups;
@@ -458,9 +540,9 @@ const getMyJoinGroups = async (
 
 const getGroupSuggestions = async (
   userId: string,
-  limit: number = 10,
-  options: { skip?: number; sortBy?: string } = {}
-): Promise<{ groups: Partial<IGroup>[]; total: number }> => {
+  filters: Record<string, any>,
+  options: PaginateOptions
+) => {
   const user = await User.findById(userId).select(
     'city locationName profession privacySettings'
   );
@@ -514,23 +596,24 @@ const getGroupSuggestions = async (
     query.$or.push({ members: { $in: friends } });
   }
 
-  const groups = await Group.find(query)
-    .select('name groupImage privacy participantCount')
-    .skip(options.skip || 0)
-    .limit(limit)
-    .sort(options.sortBy || '-participantCount');
+  options.populate = [
+    {
+      path: 'creatorId',
+      select: 'fullName  profileImage username createdAt description',
+    },
+    {
+      path: 'admins',
+      select: 'fullName  profileImage username',
+    },
+    {
+      path: 'coLeaders',
+      select: 'fullName  profileImage username',
+    },
+  ];
+  options.sortBy = options.sortBy || '-createdAt';
 
-  const total = await Group.countDocuments(query);
-
-  const filteredGroups = groups.map(group => ({
-    _id: group._id,
-    name: group.name,
-    groupImage: group.groupImage,
-    privacy: group.privacy,
-    participantCount: group.participantCount,
-  }));
-
-  return { groups: filteredGroups, total };
+  const groups = await Group.paginate(query, options);
+  return groups;
 };
 
 export const GroupService = {

@@ -15,7 +15,7 @@ router.post(
   '/',
   auth('User'),
   upload.single('groupImage'),
-  validateRequest(GroupValidation.createGroupValidationSchema),
+  // validateRequest(GroupValidation.createGroupValidationSchema),
   GroupController.createGroup
 );
 

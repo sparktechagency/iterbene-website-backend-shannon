@@ -10,9 +10,18 @@ const UPLOADS_FOLDER = 'uploads/groups';
 const createGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const file = req.file as Express.Multer.File;
+  // parse the JSON string location and coleaders
+  if (typeof req.body.location === 'string') {
+    req.body.location = JSON.parse(req.body.location);
+  }
+  if (typeof req.body.coLeaders === 'string') {
+    req.body.coLeaders = JSON.parse(req.body.coLeaders);
+  }
   const groupImage = await uploadFilesToS3([file], UPLOADS_FOLDER);
   const payload = req.body;
   payload.groupImage = groupImage[0];
+
+  console.log("Consle body", req.body);
   const result = await GroupService.createGroup(userId, payload);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -191,11 +200,9 @@ const getMyJoinGroups = catchAsync(async (req: Request, res: Response) => {
 
 const getGroupSuggestions = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { limit = 10, skip = 0, sortBy } = req.query;
-  const result = await GroupService.getGroupSuggestions(userId, Number(limit), {
-    skip: Number(skip),
-    sortBy: sortBy as string,
-  });
+  const filters = pick(req.query, ['name']);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
+  const result = await GroupService.getGroupSuggestions(userId, filters, options);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Group suggestions retrieved successfully',
