@@ -16,7 +16,6 @@ const createGroupValidationSchema = z.object({
       invalid_type_error: 'Name must be a string',
     }),
     description: z.string().optional(),
-    groupImage: z.string().url('Group image must be a valid URL').optional(),
     privacy: z.enum(['public', 'private'], {
       required_error: 'Privacy is required',
       invalid_type_error: 'Privacy must be either public or private',

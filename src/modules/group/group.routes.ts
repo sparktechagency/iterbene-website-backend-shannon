@@ -4,6 +4,9 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../shared/validateRequest';
 import { GroupController } from './group.controllers';
 import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
+import fileUploadHandler from '../../shared/fileUploadHandler';
+const UPLOADS_FOLDER = 'uploads/groups';
+const upload = fileUploadHandler(UPLOADS_FOLDER);
 
 const router = express.Router();
 
@@ -11,6 +14,7 @@ const router = express.Router();
 router.post(
   '/',
   auth('User'),
+  upload.single('groupImage'),
   validateRequest(GroupValidation.createGroupValidationSchema),
   GroupController.createGroup
 );

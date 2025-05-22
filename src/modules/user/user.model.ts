@@ -169,12 +169,22 @@ const userSchema = new Schema<TUser, UserModal>(
       locationName: {
         type: String,
         enum: PrivacyVisibility,
-       default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      country: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
+      },
+      state: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.PUBLIC,
       },
       city: {
         type: String,
         enum: PrivacyVisibility,
-         default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.PUBLIC,
       },
       profession: {
         type: String,

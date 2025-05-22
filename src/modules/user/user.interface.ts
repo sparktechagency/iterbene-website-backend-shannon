@@ -50,7 +50,9 @@ export type TUser = {
     gender: PrivacyVisibility;
     location: PrivacyVisibility;
     locationName: PrivacyVisibility;
+    country: PrivacyVisibility;
     city: PrivacyVisibility;
+    state: PrivacyVisibility;
     profession: PrivacyVisibility;
     aboutMe: PrivacyVisibility;
     phoneNumber: PrivacyVisibility;

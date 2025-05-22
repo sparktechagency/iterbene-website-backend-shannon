@@ -4,10 +4,15 @@ import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
 import pick from '../../shared/pick';
 import { GroupService } from './group.services';
+import { uploadFilesToS3 } from '../../helpers/s3Service';
+const UPLOADS_FOLDER = 'uploads/groups';
 
 const createGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
+  const file = req.file as Express.Multer.File;
+  const groupImage = await uploadFilesToS3([file], UPLOADS_FOLDER);
   const payload = req.body;
+  payload.groupImage = groupImage[0];
   const result = await GroupService.createGroup(userId, payload);
   sendResponse(res, {
     code: StatusCodes.OK,

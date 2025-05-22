@@ -25,7 +25,7 @@ const acceptConnection = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     code: 200,
     message: 'Connection accepted successfully',
-    data: result,
+    data: {},
   });
 });
 
@@ -39,7 +39,7 @@ const declineConnection = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     code: 200,
     message: 'Connection declined successfully',
-    data: result,
+    data: {},
   });
 });
 
@@ -53,18 +53,18 @@ const removeConnection = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     code: 200,
     message: 'Connection removed successfully',
-    data: result,
+    data: {},
   });
 });
 
 const cancelRequest = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { friendId } = req.params;
-  const result = await ConnectionsService.cancelRequest(userId,friendId);
+  const result = await ConnectionsService.cancelRequest(userId, friendId);
   sendResponse(res, {
     code: 200,
     message: 'Connection request cancelled successfully',
-    data: result,
+    data: {},
   });
 });
 

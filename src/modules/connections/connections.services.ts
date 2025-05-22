@@ -108,23 +108,20 @@ const declineConnection = async (connectionId: string, userId: string) => {
   if (!connection) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Connection not found');
   }
-
   if (connection.receivedBy.toString() !== userId) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'You are not authorized to decline this connection'
     );
   }
-
   if (connection.status !== ConnectionStatus.PENDING) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       `Connection is already ${connection.status}`
     );
   }
-
-  connection.status = ConnectionStatus.DECLINED;
-  await connection.save();
+  //delete connection request
+  await Connections.findByIdAndDelete(connectionId);
   return connection;
 };
 
@@ -185,6 +182,12 @@ const getMyAllConnections = async (
   if (filters.userId) {
     query.$or = [{ sentBy: filters.userId }, { receivedBy: filters.userId }];
   }
+  options.populate = [
+    {
+      path: 'sentBy',
+      select: 'fullName  profileImage username',
+    }
+  ]
   options.sortBy = options.sortBy || '-createdAt';
   const connections = await Connections.paginate(query, options);
   return connections;
@@ -198,7 +201,12 @@ const getMyAllRequests = async (
     status: ConnectionStatus.PENDING,
     receivedBy: filters.userId,
   };
-
+  options.populate = [
+    {
+      path: 'sentBy',
+      select: 'fullName  profileImage username',
+    },
+  ];
   options.sortBy = options.sortBy || '-createdAt';
   const connections = await Connections.paginate(query, options);
   const requestCount = await Connections.countDocuments(query);
@@ -277,13 +285,15 @@ const getConnectionSuggestions = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ) => {
+  // Fetch the user to get their attributes
   const user = await User.findById(userId).select(
-    'city locationName profession age privacySettings connectionPrivacy'
+    'city locationName country profession privacySettings connectionPrivacy'
   );
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
+  // Fetch user's accepted connections to exclude them
   const connections = await Connections.find({
     $or: [{ sentBy: userId }, { receivedBy: userId }],
     status: ConnectionStatus.ACCEPTED,
@@ -295,19 +305,14 @@ const getConnectionSuggestions = async (
       : conn.sentBy.toString()
   );
 
+  // Fetch pending or declined connections to exclude them
   const pendingOrDeclined = await Connections.find({
     $or: [
-      {
-        sentBy: userId,
-        status: { $in: [ConnectionStatus.DECLINED] },
-      },
-      {
-        receivedBy: userId,
-        status: { $in: [ConnectionStatus.DECLINED] },
-      },
+      { sentBy: userId, status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] } },
+      { receivedBy: userId, status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] } },
     ],
-  }).select('sentBy receivedBy');
-
+  }).select('sentBy receivedBy createdAt');
+  // Fetch blocked users to exclude them
   const blockedUsers = await BlockedUser.find({
     $or: [{ blockerId: userId }, { blockedId: userId }],
   }).select('blockerId blockedId');
@@ -318,7 +323,7 @@ const getConnectionSuggestions = async (
       : block.blockerId.toString()
   );
 
-  // Fetch recently removed connections
+  // Fetch recently removed connections to exclude them
   const removedConnections = await RemovedConnection.find({
     userId,
   }).select('removedUserId');
@@ -327,165 +332,99 @@ const getConnectionSuggestions = async (
     conn.removedUserId.toString()
   );
 
+  // Exclude users: self, friends, blocked users, removed users, and recent pending connections
   const excludeUsers = [
     userId,
     ...friends,
     ...blockedUserIds,
-    ...pendingOrDeclined.map(conn =>
-      conn.sentBy.toString() === userId
-        ? conn.receivedBy.toString()
-        : conn.sentBy.toString()
-    ),
-    ...removedUserIds, // Add removed users to the exclusion list
+    ...removedUserIds,
   ];
+  // Exclude users with pending connections sent within the last 3 minutes
+  const timeoutMinutes = 1; // Adjust this value as needed
+  const timeoutThreshold = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+  const recentPending = pendingOrDeclined.filter(
+    conn => conn.status === ConnectionStatus.PENDING && conn.sentBy.toString() === userId && conn.createdAt >= timeoutThreshold
+  );
+  const recentPendingUserIds = recentPending.map(conn => conn.receivedBy.toString());
+  excludeUsers.push(...recentPendingUserIds);
 
-  let suggestedUsers: TUser[] = [];
-  let page = 1;
-  let limit = 10;
-  let totalPages = 0;
-  let totalResults = 0;
+  // Build query for suggestions based on attributes
+  const query: Record<string, any> = {
+    _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
+    isDeleted: false,
+    isBanned: false,
+    isBlocked: false,
+    $or: [],
+  };
 
-  if (friends.length === 0) {
-    const hasAttributes =
-      (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) ||
-      (user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
-        user.locationName) ||
-      (user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
-        user.profession);
-
-    if (!hasAttributes) {
-      return { users: [], total: 0 };
-    }
-
-    const query: Record<string, any> = {
-      _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
-      isDeleted: false,
-      isBanned: false,
-      isBlocked: false,
-      $or: [],
-    };
-
-    if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
-      query.$or.push({
-        city: user.city,
-        'privacySettings.city': PrivacyVisibility.PUBLIC,
-      });
-    }
-    if (
-      user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
-      user.locationName
-    ) {
-      query.$or.push({
-        locationName: user.locationName,
-        'privacySettings.locationName': PrivacyVisibility.PUBLIC,
-      });
-    }
-    if (
-      user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
-      user.profession
-    ) {
-      query.$or.push({
-        profession: user.profession,
-        'privacySettings.profession': PrivacyVisibility.PUBLIC,
-      });
-    }
-
-    if (query.$or.length === 0) {
-      return {
-        results: [],
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-        totalResults: 0,
-      };
-    }
-    options.select = '_id fullName profileImage username';
-    const paginatedResult = await User.paginate(query, options);
-    suggestedUsers = paginatedResult.results;
-    page = paginatedResult.page;
-    limit = paginatedResult.limit;
-    totalPages = paginatedResult.totalPages;
-    totalResults = paginatedResult.totalResults;
-  } else {
-    const friendConnections = await Connections.find({
-      $or: [{ sentBy: { $in: friends } }, { receivedBy: { $in: friends } }],
-      status: ConnectionStatus.ACCEPTED,
-    }).select('sentBy receivedBy');
-
-    const friendOfFriends: { [key: string]: number } = {};
-    friendConnections.forEach(conn => {
-      const otherUser =
-        conn.sentBy.toString() === userId
-          ? conn.receivedBy.toString()
-          : conn.sentBy.toString();
-      if (!excludeUsers.includes(otherUser)) {
-        friendOfFriends[otherUser] = (friendOfFriends[otherUser] || 0) + 1;
-      }
+  // Add matching attributes to query if they are public
+  if (
+    user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
+    user.locationName
+  ) {
+    query.$or.push({
+      locationName: user.locationName,
+      'privacySettings.locationName': PrivacyVisibility.PUBLIC,
     });
-
-    const suggestedUserIds = Object.keys(friendOfFriends)
-      .sort((a, b) => friendOfFriends[b] - friendOfFriends[a])
-      .slice(0, 100);
-
-    const query: Record<string, any> = {
-      _id: { $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)) },
-      isDeleted: false,
-      isBanned: false,
-      isBlocked: false,
-      $or: [],
-    };
-
-    if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
-      query.$or.push({
-        city: user.city,
-        'privacySettings.city': PrivacyVisibility.PUBLIC,
-      });
-    }
-    if (
-      user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
-      user.locationName
-    ) {
-      query.$or.push({
-        locationName: user.locationName,
-        'privacySettings.locationName': PrivacyVisibility.PUBLIC,
-      });
-    }
-    if (
-      user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
-      user.profession
-    ) {
-      query.$or.push({
-        profession: user.profession,
-        'privacySettings.profession': PrivacyVisibility.PUBLIC,
-      });
-    }
-
-    options.select = '_id fullName profileImage username';
-    if (query.$or.length > 0) {
-      const paginatedResult = await User.paginate(query, options);
-      suggestedUsers = paginatedResult.results;
-      page = paginatedResult.page;
-      limit = paginatedResult.limit;
-      totalPages = paginatedResult.totalPages;
-      totalResults = paginatedResult.totalResults;
-    } else {
-      const suggestedUserQuery: Record<string, any> = {
-        _id: {
-          $in: suggestedUserIds.map(id => new mongoose.Types.ObjectId(id)),
-        },
-        isDeleted: false,
-        isBanned: false,
-        isBlocked: false,
-      };
-      const suggestedUsers = await User.paginate(suggestedUserQuery, options);
-      page = suggestedUsers.page;
-      limit = suggestedUsers.limit;
-      totalPages = suggestedUsers.totalPages;
-      totalResults = suggestedUsers.totalResults;
-    }
+  }
+  // country
+  if(user.privacySettings.country === PrivacyVisibility.PUBLIC && user.country) {
+    query.$or.push({
+      country: user.country,
+      'privacySettings.country': PrivacyVisibility.PUBLIC,
+    });
+  }
+  if (
+    user.privacySettings.city === PrivacyVisibility.PUBLIC &&
+    user.country
+  ) {
+    query.$or.push({
+      country: user.country,
+      'privacySettings.country': PrivacyVisibility.PUBLIC,
+    });
+  }
+  if (
+    user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
+    user.profession
+  ) {
+    query.$or.push({
+      profession: user.profession,
+      'privacySettings.profession': PrivacyVisibility.PUBLIC,
+    });
+  }
+  //agerange
+  if(user.privacySettings.ageRange === PrivacyVisibility.PUBLIC && user.ageRange) {
+    query.$or.push({
+      ageRange: user.ageRange,
+      'privacySettings.ageRange': PrivacyVisibility.PUBLIC,
+    });
   }
 
-  return { results: suggestedUsers, page, limit, totalPages, totalResults };
+  // If no matching attributes are available, return empty result
+  if (query.$or.length === 0) {
+    return {
+      results: [],
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+      totalResults: 0,
+    };
+  }
+
+  // Set pagination options
+  options.select = '_id fullName profileImage username';
+  options.sortBy = options.sortBy || '-createdAt';
+
+  // Fetch paginated users matching the query
+  const paginatedResult = await User.paginate(query, options);
+
+  return {
+    results: paginatedResult.results,
+    page: paginatedResult.page,
+    limit: paginatedResult.limit,
+    totalPages: paginatedResult.totalPages,
+    totalResults: paginatedResult.totalResults,
+  };
 };
 
 export const ConnectionsService = {
