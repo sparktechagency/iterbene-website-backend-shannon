@@ -64,13 +64,6 @@ interface DeleteCommentPayload {
   commentId: string;
 }
 
-interface GetUserMediaAndItinerariesPayload {
-  userId: string;
-  postType?: PostType;
-  page: number;
-  limit: number;
-}
-
 async function createPost(payload: CreatePostPayload): Promise<IPost> {
   const {
     userId,
@@ -194,11 +187,6 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
             visitedLocationName: visitedLocationName as string,
           },
         ],
-        interestedLocation: [],
-        latitude: visitedLocation?.latitude || 0,
-        longitude: visitedLocation?.longitude || 0,
-        visitedLocationName: visitedLocationName as string,
-        interestedLocationName: '',
       });
     }
   }

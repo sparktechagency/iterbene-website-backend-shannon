@@ -186,8 +186,8 @@ const getMyAllConnections = async (
     {
       path: 'sentBy',
       select: 'fullName  profileImage username',
-    }
-  ]
+    },
+  ];
   options.sortBy = options.sortBy || '-createdAt';
   const connections = await Connections.paginate(query, options);
   return connections;
@@ -308,10 +308,17 @@ const getConnectionSuggestions = async (
   // Fetch pending or declined connections to exclude them
   const pendingOrDeclined = await Connections.find({
     $or: [
-      { sentBy: userId, status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] } },
-      { receivedBy: userId, status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] } },
+      {
+        sentBy: userId,
+        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
+      },
+      {
+        receivedBy: userId,
+        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
+      },
     ],
   }).select('sentBy receivedBy createdAt');
+
   // Fetch blocked users to exclude them
   const blockedUsers = await BlockedUser.find({
     $or: [{ blockerId: userId }, { blockedId: userId }],
@@ -339,14 +346,14 @@ const getConnectionSuggestions = async (
     ...blockedUserIds,
     ...removedUserIds,
   ];
-  // Exclude users with pending connections sent within the last 3 minutes
-  const timeoutMinutes = 1; // Adjust this value as needed
-  const timeoutThreshold = new Date(Date.now() - timeoutMinutes * 60 * 1000);
-  const recentPending = pendingOrDeclined.filter(
-    conn => conn.status === ConnectionStatus.PENDING && conn.sentBy.toString() === userId && conn.createdAt >= timeoutThreshold
+
+  // Fetch pending or declined connections to exclude them
+  const pendingOrDeclinedIds = pendingOrDeclined.map(conn =>
+    conn.sentBy.toString() === userId
+      ? conn.receivedBy.toString()
+      : conn.sentBy.toString()
   );
-  const recentPendingUserIds = recentPending.map(conn => conn.receivedBy.toString());
-  excludeUsers.push(...recentPendingUserIds);
+  excludeUsers.push(...pendingOrDeclinedIds);
 
   // Build query for suggestions based on attributes
   const query: Record<string, any> = {
@@ -367,20 +374,25 @@ const getConnectionSuggestions = async (
       'privacySettings.locationName': PrivacyVisibility.PUBLIC,
     });
   }
-  // country
-  if(user.privacySettings.country === PrivacyVisibility.PUBLIC && user.country) {
-    query.$or.push({
-      country: user.country,
-      'privacySettings.country': PrivacyVisibility.PUBLIC,
-    });
-  }
   if (
-    user.privacySettings.city === PrivacyVisibility.PUBLIC &&
+    user.privacySettings.country === PrivacyVisibility.PUBLIC &&
     user.country
   ) {
     query.$or.push({
       country: user.country,
       'privacySettings.country': PrivacyVisibility.PUBLIC,
+    });
+  }
+  if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
+    query.$or.push({
+      city: user.city,
+      'privacySettings.city': PrivacyVisibility.PUBLIC,
+    });
+  }
+  if(user.privacySettings.ageRange === PrivacyVisibility.PUBLIC && user.ageRange) {
+    query.$or.push({
+      ageRange: user.ageRange,
+      'privacySettings.ageRange': PrivacyVisibility.PUBLIC,
     });
   }
   if (
@@ -390,13 +402,6 @@ const getConnectionSuggestions = async (
     query.$or.push({
       profession: user.profession,
       'privacySettings.profession': PrivacyVisibility.PUBLIC,
-    });
-  }
-  //agerange
-  if(user.privacySettings.ageRange === PrivacyVisibility.PUBLIC && user.ageRange) {
-    query.$or.push({
-      ageRange: user.ageRange,
-      'privacySettings.ageRange': PrivacyVisibility.PUBLIC,
     });
   }
 
