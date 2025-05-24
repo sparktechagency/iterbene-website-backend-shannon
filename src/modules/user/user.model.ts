@@ -33,7 +33,7 @@ const userSchema = new Schema<TUser, UserModal>(
       type: String,
       required: false,
       default:
-        'https://marray-meet.s3.eu-north-1.amazonaws.com/user.iter-bene.webp',
+        'https://iter-bene.s3.eu-north-1.amazonaws.com/uploads/users/2c7bcbec-1c9f-476e-9daa-f4c8f947f520.jpg',
     },
     coverImage: {
       type: String,

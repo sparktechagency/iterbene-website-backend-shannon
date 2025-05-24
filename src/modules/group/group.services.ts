@@ -482,25 +482,7 @@ const getMyGroups = async (
   if (filters.privacy) {
     query.privacy = filters.privacy;
   }
-  options.populate = [
-    {
-      path: 'creatorId',
-      select: 'fullName  profileImage username createdAt description',
-    },
-    {
-      path: 'admins',
-      select: 'fullName  profileImage username',
-    },
-    {
-      path: 'coLeaders',
-      select: 'fullName  profileImage username',
-    },
-    {
-      path: 'members',
-      select: 'fullName  profileImage username',
-    },
-  ];
-
+  options.select = 'name groupImage privacy participantCount createdAt updatedAt'; 
   options.sortBy = options.sortBy || '-createdAt';
   const groups = await Group.paginate(query, options);
   return groups;
@@ -519,20 +501,7 @@ const getMyJoinGroups = async (
   if (filters.privacy) {
     query.privacy = filters.privacy;
   }
-  options.populate = [
-    {
-      path: 'creatorId',
-      select: 'fullName  profileImage username createdAt description',
-    },
-    {
-      path: 'admins',
-      select: 'fullName  profileImage username',
-    },
-    {
-      path: 'coLeaders',
-      select: 'fullName  profileImage username',
-    },
-  ];
+  options.select = 'name groupImage privacy participantCount createdAt updatedAt'; 
   options.sortBy = options.sortBy || '-createdAt';
   const groups = await Group.paginate(query, options);
   return groups;

@@ -175,22 +175,55 @@ const cancelRequest = async (userId: string, friendId: string) => {
 const getMyAllConnections = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IConnections>> => {
-  const query: Record<string, any> = {
-    status: ConnectionStatus.ACCEPTED,
-  };
-  if (filters.userId) {
-    query.$or = [{ sentBy: filters.userId }, { receivedBy: filters.userId }];
+): Promise<PaginateResult<any>> => {
+  if (!filters.userId) {
+    throw new Error('userId is required in filters');
   }
+
+  const query = {
+    status: ConnectionStatus.ACCEPTED,
+    $or: [{ sentBy: filters.userId }, { receivedBy: filters.userId }],
+  };
+
+  // Populate both sentBy and receivedBy to get user details
   options.populate = [
     {
       path: 'sentBy',
-      select: 'fullName  profileImage username',
+      select: 'fullName profileImage username',
+    },
+    {
+      path: 'receivedBy',
+      select: 'fullName profileImage username',
     },
   ];
   options.sortBy = options.sortBy || '-createdAt';
+
+  // Use the custom paginate plugin
   const connections = await Connections.paginate(query, options);
-  return connections;
+
+  // Transform results to include only the friend's information
+  const transformedResults = connections.results.map((connection: any) => {
+    // Determine which user is the friend (not the requesting user)
+    const friend =
+      connection.sentBy._id.toString() === filters.userId
+        ? connection.receivedBy
+        : connection.sentBy;
+
+    return {
+      _id: friend._id,
+      fullName: friend.fullName,
+      profileImage: friend.profileImage,
+      username: friend.username,
+    };
+  });
+
+  return {
+    results: transformedResults,
+    page: connections.page,
+    limit: connections.limit,
+    totalPages: connections.totalPages,
+    totalResults: connections.totalResults,
+  };
 };
 
 const getMyAllRequests = async (

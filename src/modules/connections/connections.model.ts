@@ -5,6 +5,7 @@ import {
   IConnectionsModel,
 } from './connections.interface';
 import paginate from '../../common/plugins/paginate';
+import aggregatePaginate from '../../common/plugins/aggregatePaginate';
 
 const connectionsSchema = new Schema<IConnections, IConnectionsModel>(
   {
@@ -30,6 +31,7 @@ const connectionsSchema = new Schema<IConnections, IConnectionsModel>(
 );
 
 connectionsSchema.plugin(paginate);
+connectionsSchema.plugin(aggregatePaginate)
 
 export const Connections = mongoose.model<IConnections, IConnectionsModel>(
   'Connections',
