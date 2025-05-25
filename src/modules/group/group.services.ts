@@ -395,8 +395,12 @@ const getGroup = async (
       path: 'coLeaders',
       select: 'fullName  profileImage username',
     },
-     {
+    {
       path: 'members',
+      select: 'fullName  profileImage username',
+    },
+    {
+      path: 'pendingMembers',
       select: 'fullName  profileImage username',
     },
   ]);
@@ -476,13 +480,14 @@ const getMyGroups = async (
 ): Promise<PaginateResult<IGroup>> => {
   const query: Record<string, any> = {
     isDeleted: false,
-    $or: [{ creatorId: userId }, { admins: userId }, { members: userId }],
+    $or: [{ creatorId: userId }],
   };
 
   if (filters.privacy) {
     query.privacy = filters.privacy;
   }
-  options.select = 'name groupImage privacy participantCount createdAt updatedAt'; 
+  options.select =
+    'name groupImage privacy participantCount createdAt updatedAt';
   options.sortBy = options.sortBy || '-createdAt';
   const groups = await Group.paginate(query, options);
   return groups;
@@ -493,16 +498,28 @@ const getMyJoinGroups = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IGroup>> => {
+  // Ensure userId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('Invalid userId');
+  }
+
   const query: Record<string, any> = {
     isDeleted: false,
-    $or: [{ members: userId }, { pendingMembers: userId }],
+    creatorId: { $ne: userId }, 
+    $or: [
+      { members: { $in: [userId] } }, 
+      { coLeaders: { $in: [userId] } }, 
+    ],
   };
 
+  // Apply privacy filter if provided
   if (filters.privacy) {
     query.privacy = filters.privacy;
   }
-  options.select = 'name groupImage privacy participantCount createdAt updatedAt'; 
+
   options.sortBy = options.sortBy || '-createdAt';
+  options.select =
+    'name  groupImage privacy participantCount  createdAt updatedAt';
   const groups = await Group.paginate(query, options);
   return groups;
 };
@@ -565,20 +582,8 @@ const getGroupSuggestions = async (
     query.$or.push({ members: { $in: friends } });
   }
 
-  options.populate = [
-    {
-      path: 'creatorId',
-      select: 'fullName  profileImage username createdAt description',
-    },
-    {
-      path: 'admins',
-      select: 'fullName  profileImage username',
-    },
-    {
-      path: 'coLeaders',
-      select: 'fullName  profileImage username',
-    },
-  ];
+  options.select =
+    'name groupImage privacy participantCount createdAt updatedAt';
   options.sortBy = options.sortBy || '-createdAt';
 
   const groups = await Group.paginate(query, options);

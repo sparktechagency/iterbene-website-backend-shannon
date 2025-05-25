@@ -68,9 +68,11 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
     groupId: new mongoose.Types.ObjectId(payload.groupId),
     status: 'pending' as const,
   }));
-
+  group.pendingMembers.push(
+    ...recipients.map(toId => new mongoose.Types.ObjectId(toId))
+  );
   const createdInvites = await GroupInvite.insertMany(invites);
-
+  await group.save();
   return createdInvites;
 };
 
@@ -170,14 +172,36 @@ const getMyInvites = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IGroupInvite>> => {
-  const query: Record<string, any> = { to: userId };
+  const foundInvites = await GroupInvite.find({ to: userId });
+  if (foundInvites.length === 0) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'No invites found');
+  }
+  //filter not response deleted group
+  const groupIds = foundInvites.map(invite => invite.groupId);
+  const groups = await Group.find({ _id: { $in: groupIds }, isDeleted: false });
+  if (groups.length === 0) {
+    return {
+      results: [],
+      page: 1,
+      limit: 10,
+      totalResults: 0,
+      totalPages: 1,
+    };
+  }
+
+  const query: Record<string, any> = { to: userId, status: 'pending' };
   if (filters.status) {
     query.status = filters.status;
   }
   if (filters.groupId) {
     query.groupId = filters.groupId;
   }
-
+  options.populate = [
+    {
+      path: 'groupId',
+      select: 'name groupImage privacy participantCount createdAt updatedAt',
+    },
+  ];
   options.sortBy = options.sortBy || '-createdAt';
   const invites = await GroupInvite.paginate(query, options);
   return invites;

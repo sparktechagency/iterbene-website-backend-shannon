@@ -83,7 +83,7 @@ const deleteConnection = catchAsync(async (req: Request, res: Response) => {
 });
 const getMyAllConnections = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filters = pick(req.query, ['fullName']);
+  const filters = pick(req.query, ['searchTerm']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   filters.userId = userId;
   const result = await ConnectionsService.getMyAllConnections(filters, options);

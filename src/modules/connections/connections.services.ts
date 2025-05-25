@@ -185,6 +185,7 @@ const getMyAllConnections = async (
     $or: [{ sentBy: filters.userId }, { receivedBy: filters.userId }],
   };
 
+  console.log(query);
   // Populate both sentBy and receivedBy to get user details
   options.populate = [
     {
@@ -200,6 +201,7 @@ const getMyAllConnections = async (
 
   // Use the custom paginate plugin
   const connections = await Connections.paginate(query, options);
+
 
   // Transform results to include only the friend's information
   const transformedResults = connections.results.map((connection: any) => {
@@ -422,7 +424,10 @@ const getConnectionSuggestions = async (
       'privacySettings.city': PrivacyVisibility.PUBLIC,
     });
   }
-  if(user.privacySettings.ageRange === PrivacyVisibility.PUBLIC && user.ageRange) {
+  if (
+    user.privacySettings.ageRange === PrivacyVisibility.PUBLIC &&
+    user.ageRange
+  ) {
     query.$or.push({
       ageRange: user.ageRange,
       'privacySettings.ageRange': PrivacyVisibility.PUBLIC,
