@@ -4,6 +4,9 @@ import validateRequest from '../../shared/validateRequest';
 import { EventValidation } from './event.validations';
 import { EventInviteController } from '../eventInvite/eventInvite.controller';
 import { EventController } from './event.controllers';
+import fileUploadHandler from '../../shared/fileUploadHandler';
+import { EVENT_UPLOADS_FOLDER } from './event.constant';
+const upload = fileUploadHandler(EVENT_UPLOADS_FOLDER);
 
 const router = express.Router();
 
@@ -11,6 +14,7 @@ const router = express.Router();
 router.post(
   '/',
   auth('User'),
+  upload.single('eventImage'),
   validateRequest(EventValidation.createEventValidationSchema),
   EventController.createEvent
 );

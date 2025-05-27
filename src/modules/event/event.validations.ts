@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { User } from '../user/user.model';
 
 // Utility schema for MongoDB ObjectId
-const objectIdSchema = z.string({
-  required_error: 'ID is required',
-  invalid_type_error: 'ID must be a string',
-}).regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format');
+const objectIdSchema = z
+  .string({
+    required_error: 'ID is required',
+    invalid_type_error: 'ID must be a string',
+  })
+  .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format');
 
 // POST /events
 const createEventValidationSchema = z.object({
@@ -15,33 +16,15 @@ const createEventValidationSchema = z.object({
       invalid_type_error: 'Event name must be a string',
     }),
     description: z.string().optional(),
-    startDate: z.string().datetime({ message: 'Start date must be a valid ISO date' }),
-    endDate: z.string().datetime({ message: 'End date must be a valid ISO date' }),
-    location: z.object({
-      latitude: z.number({
-        required_error: 'Latitude is required',
-        invalid_type_error: 'Latitude must be a number',
-      }),
-      longitude: z.number({
-        required_error: 'Longitude is required',
-        invalid_type_error: 'Longitude must be a number',
-      }),
-    }),
-    duration: z.object({
-      days: z.number({
-        required_error: 'Days is required',
-        invalid_type_error: 'Days must be a number',
-      }),
-      nights: z.number({
-        required_error: 'Nights is required',
-        invalid_type_error: 'Nights must be a number',
-      }),
-    }),
+    startDate: z.string(),
+    endDate: z.string(),
     locationName: z.string().optional(),
-    privacy: z.enum(['public', 'private'], {
-      required_error: 'Privacy is required',
-      invalid_type_error: 'Privacy must be either public or private',
-    }).default('public'),
+    privacy: z
+      .enum(['public', 'private'], {
+        required_error: 'Privacy is required',
+        invalid_type_error: 'Privacy must be either public or private',
+      })
+      .default('public'),
     coHosts: z.array(objectIdSchema).optional(),
     eventCost: z.number().optional().default(0),
     interests: z.array(objectIdSchema).optional(),
@@ -117,8 +100,14 @@ const updateEventValidationSchema = z.object({
   body: z.object({
     eventName: z.string().optional(),
     description: z.string().optional(),
-    startDate: z.string().datetime({ message: 'Start date must be a valid ISO date' }).optional(),
-    endDate: z.string().datetime({ message: 'End date must be a valid ISO date' }).optional(),
+    startDate: z
+      .string()
+      .datetime({ message: 'Start date must be a valid ISO date' })
+      .optional(),
+    endDate: z
+      .string()
+      .datetime({ message: 'End date must be a valid ISO date' })
+      .optional(),
     location: z
       .object({
         latitude: z.number({
@@ -153,7 +142,6 @@ const deleteEventValidationSchema = z.object({
   }),
 });
 
-
 // POST /events/invites/send
 const sendInviteValidationSchema = z.object({
   body: z.object({
@@ -167,7 +155,8 @@ const sendInviteValidationSchema = z.object({
       ],
       {
         required_error: 'Recipient(s) ID is required',
-        invalid_type_error: 'Recipient(s) must be a valid ObjectId or array of ObjectIds',
+        invalid_type_error:
+          'Recipient(s) must be a valid ObjectId or array of ObjectIds',
       }
     ),
   }),
@@ -193,7 +182,6 @@ const cancelInviteValidationSchema = z.object({
     inviteId: objectIdSchema,
   }),
 });
-
 
 export const EventValidation = {
   createEventValidationSchema,

@@ -174,7 +174,13 @@ const getMyInvites = async (
 ): Promise<PaginateResult<IGroupInvite>> => {
   const foundInvites = await GroupInvite.find({ to: userId });
   if (foundInvites.length === 0) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'No invites found');
+    return {
+      results: [],
+      page: 1,
+      limit: 10,
+      totalResults: 0,
+      totalPages: 1,
+    };
   }
   //filter not response deleted group
   const groupIds = foundInvites.map(invite => invite.groupId);

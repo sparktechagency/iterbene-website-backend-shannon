@@ -1,0 +1,1 @@
+export const EVENT_UPLOADS_FOLDER = 'uploads/events';

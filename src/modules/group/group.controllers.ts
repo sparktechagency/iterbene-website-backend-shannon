@@ -21,7 +21,6 @@ const createGroup = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
   payload.groupImage = groupImage[0];
 
-  console.log("Consle body", req.body);
   const result = await GroupService.createGroup(userId, payload);
   sendResponse(res, {
     code: StatusCodes.OK,

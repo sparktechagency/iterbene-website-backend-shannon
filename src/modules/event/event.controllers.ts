@@ -4,10 +4,22 @@ import catchAsync from '../../shared/catchAsync';
 import { EventService } from './event.services';
 import sendResponse from '../../shared/sendResponse';
 import pick from '../../shared/pick';
+import { uploadFilesToS3 } from '../../helpers/s3Service';
+import { EVENT_UPLOADS_FOLDER } from './event.constant';
 
 const createEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
+  const file = req.file as Express.Multer.File;
   const payload = req.body;
+  // parse the JSON string location and coleaders
+  if (typeof req.body.location === 'string') {
+    req.body.location = JSON.parse(req.body.location);
+  }
+  if (typeof req.body.duration === 'string') {
+    req.body.duration = JSON.parse(req.body.duration);
+  }
+  const eventImage = await uploadFilesToS3([file], EVENT_UPLOADS_FOLDER);
+  payload.eventImage = eventImage[0];
   const result = await EventService.createEvent(userId, payload);
   sendResponse(res, {
     code: StatusCodes.OK,

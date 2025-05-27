@@ -83,10 +83,6 @@ const eventSchema = new Schema<IEvent, IEventModel>(
   }
 );
 
-// Indexes
-eventSchema.index({ creatorId: 1 });
-eventSchema.index({ startDate: 1 });
-eventSchema.index({ location: '2dsphere' });
 
 //add paginate plugin
 eventSchema.plugin(paginate);
