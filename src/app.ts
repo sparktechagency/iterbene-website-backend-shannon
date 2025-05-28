@@ -8,8 +8,6 @@ import i18next from './i18n/i18n';
 import i18nextMiddleware from 'i18next-express-middleware';
 import helmet from 'helmet';
 import notFound from './middlewares/notFount';
-import loggingMiddleware from './middlewares/loggingMiddleware';
-
 const app = express();
 
 // Security headers
@@ -63,9 +61,6 @@ app.use('/uploads', express.static(path.join(__dirname, '../Uploads/')));
 
 // i18next middleware
 app.use(i18nextMiddleware.handle(i18next));
-
-// Logging middleware
-app.use(loggingMiddleware);
 
 // Routes
 app.use('/api/v1', router);

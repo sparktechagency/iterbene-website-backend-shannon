@@ -183,11 +183,13 @@ const getMyInterestedEvents = catchAsync(
 
 const getEventSuggestions = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { limit = 10, skip = 0, sortBy } = req.query;
-  const result = await EventService.getEventSuggestions(userId, Number(limit), {
-    skip: Number(skip),
-    sortBy: sortBy as string,
-  });
+  const filters = pick(req.query, ['name']);
+  const options = pick(req.query, ['limit', 'skip', 'sortBy']);
+  const result = await EventService.getEventSuggestions(
+    userId,
+    filters,
+    options
+  );
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Event suggestions retrieved successfully',

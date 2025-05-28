@@ -4,8 +4,6 @@ export type TToken = {
   user: Types.ObjectId;
   token: string;
   type: string;
-  ip: string;
-  userAgent: string;
   expiresAt: Date;
 };
 

@@ -23,9 +23,7 @@ const auth = (...roles: string[]) =>
     const verifyUser = await TokenService.verifyToken(
       token,
       config.jwt.accessSecret as Secret,
-      TokenType.ACCESS,
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown'
+      TokenType.ACCESS
     );
 
     if (verifyUser) {

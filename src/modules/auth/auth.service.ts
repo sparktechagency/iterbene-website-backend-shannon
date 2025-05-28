@@ -11,10 +11,9 @@ import { TUser } from '../user/user.interface';
 import { generateUsernameFromEmail } from '../../utils/generateUsernameFromEmail';
 import moment from 'moment';
 import { totp } from 'otplib';
-import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 import { Token } from '../token/token.model';
 
-const createUser = async (userData: TUser, ip: string, userAgent: string) => {
+const createUser = async (userData: TUser) => {
   const existingUser = await User.findOne({ email: userData.email });
   if (existingUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'User already exists.');
@@ -26,18 +25,7 @@ const createUser = async (userData: TUser, ip: string, userAgent: string) => {
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
     const tokens = await TokenService.accessAndRefreshToken(
-      user,
-      ip,
-      userAgent
-    );
-    await UserInteractionLogService.createLog(
-      user._id,
-      'user_created',
-      '/auth/register',
-      'POST',
-      ip,
-      userAgent,
-      { email: user.email }
+      user
     );
     return tokens;
   }
@@ -45,9 +33,7 @@ const createUser = async (userData: TUser, ip: string, userAgent: string) => {
 
 const verifyEmail = async (
   email: string,
-  otp: string,
-  ip: string,
-  userAgent: string
+  otp: string
 ) => {
   const user = await User.findOne({ email });
   if (!user) {
@@ -62,19 +48,10 @@ const verifyEmail = async (
   user.isResetPassword = false;
   await user.save();
 
-  const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
-  await UserInteractionLogService.createLog(
-    user._id,
-    'email_verified',
-    '/auth/verify-email',
-    'POST',
-    ip,
-    userAgent,
-    { email }
-  );
+  const tokens = await TokenService.accessAndRefreshToken(user);
   return { tokens };
 };
-const forgotPassword = async (email: string, ip: string, userAgent: string) => {
+const forgotPassword = async (email: string) => {
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
@@ -82,21 +59,11 @@ const forgotPassword = async (email: string, ip: string, userAgent: string) => {
   await OtpService.createResetPasswordOtp(user.email);
   user.isResetPassword = true;
   await user.save();
-  const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
-
-  await UserInteractionLogService.createLog(
-    user._id,
-    'forgot_password',
-    '/auth/forgot-password',
-    'POST',
-    ip,
-    userAgent,
-    { email }
-  );
+  const tokens = await TokenService.accessAndRefreshToken(user);
   return tokens;
 };
 
-const resendOtp = async (email: string, ip: string, userAgent: string) => {
+const resendOtp = async (email: string) => {
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
@@ -107,29 +74,11 @@ const resendOtp = async (email: string, ip: string, userAgent: string) => {
       user
     );
     await OtpService.createResetPasswordOtp(user.email);
-    await UserInteractionLogService.createLog(
-      user._id,
-      'resend_otp_reset',
-      '/auth/resend-otp',
-      'POST',
-      ip,
-      userAgent,
-      { email }
-    );
     return { resetPasswordToken };
   }
 
   await OtpService.createVerificationEmailOtp(user.email);
-  const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
-  await UserInteractionLogService.createLog(
-    user._id,
-    'resend_otp_verify',
-    '/auth/resend-otp',
-    'POST',
-    ip,
-    userAgent,
-    { email }
-  );
+  const tokens = await TokenService.accessAndRefreshToken(user);
   return tokens;
 };
 
@@ -148,20 +97,9 @@ const resetPassword = async (email: string, password: string) => {
       'Cannot reuse a previous password.'
     );
   }
-
   user.password = password;
   user.isResetPassword = false;
   await user.save();
-
-  await UserInteractionLogService.createLog(
-    user._id,
-    'password_reset',
-    '/auth/reset-password',
-    'POST',
-    'unknown',
-    'unknown',
-    { email }
-  );
   return user;
 };
 
@@ -207,16 +145,6 @@ const changePassword = async (
   user.password = newPassword;
   user.lastPasswordChange = new Date();
   await user.save();
-
-  await UserInteractionLogService.createLog(
-    user._id,
-    'password_changed',
-    '/auth/change-password',
-    'POST',
-    ip,
-    userAgent,
-    { userId }
-  );
   return user;
 };
 
@@ -228,15 +156,6 @@ const logout = async (refreshToken: string) => {
   if (!token) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid refresh token.');
   }
-  await UserInteractionLogService.createLog(
-    token.user,
-    'logout',
-    '/auth/logout',
-    'POST',
-    'unknown',
-    'unknown',
-    { refreshToken: '***' }
-  );
 };
 
 const refreshAuth = async (
@@ -247,9 +166,7 @@ const refreshAuth = async (
   const payload = await TokenService.verifyToken(
     refreshToken,
     config.jwt.refreshSecret,
-    TokenType.REFRESH,
-    ip,
-    userAgent
+    TokenType.REFRESH
   );
   const user = await User.findById(payload?.userId);
   if (!user) {
@@ -257,17 +174,8 @@ const refreshAuth = async (
   }
 
   await Token.deleteOne({ token: refreshToken, type: TokenType.REFRESH });
-  const tokens = await TokenService.accessAndRefreshToken(user, ip, userAgent);
+  const tokens = await TokenService.accessAndRefreshToken(user);
 
-  await UserInteractionLogService.createLog(
-    user._id,
-    'token_refreshed',
-    '/auth/refresh-token',
-    'POST',
-    ip,
-    userAgent,
-    { refreshToken: '***' }
-  );
   return { tokens };
 };
 
@@ -280,15 +188,6 @@ const enableMFA = async (userId: string) => {
   user.mfaSecret = secret;
   user.mfaEnabled = true;
   await user.save();
-  await UserInteractionLogService.createLog(
-    user._id,
-    'mfa_enabled',
-    '/auth/enable-mfa',
-    'POST',
-    'unknown',
-    'unknown',
-    { userId }
-  );
   return secret;
 };
 
@@ -302,15 +201,6 @@ const verifyMFA = async (userId: string, token: string) => {
   if (!isValid) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid MFA token.');
   }
-  await UserInteractionLogService.createLog(
-    user._id,
-    'mfa_verified',
-    '/auth/login',
-    'POST',
-    'unknown',
-    'unknown',
-    { userId }
-  );
   return true;
 };
 

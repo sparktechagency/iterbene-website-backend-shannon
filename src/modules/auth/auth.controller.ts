@@ -10,7 +10,6 @@ import bcrypt from 'bcrypt';
 import { User } from '../user/user.model';
 import { TUser } from '../user/user.interface';
 import { OtpService } from '../otp/otp.service';
-import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
 const validateUserStatus = (user: TUser) => {
   if (user?.isDeleted) {
@@ -36,9 +35,7 @@ const register = catchAsync(async (req, res) => {
   }
 
   const result = await AuthService.createUser(
-    req.body,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
+    req.body
   );
   sendResponse(res, {
     code: StatusCodes.CREATED,
@@ -53,28 +50,10 @@ const login = catchAsync(async (req, res) => {
     '+password +mfaSecret +mfaEnabled'
   );
   if (!user) {
-    await UserInteractionLogService.createLog(
-      undefined,
-      'login_failed',
-      '/auth/login',
-      'POST',
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown',
-      { email }
-    );
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid credentials.');
   }
   validateUserStatus(user);
   if (user.lockUntil && user.lockUntil > new Date()) {
-    await UserInteractionLogService.createLog(
-      user._id,
-      'login_failed_locked',
-      '/auth/login',
-      'POST',
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown',
-      { email }
-    );
     throw new ApiError(
       StatusCodes.TOO_MANY_REQUESTS,
       `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`
@@ -87,30 +66,12 @@ const login = catchAsync(async (req, res) => {
     if (user.failedLoginAttempts >= config.auth.maxLoginAttempts) {
       user.lockUntil = moment().add(config.auth.lockTime, 'minutes').toDate();
       await user.save();
-      await UserInteractionLogService.createLog(
-        user._id,
-        'login_failed_locked',
-        '/auth/login',
-        'POST',
-        req.ip || 'unknown',
-        req.get('User-Agent') || 'unknown',
-        { email }
-      );
       throw new ApiError(
         StatusCodes.TOO_MANY_REQUESTS,
         `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`
       );
     }
     await user.save();
-    await UserInteractionLogService.createLog(
-      user._id,
-      'login_failed',
-      '/auth/login',
-      'POST',
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown',
-      { email }
-    );
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid credentials.');
   }
 
@@ -121,15 +82,6 @@ const login = catchAsync(async (req, res) => {
   }
 
   if (user.mfaEnabled && !mfaToken) {
-    await UserInteractionLogService.createLog(
-      user._id,
-      'login_mfa_required',
-      '/auth/login',
-      'POST',
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown',
-      { email }
-    );
     throw new ApiError(StatusCodes.BAD_REQUEST, 'MFA token required.');
   }
   if (user.mfaEnabled) {
@@ -138,19 +90,8 @@ const login = catchAsync(async (req, res) => {
 
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
-    await UserInteractionLogService.createLog(
-      user._id,
-      'login_email_not_verified',
-      '/auth/login',
-      'POST',
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown',
-      { email }
-    );
     const tokens = await TokenService.accessAndRefreshToken(
-      user,
-      req.ip || 'unknown',
-      req.get('User-Agent') || 'unknown'
+      user
     );
 
     sendResponse(res, {
@@ -163,8 +104,6 @@ const login = catchAsync(async (req, res) => {
 
   const tokens = await TokenService.accessAndRefreshToken(
     user,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
   );
   // Set cookies for access and refresh tokens
   res.cookie('accessToken', tokens.accessToken, {
@@ -179,16 +118,7 @@ const login = catchAsync(async (req, res) => {
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
-
-  await UserInteractionLogService.createLog(
-    user._id,
-    'login_success',
-    '/auth/login',
-    'POST',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown',
-    { email }
-  );
+  // Send response with tokens
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'User logged in successfully.',
@@ -201,9 +131,7 @@ const verifyEmail = catchAsync(async (req, res) => {
   const { otp } = req.body;
   const result = await AuthService.verifyEmail(
     email,
-    otp,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
+    otp
   );
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -215,9 +143,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 const resendOtp = catchAsync(async (req, res) => {
   const { email } = req.body;
   const result = await AuthService.resendOtp(
-    email,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
+    email
   );
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -228,9 +154,7 @@ const resendOtp = catchAsync(async (req, res) => {
 
 const forgotPassword = catchAsync(async (req, res) => {
   const result = await AuthService.forgotPassword(
-    req.body.email,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
+    req.body.email
   );
   sendResponse(res, {
     code: StatusCodes.OK,

@@ -32,8 +32,13 @@ const joinEvent = async (userId: string, eventId: string): Promise<IEvent> => {
   if (event.pendingInterestedUsers.includes(userObjectId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Join request already pending');
   }
-  event.pendingInterestedUsers.push(userObjectId);
-  await event.save();
+  if (event.privacy == EventPrivacy.PRIVATE) {
+    event.pendingInterestedUsers.push(userObjectId);
+    await event.save();
+    return event;
+  }
+  event.interestedUsers.push(userObjectId);
+  event.interestCount = event.interestedUsers.length;
   return event;
 };
 
@@ -220,7 +225,26 @@ const demoteCoHost = async (
 };
 
 const getEvent = async (eventId: string, userId: string): Promise<IEvent> => {
-  const event = await Event.findById(eventId);
+  const event = await Event.findById(eventId)
+    .populate([
+      {
+        path: 'creatorId',
+        select: 'fullName  profileImage username createdAt description',
+      },
+      {
+        path: 'coHosts',
+        select: 'fullName  profileImage username',
+      },
+      {
+        path: 'interestedUsers',
+        select: 'fullName  profileImage username',
+      },
+      {
+        path: 'pendingInterestedUsers',
+        select: 'fullName  profileImage username',
+      },
+    ])
+    .select('-isDeleted -createdAt -updatedAt -__v');
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
@@ -280,6 +304,7 @@ const getMyEvents = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IEvent>> => {
+    const newDate = new Date();
   const query = {
     ...filters,
     isDeleted: false,
@@ -289,7 +314,17 @@ const getMyEvents = async (
       { interestedUsers: new Types.ObjectId(userId) },
       { pendingInterestedUsers: new Types.ObjectId(userId) },
     ],
+    startDate: { $gte: newDate },
   };
+  options.populate = [
+    {
+      path: 'creatorId',
+      select: 'fullName username profileImage',
+    },
+  ];
+  options.select =
+    'eventName eventImage creatorId interestCount startDate endDate ';
+  options.sortBy = options.sortBy || '-createdAt';
   return Event.paginate(query, options);
 };
 
@@ -298,33 +333,49 @@ const getMyInterestedEvents = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IEvent>> => {
+    const newDate = new Date();
   const query = {
     ...filters,
     isDeleted: false,
-    $or: [
-      { interestedUsers: new Types.ObjectId(userId) },
-      { pendingInterestedUsers: new Types.ObjectId(userId) },
-    ],
+    $or: [{ interestedUsers: { $in: [new Types.ObjectId(userId)] } }],
+    startDate: { $gte: newDate },
   };
+  options.populate = [
+    {
+      path: 'creatorId',
+      select: 'fullName username profileImage',
+    },
+  ];
+  options.select =
+    'eventName eventImage creatorId interestCount startDate endDate ';
+  options.sortBy = options.sortBy || '-createdAt';
   return Event.paginate(query, options);
 };
 
 const getEventSuggestions = async (
   userId: string,
-  limit: number,
-  options: { skip: number; sortBy?: string }
+  filters: Record<string, any>,
+  options: PaginateOptions
 ): Promise<IEvent[]> => {
+  const newDate = new Date();
   const query = {
     isDeleted: false,
     privacy: EventPrivacy.PUBLIC,
     interestedUsers: { $ne: new Types.ObjectId(userId) },
     pendingInterestedUsers: { $ne: new Types.ObjectId(userId) },
+    startDate: { $gte: newDate },
   };
-  return Event.find(query)
-    .sort(options.sortBy || '-createdAt')
-    .skip(options.skip)
-    .limit(limit)
-    .lean();
+  options.populate = [
+    {
+      path: 'creatorId',
+      select: 'fullName username profileImage',
+    },
+  ];
+  options.select =
+    'eventName eventImage creatorId interestCount startDate endDate ';
+  options.sortBy = options.sortBy || '-createdAt';
+  const events = await Event.paginate(query, options);
+  return events.results;
 };
 
 export const EventService = {

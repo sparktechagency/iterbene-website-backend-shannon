@@ -72,7 +72,7 @@ const filterUserFields = async (
     'locationName',
     'city',
     'profession',
-    'aboutMe',
+    'description',
     'phoneNumber',
     'maritalStatus',
   ];

@@ -3,7 +3,6 @@ import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
 import ApiError from '../../errors/ApiError';
 import { UserService } from './user.service';
-import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
 const UPLOADS_FOLDER = 'uploads/users';
 
@@ -20,15 +19,6 @@ const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const payload = req.body;
   const result = await UserService.createAdminOrSuperAdmin(payload);
 
-  await UserInteractionLogService.createLog(
-    result._id,
-    'admin_created',
-    '/user/admin',
-    'POST',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown',
-    { email: payload.email, role: payload.role }
-  );
 
   sendResponse(res, {
     code: StatusCodes.CREATED,
@@ -51,16 +41,6 @@ const setUserLatestLocation = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.setUserLatestLocation(userId, req.body);
 
-  await UserInteractionLogService.createLog(
-    userId,
-    'location_updated',
-    '/user/location',
-    'POST',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown',
-    { latitude: req.body.latitude, longitude: req.body.longitude }
-  );
-
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -71,15 +51,6 @@ const setUserLatestLocation = catchAsync(async (req, res) => {
 const checkUserNameAlreadyExists = catchAsync(async (req, res) => {
   const { userName } = req.params;
   const result = await UserService.checkUserNameAlreadyExists(userName);
-  await UserInteractionLogService.createLog(
-    req.user?.userId,
-    'user_name_checked',
-    `/user/check-username/${userName}`,
-    'GET',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
-  );
-
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -90,15 +61,6 @@ const checkUserNameAlreadyExists = catchAsync(async (req, res) => {
 const updateMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.updateMyProfile(userId, req.body);
-  await UserInteractionLogService.createLog(
-    userId,
-    'profile_updated',
-    '/user/profile',
-    'PATCH',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown',
-    req.body
-  );
 
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -141,17 +103,6 @@ const updateUserStatus = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const { status } = req.body;
   const result = await UserService.updateUserStatus(userId, status);
-
-  await UserInteractionLogService.createLog(
-    req.user?.userId,
-    `user_status_${status}`,
-    `/user/${userId}/status`,
-    'PATCH',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown',
-    { userId, status }
-  );
-
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -162,16 +113,6 @@ const updateUserStatus = catchAsync(async (req, res) => {
 const getMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.getMyProfile(userId);
-
-  await UserInteractionLogService.createLog(
-    userId,
-    'profile_fetched',
-    '/user/profile',
-    'GET',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
-  );
-
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -182,16 +123,7 @@ const getMyProfile = catchAsync(async (req, res) => {
 const deleteMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.deleteMyProfile(userId);
-
-  await UserInteractionLogService.createLog(
-    userId,
-    'profile_deleted',
-    '/user/profile',
-    'DELETE',
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
-  );
-
+  
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,

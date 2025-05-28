@@ -18,14 +18,6 @@ const tokenSchema = new Schema<TToken, TokenModel>(
       enum: Object.values(TokenType),
       required: true,
     },
-    ip: {
-      type: String,
-      required: true,
-    },
-    userAgent: {
-      type: String,
-      required: true,
-    },
     expiresAt: {
       type: Date,
       required: true,

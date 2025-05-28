@@ -137,7 +137,7 @@ const banUser = async (bannedUserId: string, duration: string) => {
   }
 
   user.isBanned = true;
-  user.banUntil = banUntil;
+  user.banUntil = banUntil as Date;
   user.status = 'Banned'; // Set user status to inactive
   await user.save();
 

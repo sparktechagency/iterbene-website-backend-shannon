@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { UserInteractionLogService } from '../modules/userInteractionLog/userInteractionLog.service';
 
 const loggingMiddleware = async (
   req: Request,
@@ -17,17 +16,6 @@ const loggingMiddleware = async (
     if (payload.password) delete payload.password;
     if (payload.email)
       payload.email = payload.email.replace(/(.{1}).*@/, '$1***@');
-
-    await UserInteractionLogService.createLog(
-      userId,
-      `${method.toLowerCase()}_request`,
-      originalUrl,
-      method,
-      ip || 'unknown',
-      userAgent,
-      payload,
-      status
-    );
   });
 
   next();

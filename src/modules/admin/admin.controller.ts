@@ -3,7 +3,6 @@ import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
 import { AdminServices } from './admin.service';
 import ApiError from '../../errors/ApiError';
-import pick from '../../shared/pick';
 
 const getDashboardData = catchAsync(async (req, res, next) => {
   const result = await AdminServices.getDashboardData();

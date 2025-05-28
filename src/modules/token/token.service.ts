@@ -7,14 +7,11 @@ import { TUser } from '../user/user.interface';
 import { TokenType } from './token.interface';
 import moment from 'moment';
 import { addMinutes, addDays } from 'date-fns';
-import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
 interface TokenPayload {
   userId: string;
   email: string;
   role: string;
-  ip: string;
-  userAgent: string;
 }
 const getExpirationTime = (expiration: string) => {
   const timeValue = parseInt(expiration);
@@ -34,16 +31,12 @@ const saveToken = async (
   token: string,
   userId: string,
   type: string,
-  ip: string,
-  userAgent: string,
   expiresAt: Date
 ) => {
   const tokenDoc = await Token.create({
     token,
     user: userId,
     type,
-    ip,
-    userAgent,
     expiresAt,
   });
   return tokenDoc;
@@ -52,9 +45,7 @@ const saveToken = async (
 const verifyToken = async (
   token: string,
   secret: Secret,
-  type: string,
-  ip: string,
-  userAgent: string
+  type: string
 ): Promise<TokenPayload | null> => {
   try {
     const payload = jwt.verify(token, secret) as TokenPayload;
@@ -62,8 +53,6 @@ const verifyToken = async (
       token,
       type,
       user: payload.userId,
-      ip,
-      userAgent,
     });
     if (!tokenDoc) {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token.');
@@ -74,17 +63,11 @@ const verifyToken = async (
   }
 };
 
-const accessAndRefreshToken = async (
-  user: TUser,
-  ip: string,
-  userAgent: string
-) => {
+const accessAndRefreshToken = async (user: TUser) => {
   const accessTokenPayload: TokenPayload = {
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    ip,
-    userAgent,
   };
 
   const accessToken = generateToken(
@@ -98,8 +81,6 @@ const accessAndRefreshToken = async (
     accessToken,
     user._id.toString(),
     TokenType.ACCESS,
-    ip,
-    userAgent,
     accessTokenExpires
   );
 
@@ -107,8 +88,6 @@ const accessAndRefreshToken = async (
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    ip,
-    userAgent,
   };
 
   const refreshToken = generateToken(
@@ -123,19 +102,7 @@ const accessAndRefreshToken = async (
     refreshToken,
     user._id.toString(),
     TokenType.REFRESH,
-    ip,
-    userAgent,
     refreshTokenExpires
-  );
-
-  await UserInteractionLogService.createLog(
-    user._id,
-    'tokens_generated',
-    '/auth/token',
-    'POST',
-    ip,
-    userAgent,
-    { email: user.email }
   );
 
   return { accessToken, refreshToken };
@@ -146,8 +113,6 @@ const createResetPasswordToken = async (user: TUser) => {
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    ip: 'unknown',
-    userAgent: 'unknown',
   };
   const resetPasswordToken = generateToken(
     resetPasswordTokenPayload,
@@ -163,19 +128,7 @@ const createResetPasswordToken = async (user: TUser) => {
     resetPasswordToken,
     user._id.toString(),
     TokenType.RESET_PASSWORD,
-    'unknown',
-    'unknown',
     resetPasswordExpires
-  );
-
-  await UserInteractionLogService.createLog(
-    user._id,
-    'reset_password_token_created',
-    '/auth/forgot-password',
-    'POST',
-    'unknown',
-    'unknown',
-    { email: user.email }
   );
 
   return resetPasswordToken;

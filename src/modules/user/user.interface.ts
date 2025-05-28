@@ -36,7 +36,7 @@ export type TUser = {
   mfaEnabled: boolean;
   isEmailVerified: boolean;
   isBanned: boolean;
-  banUntil?: Date;
+  banUntil?: Date | null;
   isOnline: boolean;
   isDeleted: boolean;
   isBlocked: boolean;

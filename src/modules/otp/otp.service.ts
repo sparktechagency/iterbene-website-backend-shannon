@@ -6,7 +6,6 @@ import { sendResetPasswordEmail, sendVerificationEmail } from '../../helpers/ema
 import OTP from './otp.model';
 import { config } from '../../config';
 import { User } from '../user/user.model';
-import { UserInteractionLogService } from '../userInteractionLog/userInteractionLog.service';
 
 const obfuscateEmail = (email: string) => {
   const [local, domain] = email.split('@');
@@ -21,15 +20,6 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
   const user = await User.findOne({ email: userEmail });
   const lastOtp = await OTP.findOne({ userEmail, type }).sort({ createdAt: -1 });
   if (lastOtp && moment().diff(lastOtp.createdAt, 'seconds') < 60) {
-    await UserInteractionLogService.createLog(
-      user?._id,
-      'otp_request_failed_cooldown',
-      '/auth/resend-otp',
-      'POST',
-      'unknown',
-      'unknown',
-      { email: userEmail }
-    );
     throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Please wait 1 minute before requesting a new OTP.');
   }
 
@@ -47,15 +37,6 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
       existingOTP.lastAttemptAt &&
       existingOTP.lastAttemptAt > windowStart
     ) {
-      await UserInteractionLogService.createLog(
-        user?._id,
-        'otp_request_failed_max_attempts',
-        '/auth/resend-otp',
-        'POST',
-        'unknown',
-        'unknown',
-        { email: userEmail }
-      );
       throw new ApiError(
         StatusCodes.TOO_MANY_REQUESTS,
         `Too many attempts. Try again after ${config.otp.attemptWindowMinutes} minutes.`
@@ -71,16 +52,6 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
     type,
     expiresAt: moment.utc().add(parseInt(expiresInMinutes), 'minutes').toDate(),
   });
-
-  await UserInteractionLogService.createLog(
-    user?._id,
-    `otp_created_${type}`,
-    '/auth/resend-otp',
-    'POST',
-    'unknown',
-    'unknown',
-    { email: userEmail }
-  );
   console.log(`OTP generated for ${obfuscateEmail(userEmail)}: ${otpDoc.otp}`);
   return otpDoc;
 };
@@ -94,28 +65,10 @@ const verifyOTP = async (userEmail: string, otp: string, type: string) => {
     verified: false,
   });
   if (!otpDoc) {
-    await UserInteractionLogService.createLog(
-      user?._id,
-      'otp_verify_failed_not_found',
-      '/auth/verify-email',
-      'POST',
-      'unknown',
-      'unknown',
-      { email: userEmail }
-    );
     throw new ApiError(StatusCodes.NOT_FOUND, 'OTP not found.');
   }
 
   if (otpDoc.expiresAt < new Date()) {
-    await UserInteractionLogService.createLog(
-      user?._id,
-      'otp_verify_failed_expired',
-      '/auth/verify-email',
-      'POST',
-      'unknown',
-      'unknown',
-      { email: userEmail }
-    );
     throw new ApiError(StatusCodes.NOT_FOUND, 'OTP expired.');
   }
 
@@ -124,15 +77,6 @@ const verifyOTP = async (userEmail: string, otp: string, type: string) => {
 
   if (otpDoc.attempts > config.otp.maxOtpAttempts) {
     await otpDoc.save();
-    await UserInteractionLogService.createLog(
-      user?._id,
-      'otp_verify_failed_max_attempts',
-      '/auth/verify-email',
-      'POST',
-      'unknown',
-      'unknown',
-      { email: userEmail }
-    );
     throw new ApiError(
       StatusCodes.TOO_MANY_REQUESTS,
       `Too many attempts. Try again after ${config.otp.attemptWindowMinutes} minutes.`
@@ -141,29 +85,11 @@ const verifyOTP = async (userEmail: string, otp: string, type: string) => {
 
   if (otpDoc.otp !== otp) {
     await otpDoc.save();
-    await UserInteractionLogService.createLog(
-      user?._id,
-      'otp_verify_failed_invalid',
-      '/auth/verify-email',
-      'POST',
-      'unknown',
-      'unknown',
-      { email: userEmail }
-    );
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid OTP.');
   }
 
   otpDoc.verified = true;
   await otpDoc.save();
-  await UserInteractionLogService.createLog(
-    user?._id,
-    `otp_verified_${type}`,
-    '/auth/verify-email',
-    'POST',
-    'unknown',
-    'unknown',
-    { email: userEmail }
-  );
   return true;
 };
 
