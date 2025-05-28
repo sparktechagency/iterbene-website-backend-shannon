@@ -6,45 +6,75 @@ import { EventInvite } from './eventInvite.model';
 import { Types } from 'mongoose';
 import { Event } from '../event/event.model';
 import { Maps } from '../maps/maps.model';
+import mongoose from 'mongoose';
+import { validateUsers } from '../../utils/validateUsers';
+import { User } from '../user/user.model';
 
 const sendInvite = async (
-  userId: string,
+  fromId: string,
   payload: { eventId: string; to: string | string[] }
 ): Promise<IEventInvite[]> => {
   const event = await Event.findById(payload.eventId);
   if (!event || event.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
+
+  // Validate sender is a member or admin
   if (
-    !event.interestedUsers.includes(new Types.ObjectId(userId)) &&
-    !event.coHosts.includes(new Types.ObjectId(userId)) &&
-    !event.creatorId.equals(userId)
+    !event.interestedUsers.includes(new mongoose.Types.ObjectId(fromId)) &&
+    !event.coHosts.includes(new mongoose.Types.ObjectId(fromId)) &&
+    !event.creatorId.equals(fromId)
   ) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      'Only interested users or co-hosts can send invites'
+      'Only group interested users or co-hosts or creator can send invites'
     );
   }
-  const toArray = Array.isArray(payload.to) ? payload.to : [payload.to];
-  const invites = await Promise.all(
-    toArray.map(async toId => {
-      const existingInvite = await EventInvite.findOne({
-        eventId: payload.eventId,
-        to: new Types.ObjectId(toId),
-        status: EventInviteStatus.PENDING,
-      });
-      if (existingInvite) {
-        return existingInvite;
-      }
-      return EventInvite.create({
-        from: new Types.ObjectId(userId),
-        to: new Types.ObjectId(toId),
-        eventId: new Types.ObjectId(payload.eventId),
-        status: EventInviteStatus.PENDING,
-      });
-    })
+
+  const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
+
+  // Validate recipients
+  for (const toId of recipients) {
+    await validateUsers(fromId, toId, 'Invite to event');
+    const user = await User.findById(toId);
+    if (!user || user.isDeleted) {
+      throw new ApiError(StatusCodes.NOT_FOUND, `User ${toId} not found`);
+    }
+    if (
+      event.interestedUsers.includes(new mongoose.Types.ObjectId(toId)) ||
+      event.pendingInterestedUsers.includes(new mongoose.Types.ObjectId(toId))
+    ) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `User ${toId} is already a interested user of the event`
+      );
+    }
+    const existingInvite = await EventInvite.findOne({
+      from: fromId,
+      to: toId,
+      eventId: payload.eventId,
+      status: EventInviteStatus.PENDING,
+    });
+    if (existingInvite) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `Invite already sent to user ${toId}`
+      );
+    }
+  }
+
+  const invites = recipients.map(toId => ({
+    from: new mongoose.Types.ObjectId(fromId),
+    to: new mongoose.Types.ObjectId(toId),
+    eventId: new mongoose.Types.ObjectId(payload.eventId),
+    status: EventInviteStatus.PENDING,
+  }));
+  event.pendingInterestedUsers.push(
+    ...recipients.map(toId => new mongoose.Types.ObjectId(toId))
   );
-  return invites;
+  const createdInvites = await EventInvite.insertMany(invites);
+  await event.save();
+  return createdInvites;
 };
 
 const acceptInvite = async (
@@ -69,8 +99,9 @@ const acceptInvite = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   invite.status = EventInviteStatus.ACCEPTED;
-  if (!event.pendingInterestedUsers.includes(invite.to)) {
-    event.pendingInterestedUsers.push(invite.to);
+  if (!event.interestedUsers.includes(invite.to)) {
+    event.interestedUsers.push(invite.to);
+    event.interestCount += 1;
   }
   await Promise.all([invite.save(), event.save()]);
 
@@ -153,20 +184,57 @@ const cancelInvite = async (
 const getMyInvites = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IEventInvite>> => {
-  const query: Record<string, any> = { to: filters.userId };
+) => {
+  const foundInvites = await EventInvite.find({ to: filters.userId });
+  if (foundInvites.length === 0) {
+    return {
+      results: [],
+      page: 1,
+      limit: 10,
+      totalResults: 0,
+      totalPages: 1,
+    };
+  }
+
+  //filter not response deleted events
+  const eventIds = foundInvites.map(invite => invite.eventId);
+  const events = await Event.find({ _id: { $in: eventIds }, isDeleted: false });
+  if (events?.length === 0) {
+    return {
+      results: [],
+      page: 1,
+      limit: 10,
+      totalResults: 0,
+      totalPages: 1,
+    };
+  }
+
+  const query: Record<string, any> = { to: filters.userId , status: EventInviteStatus.PENDING};
+
+  //invitation count
+  const invitationCount = await EventInvite.countDocuments({
+    to: filters.userId,
+    status: EventInviteStatus.PENDING,
+  });
+
+  options.select = '-__v -updatedAt';
   options.populate = [
     {
-      path: 'from',
-      select: 'name email',
-    },
-    {
-      path: 'to',
-      select: 'name email',
+      path: 'eventId',
+      select:
+        'eventName eventImage  startDate endDate duration eventCost interestCount',
+      populate: {
+        path: 'creatorId',
+        select: 'fullName username profileImage',
+      },
     },
   ];
   options.sortBy = options.sortBy || '-createdAt';
-  return EventInvite.paginate(query, options);
+  const result = await EventInvite.paginate(query, options);
+  return {
+    ...result,
+    invitationCount,
+  };
 };
 
 export const EventInviteService = {

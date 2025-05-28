@@ -19,51 +19,13 @@ router.post(
   EventController.createEvent
 );
 
-// Join an event (any authenticated user)
-router.post(
-  '/join',
-  auth('User'),
-  validateRequest(EventValidation.joinEventValidationSchema),
-  EventController.joinEvent
-);
-
+// interest an event (any authenticated user)
+router.post('/interest/:eventId', auth('User'), EventController.interestEvent);
 // Leave an event (any authenticated user)
 router.post(
-  '/leave',
+  '/not-interest/:eventId',
   auth('User'),
-  validateRequest(EventValidation.leaveEventValidationSchema),
-  EventController.leaveEvent
-);
-
-//approve join event (admin only)
-router.post(
-  '/approve-join',
-  auth('User'),
-  validateRequest(EventValidation.approveJoinValidationSchema),
-  EventController.approveJoinEvent
-);
-//reject join event (admin only)
-router.post(
-  '/reject-join',
-  auth('User'),
-  validateRequest(EventValidation.rejectJoinValidationSchema),
-  EventController.rejectJoinEvent
-);
-
-// Remove a user (co-host only)
-router.post(
-  '/remove-user',
-  auth('User'),
-  validateRequest(EventValidation.removeUserValidationSchema),
-  EventController.removeUser
-);
-
-// Promote user to co-host (co-host only)
-router.post(
-  '/promote-co-host',
-  auth('User'),
-  validateRequest(EventValidation.promoteCoHostValidationSchema),
-  EventController.promoteToCoHost
+  EventController.notInterestEvent
 );
 
 // Get my events (any authenticated user)
@@ -125,14 +87,6 @@ router.get(
   EventInviteController.getMyInvites
 );
 
-// Demote co-host (creator only, enforced in service)
-router.post(
-  '/demote-co-host',
-  auth('User'),
-  validateRequest(EventValidation.demoteCoHostValidationSchema),
-  EventController.demoteCoHost
-);
-
 // Get event details (any authenticated user)
 
 router
@@ -141,11 +95,6 @@ router
     auth('Common'),
     validateRequest(EventValidation.getEventValidationSchema),
     EventController.getEvent
-  )
-  .patch(
-    auth('User'),
-    validateRequest(EventValidation.updateEventValidationSchema),
-    EventController.updateEvent
   )
   .delete(
     auth('Common'),

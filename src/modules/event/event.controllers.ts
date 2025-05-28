@@ -28,95 +28,27 @@ const createEvent = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const joinEvent = catchAsync(async (req: Request, res: Response) => {
+const interestEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { eventId } = req.body;
-  const result = await EventService.joinEvent(userId, eventId);
+  const { eventId } = req.params;
+  const result = await EventService.interestEvent(userId, eventId);
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Join request sent successfully',
+    message: 'Event interested successfully',
     data: result,
   });
 });
 
-const leaveEvent = catchAsync(async (req: Request, res: Response) => {
+const notInterestEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { eventId } = req.body;
-  const result = await EventService.leaveEvent(userId, eventId);
+  const { eventId } = req.params;
+  const result = await EventService.notInterestEvent(userId, eventId);
   sendResponse(res, {
     code: StatusCodes.OK,
-    message: 'Left event successfully',
+    message: 'Event not interested successfully',
     data: result,
   });
 });
-
-const approveJoinEvent = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { eventId, userId: targetUserId } = req.body;
-  const result = await EventService.approveJoinEvent(
-    userId,
-    eventId,
-    targetUserId
-  );
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Join request approved successfully',
-    data: result,
-  });
-});
-
-const rejectJoinEvent = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { eventId, userId: targetUserId } = req.body;
-  const result = await EventService.rejectJoinEvent(
-    userId,
-    eventId,
-    targetUserId
-  );
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Join request rejected successfully',
-    data: result,
-  });
-});
-
-const removeUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { eventId, userId: targetUserId } = req.body;
-  const result = await EventService.removeUser(userId, eventId, targetUserId);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'User removed successfully',
-    data: result,
-  });
-});
-
-const promoteToCoHost = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { eventId, userId: targetUserId } = req.body;
-  const result = await EventService.promoteToCoHost(
-    userId,
-    eventId,
-    targetUserId
-  );
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'User promoted to co-host successfully',
-    data: result,
-  });
-});
-
-const demoteCoHost = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { eventId, coHostId } = req.body;
-  const result = await EventService.demoteCoHost(userId, eventId, coHostId);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Co-host demoted successfully',
-    data: result,
-  });
-});
-
 const getEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { id } = req.params;
@@ -127,19 +59,6 @@ const getEvent = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
-const updateEvent = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { id } = req.params;
-  const payload = req.body;
-  const result = await EventService.updateEvent(userId, id, payload);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Event updated successfully',
-    data: result,
-  });
-});
-
 const deleteEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { id } = req.params;
@@ -199,15 +118,9 @@ const getEventSuggestions = catchAsync(async (req: Request, res: Response) => {
 
 export const EventController = {
   createEvent,
-  joinEvent,
-  leaveEvent,
-  approveJoinEvent,
-  rejectJoinEvent,
-  removeUser,
-  promoteToCoHost,
-  demoteCoHost,
+  interestEvent,
+  notInterestEvent,
   getEvent,
-  updateEvent,
   deleteEvent,
   getMyEvents,
   getMyInterestedEvents,

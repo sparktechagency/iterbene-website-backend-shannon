@@ -19,8 +19,11 @@ const createEvent = async (
   const event = await Event.create(eventData);
   return event;
 };
+const interestEvent = async (
+  userId: string,
+  eventId: string
+): Promise<IEvent> => {
 
-const joinEvent = async (userId: string, eventId: string): Promise<IEvent> => {
   const event = await Event.findById(eventId);
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
@@ -39,33 +42,28 @@ const joinEvent = async (userId: string, eventId: string): Promise<IEvent> => {
   }
   event.interestedUsers.push(userObjectId);
   event.interestCount = event.interestedUsers.length;
+  await event.save();
   return event;
 };
-
-const leaveEvent = async (userId: string, eventId: string): Promise<IEvent> => {
+const notInterestEvent = async (
+  userId: string,
+  eventId: string
+): Promise<IEvent> => {
   const event = await Event.findById(eventId);
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
-  if (event.creatorId.equals(userId)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Creator cannot leave event');
-  }
   const userObjectId = new Types.ObjectId(userId);
-  if (
-    !event.interestedUsers.includes(userObjectId) &&
-    !event.pendingInterestedUsers.includes(userObjectId)
-  ) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Not interested or pending in event'
-    );
-  }
   event.interestedUsers = event.interestedUsers.filter(
     id => !id.equals(userObjectId)
   );
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     id => !id.equals(userObjectId)
   );
+  event.interestCount = event.interestedUsers.length;
+  if (event.interestCount < 0) {
+    event.interestCount = 0;
+  }
   await event.save();
   return event;
 };
@@ -304,17 +302,16 @@ const getMyEvents = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IEvent>> => {
-    const newDate = new Date();
+  const newDate = new Date();
   const query = {
     ...filters,
     isDeleted: false,
     $or: [
-      { creatorId: new Types.ObjectId(userId) },
-      { coHosts: new Types.ObjectId(userId) },
-      { interestedUsers: new Types.ObjectId(userId) },
-      { pendingInterestedUsers: new Types.ObjectId(userId) },
+      { creatorId: new Types.ObjectId(userId) }
     ],
+    // filter by startDate and endDate
     startDate: { $gte: newDate },
+    endDate: { $gte: newDate },
   };
   options.populate = [
     {
@@ -333,12 +330,14 @@ const getMyInterestedEvents = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IEvent>> => {
-    const newDate = new Date();
+  const newDate = new Date();
   const query = {
     ...filters,
     isDeleted: false,
+    creatorId: { $ne: new Types.ObjectId(userId) },
     $or: [{ interestedUsers: { $in: [new Types.ObjectId(userId)] } }],
     startDate: { $gte: newDate },
+    endDate: { $gte: newDate },
   };
   options.populate = [
     {
@@ -356,14 +355,17 @@ const getEventSuggestions = async (
   userId: string,
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<IEvent[]> => {
+): Promise<PaginateResult<IEvent>> => {
   const newDate = new Date();
   const query = {
     isDeleted: false,
     privacy: EventPrivacy.PUBLIC,
-    interestedUsers: { $ne: new Types.ObjectId(userId) },
-    pendingInterestedUsers: { $ne: new Types.ObjectId(userId) },
+    interestedUsers: { $nin: [new Types.ObjectId(userId)] },
+    pendingInterestedUsers: { $nin: [new Types.ObjectId(userId)] },
+    creatorId: { $ne: new Types.ObjectId(userId) },
+    coHosts: { $nin: [new Types.ObjectId(userId)] },
     startDate: { $gte: newDate },
+    endDate: { $gte: newDate },
   };
   options.populate = [
     {
@@ -375,22 +377,16 @@ const getEventSuggestions = async (
     'eventName eventImage creatorId interestCount startDate endDate ';
   options.sortBy = options.sortBy || '-createdAt';
   const events = await Event.paginate(query, options);
-  return events.results;
+  return events;
 };
 
 export const EventService = {
   createEvent,
-  joinEvent,
-  leaveEvent,
-  removeUser,
-  promoteToCoHost,
-  demoteCoHost,
+  interestEvent,
+  notInterestEvent,
   getEvent,
-  updateEvent,
   deleteEvent,
   getMyEvents,
-  approveJoinEvent,
-  rejectJoinEvent,
   getMyInterestedEvents,
   getEventSuggestions,
 };
