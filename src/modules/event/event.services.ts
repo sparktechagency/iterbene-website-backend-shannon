@@ -12,7 +12,8 @@ const createEvent = async (
   const eventData: Partial<IEvent> = {
     ...payload,
     creatorId: new Types.ObjectId(userId),
-    interestedUsers: [],
+    interestedUsers: [new Types.ObjectId(userId)],
+    interestCount: 1,
     pendingInterestedUsers: [],
     isDeleted: false,
   };
@@ -23,7 +24,6 @@ const interestEvent = async (
   userId: string,
   eventId: string
 ): Promise<IEvent> => {
-
   const event = await Event.findById(eventId);
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
@@ -306,9 +306,7 @@ const getMyEvents = async (
   const query = {
     ...filters,
     isDeleted: false,
-    $or: [
-      { creatorId: new Types.ObjectId(userId) }
-    ],
+    $or: [{ creatorId: new Types.ObjectId(userId) }],
     // filter by startDate and endDate
     startDate: { $gte: newDate },
     endDate: { $gte: newDate },

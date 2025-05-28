@@ -11,6 +11,8 @@ const createEvent = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const file = req.file as Express.Multer.File;
   const payload = req.body;
+
+  console.log("Request body:", req.body);
   // parse the JSON string location and coleaders
   if (typeof req.body.location === 'string') {
     req.body.location = JSON.parse(req.body.location);

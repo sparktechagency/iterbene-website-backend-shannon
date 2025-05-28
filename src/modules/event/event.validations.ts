@@ -26,7 +26,7 @@ const createEventValidationSchema = z.object({
       })
       .default('public'),
     coHosts: z.array(objectIdSchema).optional(),
-    eventCost: z.number().optional().default(0),
+    eventCost: z.string().optional(),
     interests: z.array(objectIdSchema).optional(),
   }),
 });

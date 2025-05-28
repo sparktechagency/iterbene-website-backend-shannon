@@ -21,7 +21,7 @@ export interface IEvent {
   coHosts: Types.ObjectId[];
   interestedUsers: Types.ObjectId[];
   pendingInterestedUsers: Types.ObjectId[];
-  eventCost: number;
+  eventCost?: number;
   interestCount: number;
   isDeleted: boolean;
   createdAt?: Date;
