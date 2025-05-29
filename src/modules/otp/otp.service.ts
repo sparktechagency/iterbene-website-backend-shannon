@@ -52,13 +52,11 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
     type,
     expiresAt: moment.utc().add(parseInt(expiresInMinutes), 'minutes').toDate(),
   });
-  console.log(`OTP generated for ${obfuscateEmail(userEmail)}: ${otpDoc.otp}`);
   return otpDoc;
 };
 
 const verifyOTP = async (userEmail: string, otp: string, type: string) => {
   const user = await User.findOne({ email: userEmail });
-  console.log(`Verifying OTP for ${obfuscateEmail(userEmail)}, type: ${type}`);
   const otpDoc = await OTP.findOne({
     userEmail,
     type,

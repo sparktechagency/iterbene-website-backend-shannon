@@ -158,8 +158,6 @@ const unviewedMessagesCount = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
     const { chatId } = req.query;
-
-    console.log(userId, chatId);
     const count = await MessageService.unviewedMessagesCount(
       userId,
       chatId as string

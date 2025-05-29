@@ -184,8 +184,6 @@ const getMyAllConnections = async (
     status: ConnectionStatus.ACCEPTED,
     $or: [{ sentBy: filters.userId }, { receivedBy: filters.userId }],
   };
-
-  console.log(query);
   // Populate both sentBy and receivedBy to get user details
   options.populate = [
     {

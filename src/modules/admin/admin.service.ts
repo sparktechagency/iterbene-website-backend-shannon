@@ -141,8 +141,6 @@ const userActivityGraphChart = async (
 
   // ✅ Populate User Activity Data based on period
   userActivity.forEach((entry: any) => {
-    console.log(entry.activity);
-
     if (period === 'weekly') {
       // Ensure entry._id corresponds to valid day of the week (0 = Sunday, 6 = Saturday)
       const dayIndex = (entry._id + 6) % 7; // Adjust to start from Sunday (0)
