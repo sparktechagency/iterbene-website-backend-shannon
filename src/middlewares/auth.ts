@@ -15,7 +15,7 @@ const auth = (...roles: string[]) =>
     if (!tokenWithBearer || !tokenWithBearer.startsWith('Bearer')) {
       throw new ApiError(
         StatusCodes.UNAUTHORIZED,
-        'Authorization header missing or invalid.'
+        'Unauthorized to access'
       );
     }
 

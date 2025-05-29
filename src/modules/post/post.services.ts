@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { MediaType } from '../media/media.interface';
+import { MediaType, SourceType } from '../media/media.interface';
 import { IPost, PostPrivacy, PostType, ReactionType } from './post.interface';
 import ApiError from '../../errors/ApiError';
 import Group from '../group/group.model';
@@ -95,8 +95,6 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
   if (itineraryId) {
     const itineraryDoc = await Itinerary.findById(itineraryId);
     if (!itineraryDoc) throw new ApiError(404, 'Itinerary not found');
-    if (itineraryDoc.postId)
-      throw new ApiError(400, 'Itinerary already linked to a post');
     itinerary = itineraryDoc._id;
   }
 
@@ -467,6 +465,8 @@ async function deleteComment(payload: DeleteCommentPayload): Promise<IPost> {
     'media itinerary userId sourceId'
   ) as Promise<IPost>;
 }
+
+// feedPosts
 async function feedPosts(
   filters: Record<string, any>,
   options: PaginateOptions
@@ -606,21 +606,87 @@ async function feedPosts(
   return posts;
 }
 
-async function getTimelinePosts(
+// get single user timeline posts
+async function getUserTimelinePosts(
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> {
+  // Base query for posts
   const query: Record<string, any> = {
     postType: PostType.USER,
+    privacy: PostPrivacy.PUBLIC,
+    isDeleted: false,
   };
-  if (filters.userId) {
-    query.$and = [{ userId: filters.userId }, { sourceId: filters.userId }];
+  const requestedUser = await User.findOne({ username: filters.username });
+
+  if (requestedUser) {
+    query.$and = [
+      { userId: requestedUser._id },
+      { sourceId: requestedUser._id },
+    ];
   }
-  options.populate = ['media', 'itinerary', 'userId', 'sourceId'];
+
+  // Set population options
+  options.populate = [
+    {
+      path: 'media',
+      select: 'mediaType mediaUrl',
+      match: { isDeleted: false },
+    },
+    { path: 'itinerary' },
+    {
+      path: 'userId',
+      select: 'fullName username profileImage',
+    },
+    {
+      path: 'reactions',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
+    {
+      path: 'comments',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
+  ];
+
+  // Set default sort order
   options.sortBy = options.sortBy || '-createdAt';
-  return Post.paginate(query, options);
+
+  // Use paginate
+  let posts = await Post.paginate(query, options);
+
+  // Filter posts by mediaType if provided, ensuring all media are of the specified type
+  if (
+    filters.mediaType === MediaType.IMAGE ||
+    filters.mediaType === MediaType.VIDEO
+  ) {
+    posts.results = posts.results.filter(
+      post =>
+        post.media.length > 0 && // Ensure post has media
+        //@ts-ignore
+        post.media.every(media => media.mediaType === filters.mediaType)
+    );
+    // Update totalResults and totalPages based on filtered results
+    posts.totalResults = posts.results.length;
+    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
+  }
+  if (filters?.mediaType === 'itinerary') {
+    //if itinerary exist
+    posts.results = posts.results.filter(post => post?.itinerary);
+    // Update totalResults and totalPages based on filtered results
+    posts.totalResults = posts.results.length;
+    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
+  }
+
+  return posts;
 }
 
+// get single group  posts
 async function getGroupPosts(
   filters: Record<string, any>,
   options: PaginateOptions
@@ -664,7 +730,7 @@ export const PostServices = {
   updatePost,
   deleteComment,
   feedPosts,
-  getTimelinePosts,
+  getUserTimelinePosts,
   getGroupPosts,
   getEventPosts,
 };

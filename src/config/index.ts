@@ -50,7 +50,7 @@ export const config = {
   bcrypt: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12'),
   },
-  googleMapsApiKey: process.env.GOOGLE_MAP_API_KEY || '',
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY  || '',
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),

@@ -20,9 +20,10 @@ router
 
 router.post('/share', auth('User'), PostController.sharePost);
 router.get('/feed', PostController.feedPosts);
-router.get('/timeline', PostController.getTimelinePosts);
-router.get('/group/:groupId', PostController.getGroupPosts);
-router.get('/event/:eventId', PostController.getEventPosts);
+//get single user timeline posts
+router.get('/user-timeline/:username', auth('Common'), PostController.getUserTimelinePosts);
+router.get('/group/:groupId', auth('Common'), PostController.getGroupPosts);
+router.get('/event/:eventId', auth('Common'), PostController.getEventPosts);
 
 // Reaction routes
 router.post('/reaction', auth('User'), PostController.addOrRemoveReaction);

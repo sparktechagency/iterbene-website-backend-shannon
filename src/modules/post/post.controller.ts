@@ -179,11 +179,12 @@ const feedPosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getTimelinePosts = catchAsync(async (req: Request, res: Response) => {
-  const filter = pick(req.query, ['userId']);
-  const options = pick(req.query, ["page", "limit"]);
-
-  const result = await PostServices.getTimelinePosts(filter, options);
+const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
+  const { username } = req.params;
+  const filter = pick(req.query, ['mediaType']);
+  const options = pick(req.query, ['page', 'limit']);
+  filter.username = username;
+  const result = await PostServices.getUserTimelinePosts(filter, options);
 
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -234,7 +235,7 @@ export const PostController = {
   createPost,
   sharePost,
   feedPosts,
-  getTimelinePosts,
+  getUserTimelinePosts,
   getGroupPosts,
   getEventPosts,
   addOrRemoveReaction,
