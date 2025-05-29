@@ -18,6 +18,7 @@ import { StoryRoutes } from '../modules/story/story.route';
 import { PostRoutes } from '../modules/post/post.routes';
 import { ItineraryRoutes } from '../modules/Itinerary/itinerary.routes';
 import { HashtagRoutes } from '../modules/hastag/hashtag.routes';
+import { MapsRoutes } from '../modules/maps/maps.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -84,6 +85,10 @@ const apiRoutes = [
   {
     path: '/countries',
     route: CountryRoutes,
+  },
+  {
+    path: "/maps",
+    route:MapsRoutes
   },
   {
     path: '/settings',
