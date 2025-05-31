@@ -6,8 +6,13 @@ const activitySchema = new Schema({
   time: { type: String, required: true },
   description: { type: String, required: true },
   link: String,
-  rating: Number,
-  duration: Number,
+  rating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0,
+  },
+  duration: String,
   cost: { type: Number, required: false },
 });
 
@@ -38,6 +43,18 @@ const itinerarySchema = new Schema<IItinerary, ItineraryModel>({
 });
 
 itinerarySchema.plugin(paginate);
+//calculate overall rating
+itinerarySchema.pre('save', function (next) {
+  this.overAllRating = this.days.reduce((acc, day) => {
+    return (
+      acc +
+      day.activities.reduce((acc, activity) => {
+        return acc + (activity?.rating ?? 0);
+      }, 0)
+    );
+  }, 0);
+  next();
+});
 
 export const Itinerary = model<IItinerary, ItineraryModel>(
   'Itinerary',

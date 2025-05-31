@@ -23,43 +23,33 @@ const filterUserFields = async (
 ): Promise<Partial<TUser>> => {
   const isSelf = requesterId === user._id.toString();
   let isFriend = false;
-
-  if (requesterId && !isSelf) {
-    const connection = await Connections.findOne({
-      $or: [
-        {
-          sentBy: requesterId,
-          receivedBy: user._id,
-          status: ConnectionStatus.ACCEPTED,
-        },
-        {
-          sentBy: user._id,
-          receivedBy: requesterId,
-          status: ConnectionStatus.ACCEPTED,
-        },
-      ],
-    });
-    isFriend = !!connection;
+  const existingConnection = await Connections.exists({
+    $or: [
+      {
+        sentBy: requesterId,
+        receivedBy: user._id,
+        status: ConnectionStatus.ACCEPTED,
+      },
+      {
+        sentBy: user._id,
+        receivedBy: requesterId,
+        status: ConnectionStatus.ACCEPTED,
+      },
+    ],
+  });
+  if (existingConnection) {
+    isFriend = true;
   }
 
   const filteredUser: Record<string, any> = {
     _id: user._id,
     fullName: user.fullName,
-    nickname: user.nickname,
     username: user.username,
     profileImage: user.profileImage,
     coverImage: user.coverImage,
     email: user.email,
-    phoneNumber: user.phoneNumber,
     referredAs: user.referredAs,
-    ageRange: user.ageRange,
     address: user.address,
-    country: user.country,
-    city: user.city,
-    state: user.state,
-    profession: user.profession,
-    maritalStatus: user.maritalStatus,
-    role: user.role,
     isOnline: user.isOnline,
     createdAt: user.createdAt,
   };
@@ -71,13 +61,15 @@ const filterUserFields = async (
     'location',
     'locationName',
     'city',
+    'country',
+    'state',
     'profession',
     'description',
     'phoneNumber',
     'maritalStatus',
   ];
 
-  privateFields.forEach(field => {
+  privateFields?.forEach(field => {
     const visibility =
       user.privacySettings[field as keyof typeof user.privacySettings];
     if (
@@ -153,7 +145,7 @@ const getSingleUser = async (
   }
   return filterUserFields(
     user,
-    requesterId ? requesterId : user._id.toString()
+    requesterId as string
   );
 };
 

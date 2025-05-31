@@ -5,7 +5,7 @@ export interface IActivity {
   description: string;
   link?: string;
   rating?: number;
-  duration?: number;
+  duration?: string;
   cost: number;
 }
 

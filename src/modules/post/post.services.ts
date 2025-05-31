@@ -583,6 +583,21 @@ async function feedPosts(
   options.sortBy = options.sortBy || '-createdAt';
 
   const posts = await Post.paginate(query, options);
+  // Filter posts by mediaType if provided, ensuring all media are of the specified type
+  if (
+    filters.mediaType === MediaType.IMAGE ||
+    filters.mediaType === MediaType.VIDEO
+  ) {
+    posts.results = posts.results.filter(
+      post =>
+        post.media.length > 0 && // Ensure post has media
+        //@ts-ignore
+        post.media.every(media => media.mediaType === filters.mediaType)
+    );
+    // Update totalResults and totalPages based on filtered results
+    posts.totalResults = posts.results.length;
+    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
+  }
 
   // Manually sort comments and reactions for each post
   posts.results = posts.results.map(post => {
