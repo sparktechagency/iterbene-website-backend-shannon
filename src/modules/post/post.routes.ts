@@ -20,8 +20,13 @@ router
 
 router.post('/share', auth('User'), PostController.sharePost);
 router.get('/feed', PostController.feedPosts);
+
 //get single user timeline posts
-router.get('/user-timeline/:username', auth('Common'), PostController.getUserTimelinePosts);
+router.get(
+  '/user-timeline/:username',
+  auth('Common'),
+  PostController.getUserTimelinePosts
+);
 router.get('/group/:groupId', auth('Common'), PostController.getGroupPosts);
 router.get('/event/:eventId', auth('Common'), PostController.getEventPosts);
 
@@ -36,5 +41,11 @@ router.delete(
   auth('User'),
   PostController.deleteComment
 );
+
+router
+  .route('/:postId')
+  .get(PostController.getPostById)
+  .patch(auth('User'), PostController.updatePost)
+  .delete(auth('User'), PostController.deletePost);
 
 export const PostRoutes = router;

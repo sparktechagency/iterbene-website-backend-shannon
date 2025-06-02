@@ -227,29 +227,36 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
 }
 
 async function getPostById(postId: string): Promise<IPost> {
-  const post = await Post.findById(postId);
-  if (!post) throw new ApiError(404, 'Post not found');
-  return post.populate('media itinerary userId sourceId');
+  const post = await Post.findById(postId).populate(
+    'media itinerary userId sourceId'
+  );
+  if (!post || post.isDeleted) throw new ApiError(404, 'Post not found');
+  return post;
 }
 
 async function updatePost(
   postId: string,
   payload: Partial<CreatePostPayload>
 ): Promise<IPost | null> {
-  const { userId, content, privacy } = payload;
-  const user = await User.findById(userId);
+  const user = await User.findById(payload?.userId);
   if (!user) throw new ApiError(404, 'User not found');
   const post = await Post.findById(postId);
   if (!post) throw new ApiError(404, 'Post not found');
-  if (!userId || post.userId.toString() !== userId.toString()) {
+  if (
+    !payload?.userId ||
+    post.userId.toString() !== payload?.userId.toString()
+  ) {
     throw new ApiError(403, 'Not authorized to update this post');
   }
-  await Post.updateOne({ _id: postId }, { $set: { content, privacy } });
+  await Post.findOneAndUpdate({ _id: postId }, payload, { new: true });
   return Post.findById(postId).populate('media itinerary userId sourceId');
 }
 
-async function deletePost(postId: string): Promise<IPost> {
-  const post = await Post.findById(postId);
+async function deletePost(userId: string, postId: string): Promise<IPost> {
+  const post = await Post.findOne({
+    _id: postId,
+    userId: new Types.ObjectId(userId),
+  });
   if (!post) {
     throw new ApiError(404, 'Post not found');
   }
@@ -465,7 +472,6 @@ async function deleteComment(payload: DeleteCommentPayload): Promise<IPost> {
     'media itinerary userId sourceId'
   ) as Promise<IPost>;
 }
-
 // feedPosts
 async function feedPosts(
   filters: Record<string, any>,

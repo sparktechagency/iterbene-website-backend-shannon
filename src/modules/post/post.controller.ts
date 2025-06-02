@@ -179,6 +179,16 @@ const feedPosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getPostById = catchAsync(async (req: Request, res: Response) => {
+  const { postId } = req.params;
+  const result = await PostServices.getPostById(postId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Post retrieved successfully',
+    data: result,
+  });
+});
+
 const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
   const { username } = req.params;
   const filter = pick(req.query, ['mediaType']);
@@ -231,6 +241,41 @@ const getEventPosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updatePost = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const filesObject = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  };
+
+  const files = Object.values(filesObject).flat();
+
+  let visitedLocation = req.body.visitedLocation;
+  if (typeof visitedLocation === 'string') {
+    try {
+      visitedLocation = JSON.parse(visitedLocation);
+    } catch (error) {
+      return sendResponse(res, {
+        code: StatusCodes.BAD_REQUEST,
+        message: 'Invalid JSON format for visitedLocation',
+        data: null,
+      });
+    }
+  } else {
+    console.log('visitedLocation is not a string:', visitedLocation);
+  }
+});
+const deletePost = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { postId } = req.params;
+
+  const result = await PostServices.deletePost(userId, postId);
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Post deleted successfully',
+    data: result,
+  });
+});
 export const PostController = {
   createPost,
   sharePost,
@@ -239,7 +284,10 @@ export const PostController = {
   getGroupPosts,
   getEventPosts,
   addOrRemoveReaction,
+  getPostById,
+  updatePost,
   createComment,
   updateComment,
+  deletePost,
   deleteComment,
 };
