@@ -265,8 +265,7 @@ const checkIsSentConnectionExists = async (
 ) => {
   const result = await Connections.findOne({
     sentBy: userId,
-    receivedBy: friendId,
-    status: ConnectionStatus.PENDING,
+    receivedBy: friendId
   });
   return result;
 };

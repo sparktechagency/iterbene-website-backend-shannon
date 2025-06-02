@@ -14,11 +14,21 @@ export interface IReaction {
   updatedAt: Date;
 }
 
+export interface ICommentReaction {
+  userId: Types.ObjectId;
+  commentId: Types.ObjectId;
+  reactionType: ReactionType;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IComment {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   postId: Types.ObjectId;
   replyTo?: Types.ObjectId;
+  
+  reactions: ICommentReaction[];
   parentCommentId?: Types.ObjectId;
   comment: string;
   createdAt: Date;

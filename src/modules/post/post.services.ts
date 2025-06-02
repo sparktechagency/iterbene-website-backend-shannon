@@ -527,6 +527,7 @@ async function feedPosts(
   }
 
   const query: Record<string, any> = {
+    isDeleted: false,
     $or: userId
       ? [
           {
@@ -713,6 +714,7 @@ async function getGroupPosts(
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> {
   const query: Record<string, any> = {
+    isDeleted: false,
     postType: PostType.GROUP,
     sourceId: filters.groupId,
   };
@@ -726,6 +728,7 @@ async function getEventPosts(
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> {
   const query: Record<string, any> = {
+    isDeleted: false,
     postType: PostType.EVENT,
     sourceId: filters.eventId,
   };
