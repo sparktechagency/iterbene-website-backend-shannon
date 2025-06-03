@@ -192,7 +192,7 @@ const getPostById = catchAsync(async (req: Request, res: Response) => {
 const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
   const { username } = req.params;
   const filter = pick(req.query, ['mediaType']);
-  const options = pick(req.query, ['page', 'limit']);
+  const options = pick(req.query, ['page', 'limit',"populate","sortBy"]);
   filter.username = username;
   const result = await PostServices.getUserTimelinePosts(filter, options);
 

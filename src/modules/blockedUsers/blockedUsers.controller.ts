@@ -7,7 +7,7 @@ import pick from '../../shared/pick';
 
 const blockUser = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { blockedId } = req.body;
+  const { blockedId } = req.params;
   const result = await BlockedUserService.blockUser(userId, blockedId);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -18,7 +18,7 @@ const blockUser = catchAsync(async (req: Request, res: Response) => {
 
 const unblockUser = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { blockedId } = req.body;
+  const { blockedId } = req.params;
   const result = await BlockedUserService.unblockUser(userId, blockedId);
   sendResponse(res, {
     code: StatusCodes.OK,

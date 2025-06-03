@@ -4,8 +4,16 @@ import auth from '../../middlewares/auth';
 
 const router = express.Router();
 
-router.post('/block', auth('User'), BlockedUserController.blockUser);
-router.post('/unblock', auth('User'), BlockedUserController.unblockUser);
-router.get('/blocked', auth('User'), BlockedUserController.getBlockedUsers);
+router.post('/block/:blockedId', auth('User'), BlockedUserController.blockUser);
+router.post(
+  '/unblock/:blockedId',
+  auth('User'),
+  BlockedUserController.unblockUser
+);
+router.get(
+  '/my-block-users',
+  auth('User'),
+  BlockedUserController.getBlockedUsers
+);
 
 export const BlockedUserRoutes = router;

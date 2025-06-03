@@ -36,7 +36,7 @@ router.delete(
 );
 
 router.delete(
-  '/delete/:connectionId',
+  '/delete/:deleteByUserId',
   auth('User'),
   ConnectionsController.deleteConnection
 );

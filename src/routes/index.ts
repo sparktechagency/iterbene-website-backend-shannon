@@ -35,7 +35,7 @@ const apiRoutes = [
     route: AdminRoutes,
   },
   {
-    path: '/blocked-users',
+    path: '/block-users',
     route: BlockedUserRoutes,
   },
   {

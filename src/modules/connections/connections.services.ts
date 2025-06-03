@@ -125,8 +125,13 @@ const declineConnection = async (connectionId: string, userId: string) => {
   return connection;
 };
 
-const deleteConnection = async (connectionId: string, userId: string) => {
-  const connection = await Connections.findById(connectionId);
+const deleteConnection = async (deleteByUserId: string, userId: string) => {
+  const connection = await Connections.findOne({
+    $or: [
+      { sentBy: deleteByUserId, receivedBy: userId },
+      { sentBy: userId, receivedBy: deleteByUserId },
+    ],
+  });
   if (!connection) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Connection not found');
   }
@@ -148,9 +153,9 @@ const deleteConnection = async (connectionId: string, userId: string) => {
     );
   }
 
-  await Connections.findByIdAndDelete(connectionId);
+  const result = await Connections.findByIdAndDelete(connection?._id);
 
-  return { message: 'Connection removed successfully' };
+  return result;
 };
 
 const removeConnection = async (
@@ -199,7 +204,6 @@ const getMyAllConnections = async (
 
   // Use the custom paginate plugin
   const connections = await Connections.paginate(query, options);
-
 
   // Transform results to include only the friend's information
   const transformedResults = connections.results.map((connection: any) => {
@@ -264,8 +268,12 @@ const checkIsSentConnectionExists = async (
   friendId: string
 ) => {
   const result = await Connections.findOne({
-    sentBy: userId,
-    receivedBy: friendId
+    $or: [
+      { sentBy: userId },
+      { receivedBy: friendId },
+      { sentBy: friendId },
+      { receivedBy: userId },
+    ],
   });
   return result;
 };
