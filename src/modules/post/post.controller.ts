@@ -35,9 +35,8 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
         data: null,
       });
     }
-  } else {
-    console.log('visitedLocation is not a string:', visitedLocation);
   }
+
   const result = await PostServices.createPost({
     userId,
     content,
@@ -46,7 +45,7 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
     postType,
     privacy,
     sourceId,
-    visitedLocation, // Pass the parsed or original value
+    visitedLocation,
     visitedLocationName,
   });
 
@@ -78,7 +77,6 @@ const sharePost = catchAsync(async (req: Request, res: Response) => {
 const addOrRemoveReaction = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId, reactionType } = req.body;
-
   const result = await PostServices.addOrRemoveReaction({
     userId: new Types.ObjectId(userId),
     postId,
@@ -92,9 +90,29 @@ const addOrRemoveReaction = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const addOrRemoveCommentReaction = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const { postId, commentId, reactionType } = req.body;
+
+    const result = await PostServices.addOrRemoveCommentReaction({
+      userId: new Types.ObjectId(userId),
+      postId,
+      commentId,
+      reactionType,
+    });
+
+    sendResponse(res, {
+      code: StatusCodes.OK,
+      message: 'Comment reaction updated successfully',
+      data: result,
+    });
+  }
+);
+
 const createComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { postId, comment, replyTo, parentCommentId } = req.body;
+  const { postId, comment, replyTo, parentCommentId, mentions } = req.body;
 
   const result = await PostServices.createComment({
     userId: new Types.ObjectId(userId),
@@ -102,6 +120,7 @@ const createComment = catchAsync(async (req: Request, res: Response) => {
     comment,
     replyTo,
     parentCommentId,
+    mentions: mentions ? (Array.isArray(mentions) ? mentions : [mentions]) : [],
   });
 
   sendResponse(res, {
@@ -114,13 +133,14 @@ const createComment = catchAsync(async (req: Request, res: Response) => {
 const updateComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { commentId } = req.params;
-  const { postId, comment } = req.body;
+  const { postId, comment, mentions } = req.body;
 
   const result = await PostServices.updateComment({
     userId: new Types.ObjectId(userId),
     postId,
     commentId,
     comment,
+    mentions: mentions ? (Array.isArray(mentions) ? mentions : [mentions]) : [],
   });
 
   sendResponse(res, {
@@ -192,7 +212,7 @@ const getPostById = catchAsync(async (req: Request, res: Response) => {
 const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
   const { username } = req.params;
   const filter = pick(req.query, ['mediaType']);
-  const options = pick(req.query, ['page', 'limit',"populate","sortBy"]);
+  const options = pick(req.query, ['page', 'limit', 'populate', 'sortBy']);
   filter.username = username;
   const result = await PostServices.getUserTimelinePosts(filter, options);
 
@@ -243,11 +263,20 @@ const getEventPosts = catchAsync(async (req: Request, res: Response) => {
 
 const updatePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
+  const { postId } = req.params;
   const filesObject = req.files as {
     [fieldname: string]: Express.Multer.File[];
   };
 
   const files = Object.values(filesObject).flat();
+  const {
+    content,
+    itineraryId,
+    postType,
+    privacy,
+    sourceId,
+    visitedLocationName,
+  } = req.body;
 
   let visitedLocation = req.body.visitedLocation;
   if (typeof visitedLocation === 'string') {
@@ -260,10 +289,27 @@ const updatePost = catchAsync(async (req: Request, res: Response) => {
         data: null,
       });
     }
-  } else {
-    console.log('visitedLocation is not a string:', visitedLocation);
   }
+
+  const result = await PostServices.updatePost(postId, {
+    userId,
+    content,
+    files,
+    itineraryId,
+    postType,
+    privacy,
+    sourceId,
+    visitedLocation,
+    visitedLocationName,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Post updated successfully',
+    data: result,
+  });
 });
+
 const deletePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId } = req.params;
@@ -276,6 +322,7 @@ const deletePost = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
 export const PostController = {
   createPost,
   sharePost,
@@ -284,6 +331,7 @@ export const PostController = {
   getGroupPosts,
   getEventPosts,
   addOrRemoveReaction,
+  addOrRemoveCommentReaction,
   getPostById,
   updatePost,
   createComment,

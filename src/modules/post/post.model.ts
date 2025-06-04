@@ -1,19 +1,23 @@
 import { Schema, model } from 'mongoose';
 import paginate from '../../common/plugins/paginate';
 import {
+  IComment,
+  ICommentReaction,
   IPost,
   IPostModel,
+  IReaction,
+  ISortedReaction,
   PostPrivacy,
   PostType,
   ReactionType,
 } from './post.interface';
 
-const sortedReactionSchema = new Schema({
+const sortedReactionSchema = new Schema<ISortedReaction>({
   type: { type: String, enum: Object.values(ReactionType), required: true },
   count: { type: Number, default: 0 },
 });
 
-const reactionSchema = new Schema({
+const reactionSchema = new Schema<IReaction>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   postId: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
   reactionType: {
@@ -25,17 +29,34 @@ const reactionSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-const commentSchema = new Schema({
+const commentReactionSchema = new Schema<ICommentReaction>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  commentId: { type: Schema.Types.ObjectId, ref: 'Comment', required: true },
+  reactionType: {
+    type: String,
+    enum: Object.values(ReactionType),
+    required: true,
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+const commentSchema = new Schema<IComment>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   postId: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
   replyTo: { type: Schema.Types.ObjectId, ref: 'Comment' },
   parentCommentId: { type: Schema.Types.ObjectId, ref: 'Comment' },
   comment: { type: String, required: true },
+  mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }], // Added for user mentions
+  reactions: [commentReactionSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
-const visitedLocationSchema = new Schema({
+const visitedLocationSchema = new Schema<{
+  latitude: number;
+  longitude: number;
+}>({
   latitude: { type: Number, required: false },
   longitude: { type: Number, required: false },
 });
@@ -100,7 +121,7 @@ const postSchema = new Schema<IPost, IPostModel>({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
-//add paginate plugin
+
 postSchema.plugin(paginate);
 
 export const Post = model<IPost, IPostModel>('Post', postSchema);
