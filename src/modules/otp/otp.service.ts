@@ -7,11 +7,6 @@ import OTP from './otp.model';
 import { config } from '../../config';
 import { User } from '../user/user.model';
 
-const obfuscateEmail = (email: string) => {
-  const [local, domain] = email.split('@');
-  return `${local[0]}***${local.slice(-1)}@${domain}`;
-};
-
 const generateOTP = (): string => {
   return crypto.randomInt(100000, 999999).toString();
 };

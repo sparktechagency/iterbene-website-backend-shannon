@@ -30,7 +30,7 @@ app.use(
       const allowedOrigins = [
         'http://localhost:7002',
         'http://localhost:3000',
-        'http://rakib3000.sobhoy.com',
+        'https://rakib3000.sobhoy.com',
         'http://10.0.80.220:3000',
         'http://10.0.80.220:7002',
         'http://10.0.80.220:4173',
