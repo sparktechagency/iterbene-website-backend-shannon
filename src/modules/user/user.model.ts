@@ -101,17 +101,6 @@ const userSchema = new Schema<TUser, UserModal>(
       required: false,
       trim: true,
     },
-    passwordHistory: [
-      {
-        hash: { type: String },
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
-    mfaSecret: { type: String },
-    mfaEnabled: {
-      type: Boolean,
-      default: false,
-    },
     isEmailVerified: {
       type: Boolean,
       default: false,

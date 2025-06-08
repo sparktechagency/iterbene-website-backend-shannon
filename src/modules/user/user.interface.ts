@@ -28,12 +28,6 @@ export type TUser = {
   city?: string;
   state?: string;
   referredAs?: string;
-  passwordHistory?: {
-    hash: string;
-    createdAt: Date;
-  }[];
-  mfaSecret?: string;
-  mfaEnabled: boolean;
   isEmailVerified: boolean;
   isBanned: boolean;
   banUntil?: Date | null;
