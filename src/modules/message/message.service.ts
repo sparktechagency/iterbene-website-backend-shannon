@@ -20,6 +20,23 @@ const getAllMessagesByReceiverId = async (
     isDeleted: false,
   };
 
+  // Update messages to mark them as seen by the receiver
+  await Message.updateMany(
+    {
+      $or: [
+        {
+          senderId: new Types.ObjectId(filter.receiverId),
+          receiverId: new Types.ObjectId(filter.senderId),
+        },
+      ],
+      seenBy: { $nin: [new Types.ObjectId(filter.senderId)] },
+      deliveryStatus: { $ne: 'seen' },
+    },
+    {
+      $addToSet: { seenBy: new Types.ObjectId(filter?.senderId) },
+      deliveryStatus: 'seen',
+    }
+  );
   options.populate = [
     {
       path: 'receiverId',
@@ -40,14 +57,15 @@ const getAllMessagesByReceiverId = async (
 };
 
 // View all messages in a chat
-const viewAllMessages = async (chatId: string, userId: string) => {
-  const result = await Message.find(
+const viewAllMessages = async (chatId: string, receiverId: string) => {
+  const result = await Message.updateMany(
     {
       chatId: new Types.ObjectId(chatId),
+      receiverId: new Types.ObjectId(receiverId),
+      deliveryStatus: 'sent',
       isDeleted: false,
-      receiverId: new Types.ObjectId(userId),
     },
-    { seenBy: new Types.ObjectId(userId), deliveryStatus: 'seen' },
+    { seenBy: [receiverId], deliveryStatus: 'seen' },
     { new: true }
   );
   return result;
@@ -59,14 +77,11 @@ const unviewedMessagesCount = async (
   chatId?: string
 ): Promise<number> => {
   const query: Record<string, any> = {
+    chatId: new Types.ObjectId(chatId),
     receiverId: new Types.ObjectId(userId),
     isDeleted: false,
     seenBy: { $nin: [userId] },
   };
-
-  if (chatId) {
-    query.chatId = new Types.ObjectId(chatId);
-  }
 
   return Message.countDocuments(query);
 };
@@ -86,7 +101,6 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
     'lastMessage'
   );
   const message = await Message.findById(newMessage?.id).populate('senderId');
-
   //send socket message  to message
   //@ts-ignore
   io.to(payload?.receiverId).emit('new-message', {

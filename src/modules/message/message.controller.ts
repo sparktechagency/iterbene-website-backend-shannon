@@ -95,7 +95,7 @@ const sendMessage = catchAsync(async (req, res) => {
 
 const getAllMessagesByReceiverId = catchAsync(
   async (req: Request, res: Response) => {
-    const senderId = req.user.userId;
+    const senderId = req.user.userId; 
     const { receiverId } = req.params;
     const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
     const messages = await MessageService.getAllMessagesByReceiverId(

@@ -6,6 +6,7 @@ import { IChat } from './chat.interface';
 import Chat from './chat.model';
 import Message from '../message/message.model';
 import { Types } from 'mongoose';
+import { MessageService } from '../message/message.service';
 
 const getAllChatsByUserId = async (
   filters: Record<string, any>,
@@ -54,7 +55,23 @@ const getAllChatsByUserId = async (
 
   options.sortBy = options.sortBy || '-updatedAt';
   const result = await Chat.paginate(query, options);
-  return result;
+const chatsWithUnviewedCount = await Promise.all(
+    result.results.map(async (chat) => {
+      const unviewedCount = await MessageService.unviewedMessagesCount(
+        filters?.senderId,
+        chat && chat._id ? chat._id.toString() : ''
+      );
+      return {
+        //@ts-ignore
+        ...chat.toObject(),
+        unviewedCount
+      };
+    })
+  );
+  return {
+    ...result,
+    results: chatsWithUnviewedCount,
+  };
 };
 
 const getChatById = async (chatId: string): Promise<IChat | null> => {
