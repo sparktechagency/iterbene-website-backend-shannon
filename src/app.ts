@@ -8,6 +8,7 @@ import i18next from './i18n/i18n';
 import i18nextMiddleware from 'i18next-express-middleware';
 import helmet from 'helmet';
 import notFound from './middlewares/notFount';
+
 const app = express();
 
 // Security headers
@@ -24,19 +25,19 @@ app.use(
 );
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000', // Next.js dev server
+  'http://localhost:5173', // Custom port if used
+  'https://rakib3000.sobhoy.com',
+  'http://10.0.80.220:3000',
+  'http://10.0.80.220:7002',
+  'http://10.0.80.220:4173',
+  'http://localhost:7003',
+  'https://rakib7002.sobhoy.com',
+];
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        'http://localhost:7002',
-        'http://localhost:3000',
-        'https://rakib3000.sobhoy.com',
-        'http://10.0.80.220:3000',
-        'http://10.0.80.220:7002',
-        'http://10.0.80.220:4173',
-        'http://localhost:7003',
-        'https://rakib7002.sobhoy.com',
-      ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -67,9 +68,7 @@ app.use('/api/v1', router);
 
 // Health check
 app.get('/test', (req: Request, res: Response) => {
-  res
-    .status(200)
-    .json({ message: 'Welcome to the Inter Bene website backend' });
+  res.status(200).json({ message: 'Welcome to the Inter Bene website backend' });
 });
 
 // Error handling

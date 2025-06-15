@@ -6,8 +6,8 @@ import { errorLogger, logger } from './shared/logger';
 import { socketHelper } from './helpers/socket';
 import { config } from './config';
 
-//uncaught exception
-process.on('uncaughtException', error => {
+// Uncaught exception
+process.on('uncaughtException', (error) => {
   errorLogger.error('UnhandleException Detected', error);
   process.exit(1);
 });
@@ -15,22 +15,32 @@ process.on('uncaughtException', error => {
 let server: any;
 async function main() {
   try {
-    mongoose.connect(config.database.mongoUrl as string);
+    await mongoose.connect(config.database.mongoUrl as string);
     logger.info(colors.green('🚀 Database connected successfully'));
-    const port =
-      typeof config.port === 'number' ? config.port : Number(config.port);
+
+    const port = typeof config.port === 'number' ? config.port : Number(config.port);
     server = app.listen(port, config.backend.ip as string, () => {
       logger.info(
-        colors.yellow(
-          `♻️  Application listening on port ${config.backend.baseUrl}/test`
-        )
+        colors.yellow(`♻️  Application listening on port ${config.backend.baseUrl}/test`)
       );
     });
-    //socket
+
+    // Socket setup
     const io = new Server(server, {
       pingTimeout: 60000,
       cors: {
-        origin: '*',
+        origin: [
+          'http://localhost:3000',
+          'http://localhost:5173',
+          'https://rakib3000.sobhoy.com',
+          'http://10.0.80.220:3000',
+          'http://10.0.80.220:7002',
+          'http://10.0.80.220:4173',
+          'http://localhost:7003',
+          'https://rakib7002.sobhoy.com',
+        ],
+        methods: ['GET', 'POST'],
+        credentials: true,
       },
     });
     socketHelper.socket(io);
@@ -40,8 +50,8 @@ async function main() {
     errorLogger.error(colors.red('🤢 Failed to connect Database'));
   }
 
-  //handle unhandledRejection
-  process.on('unhandledRejection', error => {
+  // Handle unhandled rejection
+  process.on('unhandledRejection', (error) => {
     if (server) {
       server.close(() => {
         errorLogger.error('UnhandledRejection Detected', error);
@@ -55,7 +65,7 @@ async function main() {
 
 main();
 
-//SIGTERM
+// SIGTERM
 process.on('SIGTERM', () => {
   logger.info('SIGTERM IS RECEIVE');
   if (server) {

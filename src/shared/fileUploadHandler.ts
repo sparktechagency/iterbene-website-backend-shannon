@@ -40,6 +40,7 @@ const fileUploadHandler = (UPLOADS_FOLDER: string) => {
       'image/jpeg',
       'image/png',
       'image/gif',
+      'application/pdf',
       'image/webp',
       'image/heic',
       'image/heif',

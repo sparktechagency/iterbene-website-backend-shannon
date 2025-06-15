@@ -74,24 +74,34 @@ const unviewedMessagesCount = async (
 // Send a message
 const sendMessage = async (payload: IMessage): Promise<IMessage> => {
   const newMessage = await Message.create(payload);
+  // Update last message in chat
+  const chat = await Chat.findById(payload.chatId);
 
-  if (payload.chatId) {
-    const chat = await Chat.findOne({ _id: payload.chatId, isDeleted: false });
-    if (chat) {
-      chat.lastMessage = new Types.ObjectId(newMessage._id);
-      chat.updatedAt = newMessage.createdAt;
-      await chat.save();
-    }
+  if (chat) {
+    chat.lastMessage = newMessage?.id;
+    chat.updatedAt = newMessage?.createdAt;
+    await chat.save();
   }
+  const updateChat = await Chat.findById(payload.chatId).populate(
+    'lastMessage'
+  );
+  const message = await Message.findById(newMessage?.id).populate('senderId');
 
-  const messageEvent = `new-message::${payload.chatId}`;
+  //send socket message  to message
   //@ts-ignore
-  io.emit(messageEvent, {
+  io.to(payload?.receiverId).emit('new-message', {
     code: StatusCodes.OK,
     message: 'Message sent successfully',
-    data: newMessage,
+    data: message,
   });
-  const result = await Message.findById(newMessage._id).select('chatId senderId receiverId deliveryStatus'); 
+
+  //sent socket to chat
+  //@ts-ignore
+  io.to(payload?.receiverId).emit('new-chat', {
+    code: StatusCodes.OK,
+    message: 'Updated chat sent successfully',
+    data: updateChat,
+  });
   return newMessage;
 };
 
