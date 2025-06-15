@@ -38,6 +38,16 @@ const getSingleUser = catchAsync(async (req, res) => {
   });
 });
 
+const getSingleUserByUser = catchAsync(async (req, res) => {
+  const { userId:requesterId } = req.user;
+  const { userId } = req.params;
+  const result = await UserService.getSingleUserByUser(userId,requesterId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: result,
+    message: 'User fetched successfully.',
+  });
+})
 const setUserLatestLocation = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.setUserLatestLocation(userId, req.body);
@@ -140,6 +150,7 @@ export const UserController = {
   updateUserStatus,
   getMyProfile,
   updateProfileImage,
+  getSingleUserByUser,
   updateCoverImage,
   updateMyProfile,
   deleteMyProfile,

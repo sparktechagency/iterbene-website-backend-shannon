@@ -137,7 +137,23 @@ const getSingleUser = async (
   userName: string,
   requesterId?: string
 ): Promise<Partial<TUser> | null> => {
-  const user = await User.findOne({ username: userName }).select(
+  const user = await User.findOne({ username: userName, isDeleted: false }).select(
+    '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -isBanned -isDeleted -__v'
+  );
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+  return filterUserFields(
+    user,
+    requesterId as string
+  );
+};
+
+const getSingleUserByUser = async (
+  userId: string,
+  requesterId?: string
+): Promise<Partial<TUser> | null> => {
+  const user = await User.findOne({ _id: userId, isDeleted: false }).select(
     '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -isBanned -isDeleted -__v'
   );
   if (!user || user.isDeleted) {
@@ -326,6 +342,7 @@ export const UserService = {
   updateProfileImage,
   updateCoverImage,
   updateMyProfile,
+  getSingleUserByUser,
   checkUserNameAlreadyExists,
   updateUserStatus,
   getMyProfile,

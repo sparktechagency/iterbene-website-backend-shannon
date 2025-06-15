@@ -7,6 +7,8 @@ import { Request, Response } from 'express';
 import { IContent, IMessage, MessageType } from './message.interface';
 import { ChatService } from '../chat/chat.service';
 import ApiError from '../../errors/ApiError';
+import { uploadFilesToS3 } from '../../helpers/s3Service';
+import { MESSAGE_UPLOADS_FOLDER } from './message.constant';
 
 const sendMessage = catchAsync(async (req, res) => {
   const senderId = req.user.userId;
@@ -37,11 +39,10 @@ const sendMessage = catchAsync(async (req, res) => {
 
   // Handle file uploads (supporting multiple files)
   if (Array.isArray(req.files) && req.files.length > 0) {
-    req.files.forEach(file => {
-      const fileUrl = `/uploads/messages/${file.filename}`;
-      if (content.fileUrls) {
-        content.fileUrls.push(fileUrl);
-      }
+    for (const file of req.files) {
+      const fileUrl = await uploadFilesToS3([file], MESSAGE_UPLOADS_FOLDER);
+
+      (content.fileUrls ??= []).push(fileUrl[0]);
 
       // Detect message type based on file type
       if (file.mimetype.startsWith('image/')) {
@@ -53,7 +54,7 @@ const sendMessage = catchAsync(async (req, res) => {
       } else if (file.mimetype === 'application/pdf') {
         content.messageType = MessageType.DOCUMENT;
       }
-    });
+    }
 
     // If there are files but no text, clear the text field
     if (

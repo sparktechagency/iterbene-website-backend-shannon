@@ -22,10 +22,6 @@ const getAllMessagesByReceiverId = async (
 
   options.populate = [
     {
-      path: 'senderId',
-      select: 'fullName profileImage email',
-    },
-    {
       path: 'receiverId',
       select: 'fullName profileImage email',
     },
@@ -95,7 +91,7 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
     message: 'Message sent successfully',
     data: newMessage,
   });
-
+  const result = await Message.findById(newMessage._id).select('chatId senderId receiverId deliveryStatus'); 
   return newMessage;
 };
 
