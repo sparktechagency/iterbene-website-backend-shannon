@@ -4,6 +4,7 @@ export interface PaginateOptions {
   sortBy?: string;
   select?: string;
   populate?: any; 
+  sortOrder?: number;
 }
 
 export interface PaginateResult<T> {

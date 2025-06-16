@@ -52,6 +52,7 @@ const getAllMessagesByReceiverId = async (
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = 1;
   const result = await Message.paginate(query, options);
   return result;
 };
@@ -100,6 +101,10 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
   const updateChat = await Chat.findById(payload.chatId).populate(
     'lastMessage'
   );
+  const unviewedCount = await MessageService.unviewedMessagesCount(
+    new Types.ObjectId(payload.receiverId).toString(),
+    chat && chat._id ? chat._id.toString() : ''
+  );
   const message = await Message.findById(newMessage?.id).populate('senderId');
   //send socket message  to message
   //@ts-ignore
@@ -114,7 +119,10 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
   io.to(payload?.receiverId).emit('new-chat', {
     code: StatusCodes.OK,
     message: 'Updated chat sent successfully',
-    data: updateChat,
+    data: {
+      ...updateChat?.toObject(),
+      unviewedCount,
+    },
   });
   return newMessage;
 };

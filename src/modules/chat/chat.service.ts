@@ -55,8 +55,8 @@ const getAllChatsByUserId = async (
 
   options.sortBy = options.sortBy || '-updatedAt';
   const result = await Chat.paginate(query, options);
-const chatsWithUnviewedCount = await Promise.all(
-    result.results.map(async (chat) => {
+  const chatsWithUnviewedCount = await Promise.all(
+    result.results.map(async chat => {
       const unviewedCount = await MessageService.unviewedMessagesCount(
         filters?.senderId,
         chat && chat._id ? chat._id.toString() : ''
@@ -64,7 +64,7 @@ const chatsWithUnviewedCount = await Promise.all(
       return {
         //@ts-ignore
         ...chat.toObject(),
-        unviewedCount
+        unviewedCount,
       };
     })
   );
@@ -164,10 +164,16 @@ const addParticipantToGroup = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Not a group chat');
   }
   if (!chat.groupAdmin || chat.groupAdmin.toString() !== adminId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Only group admin can add participants');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only group admin can add participants'
+    );
   }
   if (!chat.groupSettings?.allowAddParticipants) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Adding participants is disabled');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Adding participants is disabled'
+    );
   }
 
   const user = await User.findById(userId);
@@ -194,14 +200,20 @@ const removeParticipantFromGroup = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Not a group chat');
   }
   if (!chat.groupAdmin || chat.groupAdmin.toString() !== adminId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Only group admin can remove participants');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only group admin can remove participants'
+    );
   }
   if (!chat.groupSettings?.allowRemoveParticipants) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Removing participants is disabled');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Removing participants is disabled'
+    );
   }
 
   chat.participants = chat.participants.filter(
-    (participant) => participant.toString() !== userId
+    participant => participant.toString() !== userId
   );
   await chat.save();
 
@@ -210,7 +222,10 @@ const removeParticipantFromGroup = async (
 
 const updateGroupSettings = async (
   chatId: string,
-  settings: { allowAddParticipants?: boolean; allowRemoveParticipants?: boolean },
+  settings: {
+    allowAddParticipants?: boolean;
+    allowRemoveParticipants?: boolean;
+  },
   adminId: string
 ): Promise<IChat | null> => {
   const chat = await Chat.findById(chatId);
@@ -221,16 +236,21 @@ const updateGroupSettings = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Not a group chat');
   }
   if (!chat.groupAdmin || chat.groupAdmin.toString() !== adminId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Only group admin can update settings');
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only group admin can update settings'
+    );
   }
 
   chat.groupSettings = {
-    allowAddParticipants: settings.allowAddParticipants !== undefined
-      ? settings.allowAddParticipants
-      : chat.groupSettings?.allowAddParticipants ?? false,
-    allowRemoveParticipants: settings.allowRemoveParticipants !== undefined
-      ? settings.allowRemoveParticipants
-      : chat.groupSettings?.allowRemoveParticipants ?? false,
+    allowAddParticipants:
+      settings.allowAddParticipants !== undefined
+        ? settings.allowAddParticipants
+        : chat.groupSettings?.allowAddParticipants ?? false,
+    allowRemoveParticipants:
+      settings.allowRemoveParticipants !== undefined
+        ? settings.allowRemoveParticipants
+        : chat.groupSettings?.allowRemoveParticipants ?? false,
   };
   await chat.save();
 
