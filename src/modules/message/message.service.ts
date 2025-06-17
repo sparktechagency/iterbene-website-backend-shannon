@@ -124,8 +124,9 @@ const sendMessage = async (payload: IMessage) => {
     });
     if (!existingNotification) {
       await NotificationService.addCustomNotification(
-        `notification::${payload.receiverId}`,
-        notification
+        'notification',
+        notification,
+        new Types.ObjectId(payload.receiverId).toString()
       );
     }
   } else {
