@@ -6,19 +6,19 @@ const router = Router();
 
 router.get(
   '/unview-notification-count',
-  auth('common'),
+  auth('Common'),
   NotificationController.getUnViewNotificationCount
 );
 
 /** ========================View all notifications route here==================== */
 router
   .route('/view-all-notifications')
-  .get(auth('common'), NotificationController.viewAllNotifications);
+  .post(auth('Common'), NotificationController.viewAllNotifications);
 
 /** ========================Clear all notifications route here==================== */
 router
   .route('/clear-all-notifications')
-  .delete(auth('common'), NotificationController.clearAllNotification);
+  .delete(auth('Common'), NotificationController.clearAllNotification);
 
 /** ========================Admin all notifications route here==================== */
 router
@@ -28,13 +28,14 @@ router
 /** ========================User all notifications route here==================== */
 router
   .route('/')
-  .get(auth('common'), NotificationController.getALLNotification);
+  .get(auth('Common'), NotificationController.getALLNotification);
 
 /** ========================Single notifications route here==================== */
 router
   .route('/:id')
-  .get(auth('common'), NotificationController.getSingleNotification)
+  .get(auth('Common'), NotificationController.getSingleNotification)
+  .patch(auth('Common'), NotificationController.viewSingleNotification)
   /** ========================Delete Single notifications route here==================== */
-  .delete(auth('common'), NotificationController.deleteNotification);
+  .delete(auth('Common'), NotificationController.deleteNotification);
 
 export const NotificationRoutes = router;

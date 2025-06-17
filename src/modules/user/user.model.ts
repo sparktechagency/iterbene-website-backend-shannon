@@ -116,6 +116,10 @@ const userSchema = new Schema<TUser, UserModal>(
       type: Boolean,
       default: false,
     },
+    isInMessageBox: {
+      type: Boolean,
+      default: false,
+    },
     isDeleted: {
       type: Boolean,
       default: false,

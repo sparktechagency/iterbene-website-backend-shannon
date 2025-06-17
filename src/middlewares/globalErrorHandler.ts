@@ -8,8 +8,6 @@ import { IErrorMessage } from '../types/errors.types';
 import { config } from '../config';
 
 const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
-
-  console.log(error)
   // Log error
   config.environment === 'development'
     ? console.log('🚨 globalErrorHandler ~~ ', error)

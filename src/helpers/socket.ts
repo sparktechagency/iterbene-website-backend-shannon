@@ -36,14 +36,49 @@ const socket = (io: Server) => {
       try {
         socket.userId = userId;
         socket.join(userId);
-        socket.broadcast.to(userId).emit('user/inactivate', true);
-
         await User.updateOne({ _id: userId }, { $set: { isOnline: true } });
         socket.broadcast.emit('user/connect', userId);
-
         logger.info(colors.green(`User ${userId} is now online.`));
       } catch (error) {
         logger.error(colors.red(`Error in user/connect: ${error}`));
+      }
+    });
+
+    socket.on('user/connectInMessageBox', async ({ userId }) => {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        logger.error(colors.red(`Invalid user ID: ${userId}`));
+        return;
+      }
+
+      try {
+        socket.userId = userId;
+        await User.updateOne(
+          { _id: userId },
+          { $set: { isInMessageBox: true } }
+        );
+        logger.info(colors.green(`User ${userId} entered message box.`));
+      } catch (error) {
+        logger.error(colors.red(`Error in user/connectInMessageBox: ${error}`));
+      }
+    });
+
+    socket.on('user/disconnectInMessageBox', async ({ userId }) => {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        logger.error(colors.red(`Invalid user ID: ${userId}`));
+        return;
+      }
+
+      try {
+        socket.userId = userId;
+        await User.updateOne(
+          { _id: userId },
+          { $set: { isInMessageBox: false } }
+        );
+        logger.info(colors.green(`User ${userId} left message box.`));
+      } catch (error) {
+        logger.error(
+          colors.red(`Error in user/disconnectInMessageBox: ${error}`)
+        );
       }
     });
 
@@ -54,7 +89,7 @@ const socket = (io: Server) => {
       try {
         await User.updateOne(
           { _id: socket.userId },
-          { $set: { isOnline: false } }
+          { $set: { isOnline: false, isInMessageBox: false } }
         );
         socket.broadcast.emit('user/disconnect', socket.userId);
         logger.info(colors.yellow(`User ${socket.userId} is now offline.`));

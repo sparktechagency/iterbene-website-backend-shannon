@@ -53,7 +53,7 @@ const getAllChatsByUserId = async (
     },
   ];
 
-  options.sortBy = options.sortBy || 'createdAt';
+  options.sortBy = options.sortBy || 'updatedAt';
   options.sortOrder = 1;
   const result = await Chat.paginate(query, options);
   const chatsWithUnviewedCount = await Promise.all(

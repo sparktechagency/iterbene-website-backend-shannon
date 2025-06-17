@@ -8,7 +8,7 @@ import { notificationFilters } from './notification.constants';
 const getALLNotification = catchAsync(async (req, res) => {
   const filters = pick(req.query, notificationFilters);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
-  const {userId} = req.user;
+  const { userId } = req.user;
   const result = await NotificationService.getALLNotification(
     filters,
     options,
@@ -36,14 +36,14 @@ const getAdminNotifications = catchAsync(async (req, res) => {
 });
 
 const getUnViewNotificationCount = catchAsync(async (req, res) => {
-  const {userId} = req.user;
+  const { userId } = req.user;
   const result = await NotificationService.getUnViewNotificationCount(userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
     message: 'Notifications count fetched successfully',
   });
-})
+});
 
 const getSingleNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -56,15 +56,24 @@ const getSingleNotification = catchAsync(async (req, res) => {
 });
 
 const viewAllNotifications = catchAsync(async (req, res) => {
-  const {userId} = req.user;
+  const { userId } = req.user;
   await NotificationService.viewAllNotifications(userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'All notifications viewed successfully',
     data: {},
   });
-})
+});
 
+const viewSingleNotification = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  await NotificationService.viewSingleNotification(id);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Notification viewed successfully',
+    data: {},
+  });
+})
 const deleteNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   await NotificationService.deleteNotification(id);
@@ -76,7 +85,7 @@ const deleteNotification = catchAsync(async (req, res) => {
 });
 
 const clearAllNotification = catchAsync(async (req, res) => {
-  const {userId} = req.user;
+  const { userId } = req.user;
   await NotificationService.clearAllNotification(userId);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -91,6 +100,7 @@ export const NotificationController = {
   getSingleNotification,
   getUnViewNotificationCount,
   viewAllNotifications,
+  viewSingleNotification,
   deleteNotification,
   clearAllNotification,
 };

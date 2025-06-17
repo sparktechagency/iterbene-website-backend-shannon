@@ -6,8 +6,8 @@ export interface INotification {
   receiverId?: Types.ObjectId | string;
   title: string;
   message?: string;
-  image?: object;
-  type: 'favorite' | 'report' | 'payment' | 'subscription';
+  image?: string;
+  type: 'favorite' | 'report' | 'payment' | 'subscription' | 'message';
   linkId?: Types.ObjectId | string;
   role: 'admin' | 'user';
   viewStatus?: boolean;

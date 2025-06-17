@@ -20,7 +20,7 @@ const notificationModel = new Schema<INotification>(
     },
     role: {
       type: String,
-      enum: Roles,
+      enum: ["admin", "user"],
       required: true,
     },
     image: {
@@ -28,7 +28,7 @@ const notificationModel = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['favorite', 'report', 'payment', 'subscription'],
+      enum: ['favorite', 'report', 'payment', 'subscription' , 'message'],
       required: [true, 'Type is required'],
     },
     linkId: {

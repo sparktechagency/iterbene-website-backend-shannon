@@ -1,1 +1,1 @@
-export const notificationFilters: string[] = ['receiverId'];
+export const notificationFilters: string[] = ['receiverId','type'];

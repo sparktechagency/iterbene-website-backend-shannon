@@ -71,8 +71,6 @@ const addCustomNotification = async (
       message: notifications.title || 'New notification',
       data: result,
     });
-    console.log('Notification Event', notificationEvent);
-    console.log('Send Notification', notifications.title || 'New notification');
   }
   return result;
 };
@@ -92,6 +90,18 @@ const viewAllNotifications = async (userId: string) => {
   );
   return result;
 };
+
+const viewSingleNotification = async (notificationId: string) => {
+  const result = await Notification.findByIdAndUpdate(
+    notificationId,
+    { viewStatus: true },
+    { new: true }
+  );
+  if (!result) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
+  }
+  return result;
+}
 const deleteNotification = async (notificationId: string) => {
   const result = await Notification.findByIdAndDelete(notificationId);
   if (!result) {
@@ -117,6 +127,7 @@ export const NotificationService = {
   addCustomNotification,
   viewAllNotifications,
   deleteNotification,
+  viewSingleNotification,
   getUnViewNotificationCount,
   clearAllNotification,
 };

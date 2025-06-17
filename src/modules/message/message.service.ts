@@ -6,6 +6,9 @@ import Message from './message.model';
 import ApiError from '../../errors/ApiError';
 import { User } from '../user/user.model';
 import { Types } from 'mongoose';
+import { NotificationService } from '../notification/notification.services';
+import { INotification } from '../notification/notification.interface';
+import { Notification } from '../notification/notification.model';
 
 // View all messages by receiver ID (aligned with GET /:receiverId)
 const getAllMessagesByReceiverId = async (
@@ -90,22 +93,63 @@ const unviewedMessagesCount = async (
 // Send a message
 const sendMessage = async (payload: IMessage) => {
   const newMessage = await Message.create(payload);
+
   // Update last message in chat
   const chat = await Chat.findById(payload.chatId);
-
   if (chat) {
     chat.lastMessage = newMessage?.id;
     chat.updatedAt = newMessage?.createdAt;
     await chat.save();
   }
+  const sender = await User.findById(payload.senderId);
+  // Check if recipient is in message box
+  const recipient = await User.findById(payload.receiverId);
+  if (!recipient?.isInMessageBox || !recipient?.isOnline) {
+    const notification: INotification = {
+      title: `${sender?.fullName} sent you a message`,
+      message: `You have a new message from ${sender?.fullName}`,
+      receiverId: new Types.ObjectId(payload.receiverId),
+      linkId: sender?._id,
+      image: sender?.profileImage,
+      role: 'user',
+      type: 'message',
+      viewStatus: false,
+    };
+
+    // check if receiverId already has a notification message
+    const existingNotification = await Notification.findOne({
+      receiverId: new Types.ObjectId(payload.receiverId),
+      type: 'message',
+      viewStatus: false,
+    });
+    if (!existingNotification) {
+      await NotificationService.addCustomNotification(
+        `notification::${payload.receiverId}`,
+        notification
+      );
+    }
+  } else {
+    // Mark message as seen if in message box
+    await Message.updateOne(
+      { _id: newMessage._id },
+      { $addToSet: { seenBy: payload.receiverId }, deliveryStatus: 'seen' }
+    );
+    //@ts-ignore
+    io.to(payload.receiverId).emit(`message-seen::${payload.chatId}`, {
+      code: StatusCodes.OK,
+      message: 'Message marked as seen',
+      data: newMessage,
+    });
+  }
+
   const updateChat = await Chat.findById(payload.chatId).populate([
     {
       path: 'participants',
       select: 'fullName email profileImage',
     },
     {
-      path: 'lastMessage'
-    }
+      path: 'lastMessage',
+    },
   ]);
   const unviewedCount = await MessageService.unviewedMessagesCount(
     new Types.ObjectId(payload.receiverId).toString(),
@@ -117,15 +161,14 @@ const sendMessage = async (payload: IMessage) => {
       select: 'fullName profileImage email',
     },
   ]);
-  //send socket message  to message
+
+  // Send socket events
   //@ts-ignore
   io.to(payload?.receiverId).emit('new-message', {
     code: StatusCodes.OK,
     message: 'Message sent successfully',
     data: message,
   });
-
-  //sent socket to chat
   //@ts-ignore
   io.to(payload?.receiverId).emit('new-chat', {
     code: StatusCodes.OK,
@@ -135,6 +178,7 @@ const sendMessage = async (payload: IMessage) => {
       unviewedCount,
     },
   });
+
   return message;
 };
 
