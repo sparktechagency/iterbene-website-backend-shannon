@@ -88,7 +88,7 @@ const unviewedMessagesCount = async (
 };
 
 // Send a message
-const sendMessage = async (payload: IMessage): Promise<IMessage> => {
+const sendMessage = async (payload: IMessage) => {
   const newMessage = await Message.create(payload);
   // Update last message in chat
   const chat = await Chat.findById(payload.chatId);
@@ -98,14 +98,25 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
     chat.updatedAt = newMessage?.createdAt;
     await chat.save();
   }
-  const updateChat = await Chat.findById(payload.chatId).populate(
-    'lastMessage'
-  );
+  const updateChat = await Chat.findById(payload.chatId).populate([
+    {
+      path: 'participants',
+      select: 'fullName email profileImage',
+    },
+    {
+      path: 'lastMessage'
+    }
+  ]);
   const unviewedCount = await MessageService.unviewedMessagesCount(
     new Types.ObjectId(payload.receiverId).toString(),
     chat && chat._id ? chat._id.toString() : ''
   );
-  const message = await Message.findById(newMessage?.id).populate('senderId');
+  const message = await Message.findById(newMessage?.id).populate([
+    {
+      path: 'receiverId',
+      select: 'fullName profileImage email',
+    },
+  ]);
   //send socket message  to message
   //@ts-ignore
   io.to(payload?.receiverId).emit('new-message', {
@@ -124,7 +135,7 @@ const sendMessage = async (payload: IMessage): Promise<IMessage> => {
       unviewedCount,
     },
   });
-  return newMessage;
+  return message;
 };
 
 // Update message

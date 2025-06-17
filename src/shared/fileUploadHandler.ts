@@ -55,7 +55,7 @@ const fileUploadHandler = (UPLOADS_FOLDER: string) => {
       console.error(`File rejected: ${file.originalname}`);
       cb(
         new Error(
-          'Only jpg, jpeg, png, gif, webp, heic, heif, csv, mp4, and mpeg formats are allowed!'
+          'Only jpg, jpeg, png, gif, webp, heic, heif, csv, mp4, pdf and mpeg formats are allowed!'
         )
       );
     }
