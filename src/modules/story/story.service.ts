@@ -424,7 +424,9 @@ const getStoryFeed = async (
   const followedIds = followers.map(f => f.followedId);
 
   // Combine friend and followed user IDs
-  const socialUserIds = [...new Set([...friendIds, ...followedIds])];
+  const socialUserIds = [...new Set([...friendIds, ...followedIds,new Types.ObjectId(userId)])];
+
+  console.log('Social User Ids', socialUserIds);
 
   // Build query for public stories with matching criteria
   let publicStoryQuery: any = {
@@ -455,6 +457,7 @@ const getStoryFeed = async (
 
   // If no connections or followers, only return matching public stories
   if (friendIds.length === 0 && followedIds.length === 0) {
+    console.log('This Api Hit');
     return Story.paginate(publicStoryQuery, {
       ...options,
       populate: [
@@ -470,6 +473,7 @@ const getStoryFeed = async (
             'firstName lastName username nickname profileImage coverImage',
         },
       ],
+      select: '-isDeleted  -updatedAt -__v',
     });
   }
 
@@ -489,13 +493,14 @@ const getStoryFeed = async (
       },
     ],
   };
-
+  console.log('This Api Hit outside', query);
   return Story.paginate(query, {
     ...options,
     populate: [
       {
         path: 'mediaIds',
-       select: '_id mediaType mediaUrl  duration textContent textFontFamily backgroundColor caption',
+        select:
+          '_id mediaType mediaUrl  duration textContent textFontFamily backgroundColor caption',
         match: { expiresAt: { $gt: new Date() }, isDeleted: false },
       },
       {
@@ -503,6 +508,7 @@ const getStoryFeed = async (
         select: 'firstName lastName username nickname profileImage coverImage',
       },
     ],
+    select: '-isDeleted  -updatedAt -__v',
   });
 };
 
