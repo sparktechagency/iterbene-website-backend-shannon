@@ -5,6 +5,7 @@ import validateRequest from '../../shared/validateRequest';
 import { GroupController } from './group.controllers';
 import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
 import fileUploadHandler from '../../shared/fileUploadHandler';
+import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
 const UPLOADS_FOLDER = 'uploads/groups';
 const upload = fileUploadHandler(UPLOADS_FOLDER);
 
@@ -15,6 +16,7 @@ router.post(
   '/',
   auth('User'),
   upload.single('groupImage'),
+  convertHeicToPngMiddleware(UPLOADS_FOLDER),
   // validateRequest(GroupValidation.createGroupValidationSchema),
   GroupController.createGroup
 );

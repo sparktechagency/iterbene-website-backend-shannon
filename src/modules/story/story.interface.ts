@@ -18,7 +18,6 @@ export interface IStory {
     createdAt: Date;
   }>;
   status: string;
-  backgroundColor?: string;
   expiresAt: Date;
   isDeleted: boolean;
   createdAt?: Date;

@@ -28,6 +28,14 @@ const mediaSchema = new Schema<IMedia>(
       type: String,
       trim: true,
     },
+    textFontFamily: {
+      type: String,
+      trim: true,
+    },
+    backgroundColor: {
+      type: String,
+      trim: true,
+    },
     caption: {
       type: String,
       trim: true,

@@ -7,7 +7,7 @@ import { socketHelper } from './helpers/socket';
 import { config } from './config';
 
 // Uncaught exception
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   errorLogger.error('UnhandleException Detected', error);
   process.exit(1);
 });
@@ -18,10 +18,13 @@ async function main() {
     await mongoose.connect(config.database.mongoUrl as string);
     logger.info(colors.green('🚀 Database connected successfully'));
 
-    const port = typeof config.port === 'number' ? config.port : Number(config.port);
+    const port =
+      typeof config.port === 'number' ? config.port : Number(config.port);
     server = app.listen(port, config.backend.ip as string, () => {
       logger.info(
-        colors.yellow(`♻️  Application listening on port ${config.backend.baseUrl}/test`)
+        colors.yellow(
+          `♻️  Application listening on port ${config.backend.baseUrl}/test`
+        )
       );
     });
 
@@ -51,7 +54,7 @@ async function main() {
   }
 
   // Handle unhandled rejection
-  process.on('unhandledRejection', (error) => {
+  process.on('unhandledRejection', error => {
     if (server) {
       server.close(() => {
         errorLogger.error('UnhandledRejection Detected', error);

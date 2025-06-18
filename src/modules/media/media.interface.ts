@@ -8,6 +8,8 @@ export interface IMedia {
   mediaUrl: string;
   duration?: number;
   textContent?: string;
+  textFontFamily?: string;
+  backgroundColor?: string;
   caption?: string;
   expiresAt?: Date;
   isDeleted: boolean;

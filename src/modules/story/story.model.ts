@@ -69,10 +69,6 @@ const storySchema = new Schema<IStory, IStoryModel>(
       enum: Object.values(StoryStatus),
       default: StoryStatus.ACTIVE,
     },
-    backgroundColor: {
-      type: String,
-      trim: true,
-    },
     expiresAt: {
       type: Date,
       required: true,

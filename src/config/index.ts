@@ -5,7 +5,6 @@ export const config = {
   environment: process.env.NODE_ENV,
   port: process.env.PORT || 8083,
   socketPort: process.env.SOCKET || 8082,
-
   database: {
     mongoUrl:
       process.env.MONGODB_URL || 'mongodb://localhost:27017/mentor-service',
@@ -58,7 +57,6 @@ export const config = {
     password: process.env.SMTP_PASSWORD || '',
     emailFrom: process.env.EMAIL_FROM || '',
   },
-
   client: {
     url: process.env.CLIENT_URL || 'http://localhost:3000',
   },

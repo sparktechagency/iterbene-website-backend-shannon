@@ -12,7 +12,6 @@ import { User } from '../user/user.model';
 import { ConnectionStatus } from '../connections/connections.interface';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
 
-
 const UPLOADS_FOLDER = 'uploads/stories';
 const createStory = async (
   userId: string,
@@ -64,12 +63,10 @@ const createStory = async (
           mediaUrl: mediaUrl[0],
           duration: payload.duration || 0,
           textContent: payload.textContent || null,
+          textFontFamily: payload.textFontFamily || null,
+          backgroundColor: payload.backgroundColor || null,
           expiresAt,
           isDeleted: false,
-          metadata: {
-            fileSize: file.size,
-            resolution: payload.resolution, // Optional
-          },
         };
       })
     );
@@ -84,6 +81,8 @@ const createStory = async (
         mediaUrl: null,
         duration: payload.duration || 0,
         textContent: payload.textContent,
+        textFontFamily: payload?.textFontFamily || null,
+        backgroundColor: payload.backgroundColor,
         expiresAt,
         isDeleted: false,
       },
@@ -115,7 +114,6 @@ const createStory = async (
     );
     story.expiresAt = new Date(latestExpiresAt);
     story.privacy = payload.privacy || story.privacy;
-    story.backgroundColor = payload.backgroundColor || story.backgroundColor;
     await story.save();
   } else {
     // Create new story
@@ -133,7 +131,6 @@ const createStory = async (
         reactions: [],
         replies: [],
         status: StoryStatus.ACTIVE,
-        backgroundColor: payload.backgroundColor,
         expiresAt: new Date(latestExpiresAt),
         isDeleted: false,
       },
@@ -155,7 +152,8 @@ const getStory = async (storyId: string, userId: string): Promise<IStory> => {
   const story = await Story.findById(storyId).populate([
     {
       path: 'mediaIds',
-      select: '_id mediaType mediaUrl thumbnailUrl duration textContent ',
+      select:
+        '_id mediaType mediaUrl  duration textContent textFontFamily backgroundColor caption',
       match: { expiresAt: { $gt: new Date() }, isDeleted: false },
     },
     {
@@ -373,7 +371,8 @@ const getMyStories = async (
   options.populate = [
     {
       path: 'mediaIds',
-      select: '_id mediaType mediaUrl thumbnailUrl duration textContent ',
+      select:
+        '_id mediaType mediaUrl  duration textContent textFontFamily backgroundColor caption',
       match: { expiresAt: { $gt: new Date() }, isDeleted: false },
     },
     {
@@ -461,7 +460,8 @@ const getStoryFeed = async (
       populate: [
         {
           path: 'mediaIds',
-          select: '_id mediaType mediaUrl thumbnailUrl duration textContent ',
+          select:
+            '_id mediaType mediaUrl  duration textContent textFontFamily backgroundColor caption',
           match: { expiresAt: { $gt: new Date() }, isDeleted: false },
         },
         {
@@ -495,7 +495,7 @@ const getStoryFeed = async (
     populate: [
       {
         path: 'mediaIds',
-        select: '_id mediaType mediaUrl thumbnailUrl duration textContent ',
+       select: '_id mediaType mediaUrl  duration textContent textFontFamily backgroundColor caption',
         match: { expiresAt: { $gt: new Date() }, isDeleted: false },
       },
       {

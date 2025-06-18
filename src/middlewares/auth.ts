@@ -32,9 +32,7 @@ const auth = (...roles: string[]) =>
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token.');
     }
 
-    const user = await User.findById(verifyUser.userId).select(
-      '+mfaSecret +mfaEnabled'
-    );
+    const user = await User.findById(verifyUser.userId);
     if (!user || user.isDeleted) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
     }
@@ -43,18 +41,6 @@ const auth = (...roles: string[]) =>
         StatusCodes.FORBIDDEN,
         'Your account is blocked or banned.'
       );
-    }
-    if (user.mfaEnabled && !req.body.mfaToken) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'MFA token required.');
-    }
-    if (user.mfaEnabled) {
-      const isValid = require('otplib').totp.check(
-        req.body.mfaToken,
-        user.mfaSecret
-      );
-      if (!isValid) {
-        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid MFA token.');
-      }
     }
     if (roles.length) {
       const userRole = roleRights.get(verifyUser?.role);
