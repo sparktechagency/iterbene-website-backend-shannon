@@ -160,6 +160,14 @@ const getStory = async (storyId: string, userId: string): Promise<IStory> => {
       path: 'userId',
       select: 'firstName lastName username nickname profileImage coverImage',
     },
+    {
+      path: 'viewedBy',
+      select: 'firstName lastName username nickname profileImage coverImage',
+    },
+    {
+      path: 'reactions.userId',
+      select: 'firstName lastName username nickname profileImage coverImage',
+    },
   ]);
   if (!story || story.isDeleted || story.status === StoryStatus.DELETED) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found');
@@ -424,9 +432,9 @@ const getStoryFeed = async (
   const followedIds = followers.map(f => f.followedId);
 
   // Combine friend and followed user IDs
-  const socialUserIds = [...new Set([...friendIds, ...followedIds,new Types.ObjectId(userId)])];
-
-  console.log('Social User Ids', socialUserIds);
+  const socialUserIds = [
+    ...new Set([...friendIds, ...followedIds, new Types.ObjectId(userId)]),
+  ];
 
   // Build query for public stories with matching criteria
   let publicStoryQuery: any = {
@@ -472,8 +480,17 @@ const getStoryFeed = async (
           select:
             'firstName lastName username nickname profileImage coverImage',
         },
+        {
+          path: 'viewedBy',
+          select:
+            'firstName lastName username nickname profileImage coverImage',
+        },
+        {
+          path: 'reactions.userId',
+          select:
+            'firstName lastName username nickname profileImage coverImage',
+        },
       ],
-      select: '-isDeleted  -updatedAt -__v',
     });
   }
 
@@ -493,7 +510,6 @@ const getStoryFeed = async (
       },
     ],
   };
-  console.log('This Api Hit outside', query);
   return Story.paginate(query, {
     ...options,
     populate: [
@@ -505,6 +521,14 @@ const getStoryFeed = async (
       },
       {
         path: 'userId',
+        select: 'firstName lastName username nickname profileImage coverImage',
+      },
+      {
+        path: 'viewedBy',
+        select: 'firstName lastName username nickname profileImage coverImage',
+      },
+      {
+        path: 'reactions.userId',
         select: 'firstName lastName username nickname profileImage coverImage',
       },
     ],

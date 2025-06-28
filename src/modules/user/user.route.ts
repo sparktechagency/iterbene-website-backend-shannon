@@ -4,8 +4,8 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../shared/validateRequest';
 import { UserValidation } from './user.validation';
 import fileUploadHandler from '../../shared/fileUploadHandler';
-const UPLOADS_FOLDER = 'uploads/users';
-const upload = fileUploadHandler(UPLOADS_FOLDER);
+import { USER_UPLOADS_FOLDER } from './user.constant';
+const upload = fileUploadHandler(USER_UPLOADS_FOLDER);
 
 const router = express.Router();
 

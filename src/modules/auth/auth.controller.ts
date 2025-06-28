@@ -81,12 +81,6 @@ const login = catchAsync(async (req, res) => {
     await user.save();
   }
 
-  if (user.mfaEnabled && !mfaToken) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'MFA token required.');
-  }
-  if (user.mfaEnabled) {
-    await AuthService.verifyMFA(user._id.toString(), mfaToken);
-  }
 
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
@@ -168,19 +162,12 @@ const changePassword = catchAsync(async (req, res) => {
   const { currentPassword, newPassword, mfaToken } = req.body;
 
   const user = await User.findById(userId).select('+mfaSecret');
-  if (user?.mfaEnabled && !mfaToken) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'MFA token required.');
-  }
-  if (user?.mfaEnabled) {
-    await AuthService.verifyMFA(userId, mfaToken);
-  }
+
 
   const result = await AuthService.changePassword(
     userId,
     currentPassword,
-    newPassword,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
+    newPassword
   );
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -221,9 +208,7 @@ const refreshToken = catchAsync(async (req, res) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Refresh token is required.');
   }
   const tokens = await AuthService.refreshAuth(
-    refreshToken,
-    req.ip || 'unknown',
-    req.get('User-Agent') || 'unknown'
+    refreshToken
   );
   res.cookie('accessToken', tokens.tokens.accessToken, {
     httpOnly: true,
@@ -245,16 +230,6 @@ const refreshToken = catchAsync(async (req, res) => {
   });
 });
 
-const enableMFA = catchAsync(async (req, res) => {
-  const { userId } = req.user;
-  const secret = await AuthService.enableMFA(userId);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message:
-      'MFA enabled successfully. Use this secret to configure your authenticator app.',
-    data: { secret },
-  });
-});
 
 export const AuthController = {
   register,
@@ -265,6 +240,5 @@ export const AuthController = {
   changePassword,
   refreshToken,
   forgotPassword,
-  resetPassword,
-  enableMFA,
+  resetPassword
 };

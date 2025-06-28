@@ -56,6 +56,7 @@ const paginate = <T>(schema: Schema<T>) => {
     const page = options.page ?? 1;
     const sortBy = options.sortBy ?? 'createdAt';
     const sortOrder = options.sortOrder ?? 1; 
+    const select = options.select; // Get select option
 
     // Count total documents
     const totalResults = await this.countDocuments(filter).exec();
@@ -75,6 +76,12 @@ const paginate = <T>(schema: Schema<T>) => {
       .skip(skip)
       .limit(limit);
 
+      // Apply select if provided
+    if (select) {
+      query = query.select(select);
+    }
+
+      // populate if provided
     if (options.populate) {
       query = query.populate(options.populate);
     }

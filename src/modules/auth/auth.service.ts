@@ -10,7 +10,6 @@ import { OtpType } from '../otp/otp.interface';
 import { TUser } from '../user/user.interface';
 import { generateUsernameFromEmail } from '../../utils/generateUsernameFromEmail';
 import moment from 'moment';
-import { totp } from 'otplib';
 import { Token } from '../token/token.model';
 
 const createUser = async (userData: TUser) => {
@@ -87,16 +86,6 @@ const resetPassword = async (email: string, password: string) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-
-  const isReused = await Promise.all(
-    (user.passwordHistory ?? []).map(entry => bcrypt.compare(password, entry.hash))
-  );
-  if (isReused.includes(true)) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Cannot reuse a previous password.'
-    );
-  }
   user.password = password;
   user.isResetPassword = false;
   await user.save();
@@ -107,8 +96,6 @@ const changePassword = async (
   userId: string,
   currentPassword: string,
   newPassword: string,
-  ip: string,
-  userAgent: string
 ) => {
   const user = await User.findById(userId).select(
     '+password +passwordHistory +mfaSecret'
@@ -132,15 +119,6 @@ const changePassword = async (
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid password.');
   }
 
-  const isReused = await Promise.all(
-    (user.passwordHistory ?? []).map(entry => bcrypt.compare(newPassword, entry.hash))
-  );
-  if (isReused.includes(true)) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Cannot reuse a previous password.'
-    );
-  }
 
   user.password = newPassword;
   user.lastPasswordChange = new Date();
@@ -160,8 +138,6 @@ const logout = async (refreshToken: string) => {
 
 const refreshAuth = async (
   refreshToken: string,
-  ip: string,
-  userAgent: string
 ) => {
   const payload = await TokenService.verifyToken(
     refreshToken,
@@ -179,31 +155,6 @@ const refreshAuth = async (
   return { tokens };
 };
 
-const enableMFA = async (userId: string) => {
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
-  }
-  const secret = totp.generate(user.id.toString());
-  user.mfaSecret = secret;
-  user.mfaEnabled = true;
-  await user.save();
-  return secret;
-};
-
-const verifyMFA = async (userId: string, token: string) => {
-  const user = await User.findById(userId).select('+mfaSecret');
-  if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
-  }
-  if (!user.mfaEnabled) return true;
-  const isValid = totp.check(token, user.mfaSecret!);
-  if (!isValid) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid MFA token.');
-  }
-  return true;
-};
-
 export const AuthService = {
   createUser,
   verifyEmail,
@@ -212,7 +163,5 @@ export const AuthService = {
   resendOtp,
   logout,
   changePassword,
-  refreshAuth,
-  enableMFA,
-  verifyMFA,
+  refreshAuth
 };

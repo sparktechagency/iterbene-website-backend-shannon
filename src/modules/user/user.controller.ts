@@ -4,7 +4,7 @@ import sendResponse from '../../shared/sendResponse';
 import ApiError from '../../errors/ApiError';
 import { UserService } from './user.service';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
-const UPLOADS_FOLDER = 'uploads/users';
+import { USER_UPLOADS_FOLDER } from './user.constant';
 
 const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const { userId } = req.user;
@@ -85,7 +85,7 @@ const updateProfileImage = catchAsync(async (req, res) => {
   const file = req.file as Express.Multer.File;
   const result = await uploadFilesToS3(
     [file],
-    UPLOADS_FOLDER
+    USER_UPLOADS_FOLDER
   );
 
  const updatedResult = await UserService.updateProfileImage(userId, result[0]);
@@ -100,7 +100,7 @@ const updateCoverImage = catchAsync(async (req, res) => {
   const file = req.file as Express.Multer.File;
   const result = await uploadFilesToS3(
     [file],
-    UPLOADS_FOLDER
+    USER_UPLOADS_FOLDER
   );
 
  const updatedResult = await UserService.updateCoverImage(userId, result[0]);

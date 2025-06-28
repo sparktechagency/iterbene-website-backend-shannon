@@ -51,9 +51,9 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
 };
 
 const verifyOTP = async (userEmail: string, otp: string, type: string) => {
-  const user = await User.findOne({ email: userEmail });
   const otpDoc = await OTP.findOne({
     userEmail,
+    otp,
     type,
     verified: false,
   });
