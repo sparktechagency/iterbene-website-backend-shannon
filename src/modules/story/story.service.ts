@@ -384,14 +384,7 @@ const viewStoryMedia = async (
 };
 
 // Get story by storyId (returns first media)
-const getStory = async (
-  storyId: string,
-  userId: string
-): Promise<{
-  story: IStory;
-  firstMediaId: string;
-  totalMediaCount: number;
-}> => {
+const getStory = async (storyId: string, userId: string): Promise<IStory> => {
   if (!Types.ObjectId.isValid(storyId) || !Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid story ID or user ID');
   }
@@ -405,6 +398,16 @@ const getStory = async (
       path: 'mediaIds',
       match: { expiresAt: { $gt: new Date() }, isDeleted: false },
       select: '-createdAt -updatedAt -__v -isDeleted -expiresAt',
+      populate: [
+        {
+          path: 'viewedBy',
+          select: 'firstName lastName username nickname profileImage',
+        },
+        {
+          path: 'reactions.userId',
+          select: 'firstName lastName username nickname profileImage',
+        },
+      ],
     },
     {
       path: 'userId',
@@ -432,18 +435,7 @@ const getStory = async (
     );
   }
 
-  // Get first media ID (oldest)
-  const sortedMedia = story.mediaIds.sort(
-    (a, b) =>
-      new Date(a.createdAt || 0).getTime() -
-      new Date(b.createdAt || 0).getTime()
-  );
-
-  return {
-    story,
-    firstMediaId: sortedMedia[0]._id.toString(),
-    totalMediaCount: sortedMedia.length,
-  };
+  return story;
 };
 
 // React to story media
@@ -603,7 +595,7 @@ const deleteStoryMedia = async (
   }
 };
 
-// Get story feed for user
+// Get story feed for user with own stories prioritized at index 0
 const getStoryFeed = async (
   userId: string,
   filters: { city?: string; country?: string; ageRange?: [number, number] },
@@ -621,6 +613,7 @@ const getStoryFeed = async (
   const city = filters.city || currentUser.city;
   const country = filters.country || currentUser.country;
 
+  // Get user's connections and followers
   const connections = await Connections.find({
     $or: [{ sentBy: userId }, { receivedBy: userId }],
     status: ConnectionStatus.ACCEPTED,
@@ -632,15 +625,15 @@ const getStoryFeed = async (
   const followers = await Follower.find({ followerId: userId }).lean();
   const followedIds = followers.map(f => f.followedId);
 
-  const socialUserIds = [
-    ...new Set([...friendIds, ...followedIds, new Types.ObjectId(userId)]),
-  ];
+  const socialUserIds = [...new Set([...friendIds, ...followedIds])];
 
+  // Build query for public stories from location-matched users
   let publicStoryQuery: any = {
     privacy: StoryPrivacy.PUBLIC,
     isDeleted: false,
     status: StoryStatus.ACTIVE,
     expiresAt: { $gt: new Date() },
+    userId: { $ne: new Types.ObjectId(userId) }, // Exclude own stories from public query
   };
 
   const userMatch: any = { city, country };
@@ -659,10 +652,45 @@ const getStoryFeed = async (
   if (matchedUserIds.length > 0) {
     publicStoryQuery.userId = { $in: matchedUserIds };
   } else {
-    publicStoryQuery = { _id: null };
+    publicStoryQuery = { _id: null }; // No matching users found
   }
 
-  const query = {
+  // Step 1: Get own stories first
+  const ownStoriesQuery = {
+    userId: new Types.ObjectId(userId),
+    isDeleted: false,
+    status: StoryStatus.ACTIVE,
+    expiresAt: { $gt: new Date() },
+  };
+
+  const ownStories = await Story.find(ownStoriesQuery)
+    .populate([
+      {
+        path: 'mediaIds',
+        match: { expiresAt: { $gt: new Date() }, isDeleted: false },
+        select: '-createdAt -updatedAt -__v -isDeleted -expiresAt',
+        populate: [
+          {
+            path: 'viewedBy',
+            select: 'firstName lastName username nickname profileImage',
+          },
+          {
+            path: 'reactions.userId',
+            select: 'firstName lastName username nickname profileImage',
+          },
+        ],
+      },
+      {
+        path: 'userId',
+        select: 'firstName lastName username nickname profileImage coverImage',
+      },
+    ])
+    .select('-isDeleted -updatedAt -__v')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Step 2: Get other stories (social connections + public)
+  const otherStoriesQuery = {
     $or: [
       publicStoryQuery,
       {
@@ -678,8 +706,23 @@ const getStoryFeed = async (
     ],
   };
 
-  const result = await Story.paginate(query, {
+  // Calculate pagination for other stories
+  let otherStoriesLimit = options.limit || 10;
+  let otherStoriesPage = options.page || 1;
+
+  // If we have own stories and this is the first page, reduce the limit for other stories
+  if (ownStories.length > 0 && otherStoriesPage === 1) {
+    otherStoriesLimit = Math.max(1, otherStoriesLimit - ownStories.length);
+  }
+
+  const otherStoriesOptions = {
     ...options,
+    limit: otherStoriesLimit,
+    page: otherStoriesPage,
+  };
+
+  const otherStoriesResult = await Story.paginate(otherStoriesQuery, {
+    ...otherStoriesOptions,
     populate: [
       {
         path: 'mediaIds',
@@ -704,10 +747,32 @@ const getStoryFeed = async (
     select: '-isDeleted -updatedAt -__v',
   });
 
-  if (result.results.length === 0) {
-    return { ...result, results: [] };
+  // Step 3: Combine results with own stories first
+  let combinedResults: IStory[] = [];
+
+  if (otherStoriesPage === 1) {
+    // First page: own stories first, then other stories
+    combinedResults = [...ownStories, ...otherStoriesResult.results];
+  } else {
+    // Subsequent pages: only other stories
+    combinedResults = otherStoriesResult.results;
   }
-  return result;
+
+  // Calculate total count
+  const ownStoriesCount = ownStories.length;
+  const totalOtherStories = otherStoriesResult.totalResults || 0;
+  const totalResults = ownStoriesCount + totalOtherStories;
+
+  // Calculate pagination info
+  const totalPages = Math.ceil(totalResults / (options.limit || 10));
+
+  return {
+    results: combinedResults,
+    totalResults,
+    totalPages,
+    page: otherStoriesPage,
+    limit: options.limit || 10,
+  };
 };
 
 // Get viewers of a story media
