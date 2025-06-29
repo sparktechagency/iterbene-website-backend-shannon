@@ -8,6 +8,7 @@ export enum MessageType {
   VIDEO = 'video',
   DOCUMENT = 'document',
   MIXED = 'mixed',
+  STORYMESSAGE = 'storyMessage', // For story messages
 }
 
 export interface IContent {

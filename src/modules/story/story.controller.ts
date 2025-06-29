@@ -70,7 +70,7 @@ const reactToStory = catchAsync(async (req: Request, res: Response) => {
 const replyToStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { mediaId, message } = req.body;
-  const result = await StoryService.replyToStoryMedia(mediaId, userId);
+  const result = await StoryService.replyToStoryMedia(mediaId, userId, message);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Reply sent successfully',
