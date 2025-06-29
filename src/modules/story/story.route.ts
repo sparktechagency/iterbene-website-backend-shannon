@@ -42,23 +42,18 @@ router.post(
   StoryController.replyToStory
 );
 
-
 // Get story feed (any authenticated user)
 router.get('/feed', auth('Common'), StoryController.getStoryFeed);
 
 // Get story viewers (creator only)
-router.get('/viewers/:mediaId', auth('Common'), StoryController.getStoryViewers);
+router.get(
+  '/viewers/:mediaId',
+  auth('Common'),
+  StoryController.getStoryViewers
+);
 
 // Get a story (any authenticated user with access)
-router
-  .route('/:storyId')
-  .get(
-    auth('Common'),
-    StoryController.getStory
-  )
-  .delete(
-    auth('Common'),
-    StoryController.deleteStory
-  );
+router.route('/:storyId').get(auth('Common'), StoryController.getStory);
+router.route('/:mediaId').delete(auth('Common'), StoryController.deleteStory);
 
 export const StoryRoutes = router;

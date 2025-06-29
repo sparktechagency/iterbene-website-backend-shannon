@@ -32,8 +32,8 @@ const getStory = catchAsync(async (req: Request, res: Response) => {
 
 const deleteStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { storyId } = req.params;
-  const result = await StoryService.deleteStory(userId, storyId);
+  const { mediaId } = req.params;
+  const result = await StoryService.deleteStory(userId, mediaId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Story deleted successfully',

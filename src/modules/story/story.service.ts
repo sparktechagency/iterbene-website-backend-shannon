@@ -76,7 +76,6 @@ const createStory = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID');
   }
 
-
   const hasText = !!payload.textContent?.trim();
   const hasFiles = files && files.length > 0;
 
@@ -523,34 +522,28 @@ const replyToStoryMedia = async (
 };
 
 // Delete entire story
-const deleteStory = async (userId: string, storyId: string): Promise<void> => {
-  if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(storyId)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID or story ID');
+const deleteStory = async (userId: string, mediaId: string): Promise<void> => {
+  if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(mediaId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID or media ID');
   }
-
-  const story = await Story.findById(storyId);
-  if (!story || story.isDeleted) {
+  const story = await Story.findOne({
+    mediaIds: mediaId,
+    status: StoryStatus.ACTIVE,
+    isDeleted: false,
+  });
+  if (!story) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found');
   }
-
-  if (!story.userId.equals(userId)) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Only the creator can delete the story'
-    );
+  //remove this media from story
+  //also remove media from StoryMedia collection
+  const media = await StoryMedia.findById(mediaId);
+  if (!media) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Media not found');
   }
-
-  // Soft delete story and all its media
-  await Promise.all([
-    Story.updateOne(
-      { _id: storyId },
-      { isDeleted: true, status: StoryStatus.DELETED }
-    ),
-    StoryMedia.updateMany(
-      { _id: { $in: story.mediaIds } },
-      { isDeleted: true }
-    ),
-  ]);
+  media.isDeleted = true;
+  await media.save();
+  await Story.updateOne({ _id: story._id }, { $pull: { mediaIds: mediaId } });
+  return;
 };
 
 // Delete single media from story
