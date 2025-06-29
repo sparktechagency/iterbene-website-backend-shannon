@@ -21,29 +21,6 @@ const mediaSchema = new Schema<IMedia>(
       type: String,
       trim: true,
     },
-    duration: {
-      type: Number,
-    },
-    textContent: {
-      type: String,
-      trim: true,
-    },
-    textFontFamily: {
-      type: String,
-      trim: true,
-    },
-    backgroundColor: {
-      type: String,
-      trim: true,
-    },
-    caption: {
-      type: String,
-      trim: true,
-    },
-
-    expiresAt: {
-      type: Date,
-    },
     isDeleted: {
       type: Boolean,
       default: false,

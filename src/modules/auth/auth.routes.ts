@@ -79,10 +79,4 @@ router.post('/logout', AuthController.logout);
 
 router.post('/refresh-token',AuthController.refreshToken);
 
-router.post('/enable-mfa', auth('Common'), AuthController.enableMFA);
-
-router.get('/interaction-logs/:userId', auth('admin'));
-
-router.get('/interaction-logs', auth('admin'));
-
 export const AuthRoutes = router;

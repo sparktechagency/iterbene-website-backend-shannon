@@ -17,12 +17,6 @@ const createStoryValidationSchema = z.object({
   }),
 });
 
-// GET /stories/:id
-const getStoryValidationSchema = z.object({
-  params: z.object({
-    id: objectIdSchema,
-  }),
-});
 
 // DELETE /stories/:id
 const deleteStoryValidationSchema = z.object({
@@ -34,14 +28,14 @@ const deleteStoryValidationSchema = z.object({
 // POST /stories/view
 const viewStoryValidationSchema = z.object({
   body: z.object({
-    storyId: objectIdSchema,
+    mediaId: objectIdSchema,
   }),
 });
 
 // POST /stories/react
 const reactStoryValidationSchema = z.object({
   body: z.object({
-    storyId: objectIdSchema,
+    mediaId: objectIdSchema,
     reactionType: z.enum(
       Object.values(ReactionType) as [ReactionType, ...ReactionType[]]
     ),
@@ -51,14 +45,13 @@ const reactStoryValidationSchema = z.object({
 // POST /stories/reply
 const replyStoryValidationSchema = z.object({
   body: z.object({
-    storyId: objectIdSchema,
+    mediaId: objectIdSchema,
     message: z.string().min(1, 'Reply message is required'),
   }),
 });
 
 export const StoryValidation = {
   createStoryValidationSchema,
-  getStoryValidationSchema,
   deleteStoryValidationSchema,
   viewStoryValidationSchema,
   reactStoryValidationSchema,

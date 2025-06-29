@@ -42,26 +42,22 @@ router.post(
   StoryController.replyToStory
 );
 
-// Get my stories (any authenticated user)
-router.get('/my-stories', auth('Common'), StoryController.getMyStories);
 
 // Get story feed (any authenticated user)
 router.get('/feed', auth('Common'), StoryController.getStoryFeed);
 
 // Get story viewers (creator only)
-router.get('/viewers/:id', auth('Common'), StoryController.getStoryViewers);
+router.get('/viewers/:mediaId', auth('Common'), StoryController.getStoryViewers);
 
 // Get a story (any authenticated user with access)
 router
-  .route('/:id')
+  .route('/:storyId')
   .get(
     auth('Common'),
-    validateRequest(StoryValidation.getStoryValidationSchema),
     StoryController.getStory
   )
   .delete(
     auth('Common'),
-    validateRequest(StoryValidation.deleteStoryValidationSchema),
     StoryController.deleteStory
   );
 

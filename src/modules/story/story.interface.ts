@@ -1,22 +1,30 @@
 import { Model, Types } from 'mongoose';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 
-export interface IStory {
-  _id?: Types.ObjectId;
-  userId: Types.ObjectId;
-  mediaIds: Types.ObjectId[]; 
-  privacy: string;
+export interface IStoryMedia {
+  _id: Types.ObjectId;
+  mediaUrl: string;
+  textContent?: string;
+  textFontFamily?: string;
+  backgroundColor?: string;
+  expiresAt?: Date;
+  mediaType: StoryMediaType;
   viewedBy: Types.ObjectId[];
   viewCount: number;
   reactions: Array<{
     userId: Types.ObjectId;
-    reactionType: string;
+    reactionType: ReactionType;
   }>;
-  replies: Array<{
-    userId: Types.ObjectId;
-    message: string;
-    createdAt: Date;
-  }>;
+  isDeleted: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface IStory {
+  _id?: Types.ObjectId;
+  userId: Types.ObjectId;
+  mediaIds: IStoryMedia[];
+  privacy: string;
   status: string;
   expiresAt: Date;
   isDeleted: boolean;
@@ -24,6 +32,14 @@ export interface IStory {
   updatedAt?: Date;
 }
 
+export enum StoryMediaType {
+  TEXT = 'text',
+  MIXED = 'mixed',
+  DOCUMENT = 'document',
+  IMAGE = 'image',
+  VIDEO = 'video',
+  AUDIO = 'audio',
+}
 export enum StoryPrivacy {
   PUBLIC = 'public',
   FOLLOWERS = 'followers',
@@ -43,5 +59,8 @@ export enum ReactionType {
 }
 
 export interface IStoryModel extends Model<IStory> {
-    paginate(filter: Record<string, any>, options: PaginateOptions): Promise<PaginateResult<IStory>>
+  paginate(
+    filter: Record<string, any>,
+    options: PaginateOptions
+  ): Promise<PaginateResult<IStory>>;
 }

@@ -1,16 +1,17 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { StoryService } from './story.service';
-import { PaginateOptions } from '../../types/paginate';
 import catchAsync from '../../shared/catchAsync';
 import sendResponse from '../../shared/sendResponse';
+import pick from '../../shared/pick';
 
 const createStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filesObject = req.files as { [fieldname: string]: Express.Multer.File[] };
+  const filesObject = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  };
   const files = Object.values(filesObject).flat();
-  const payload = req.body;
-  const result = await StoryService.createStory(userId, payload, files);
+  const result = await StoryService.createStory(userId, req.body, files);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Story created successfully',
@@ -20,8 +21,8 @@ const createStory = catchAsync(async (req: Request, res: Response) => {
 
 const getStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { id } = req.params;
-  const result = await StoryService.getStory(id, userId);
+  const { storyId } = req.params;
+  const result = await StoryService.getStory(storyId, userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Story retrieved successfully',
@@ -31,8 +32,8 @@ const getStory = catchAsync(async (req: Request, res: Response) => {
 
 const deleteStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { id } = req.params;
-  const result = await StoryService.deleteStory(userId, id);
+  const { storyId } = req.params;
+  const result = await StoryService.deleteStory(userId, storyId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Story deleted successfully',
@@ -42,8 +43,8 @@ const deleteStory = catchAsync(async (req: Request, res: Response) => {
 
 const viewStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { storyId } = req.body;
-  const result = await StoryService.viewStory(userId, storyId);
+  const { mediaId } = req.body;
+  const result = await StoryService.viewStoryMedia(mediaId, userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Story viewed successfully',
@@ -53,8 +54,12 @@ const viewStory = catchAsync(async (req: Request, res: Response) => {
 
 const reactToStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { storyId, reactionType } = req.body;
-  const result = await StoryService.reactToStory(userId, storyId, reactionType);
+  const { mediaId, reactionType } = req.body;
+  const result = await StoryService.reactToStoryMedia(
+    mediaId,
+    userId,
+    reactionType
+  );
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Reaction added successfully',
@@ -64,8 +69,8 @@ const reactToStory = catchAsync(async (req: Request, res: Response) => {
 
 const replyToStory = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { storyId, message } = req.body;
-  const result = await StoryService.replyToStory(userId, storyId, message);
+  const { mediaId, message } = req.body;
+  const result = await StoryService.replyToStoryMedia(mediaId, userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Reply sent successfully',
@@ -73,42 +78,10 @@ const replyToStory = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getMyStories = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const filters = req.query;
-  const options: PaginateOptions = {
-    limit: Number(req.query.limit) || 10,
-    page: Number(req.query.page) || 1,
-    sortBy: req.query.sortBy as string,
-  };
-  const result = await StoryService.getMyStories(userId, filters, options);
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'My stories retrieved successfully',
-    data: result,
-  });
-});
-
 const getStoryFeed = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { city, country, ageRange, limit = 10, page = 1, sortBy } = req.query;
-  const options: PaginateOptions = {
-    limit: Number(limit),
-    page: Number(page),
-    sortBy: sortBy as string,
-  };
-  const filters: {
-    city?: string;
-    country?: string;
-    ageRange?: [number, number];
-  } = {};
-  if (city) filters.city = city as string;
-  if (country) filters.country = country as string;
-  if (ageRange)
-    filters.ageRange = (ageRange as string).split(',').map(Number) as [
-      number,
-      number
-    ];
+  const filters = pick(req.query, ['city', 'country', 'ageRange']);
+  const options = pick(req.query, ['limit', 'page', 'sortBy']);
   const result = await StoryService.getStoryFeed(userId, filters, options);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -119,8 +92,8 @@ const getStoryFeed = catchAsync(async (req: Request, res: Response) => {
 
 const getStoryViewers = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { id } = req.params;
-  const result = await StoryService.getStoryViewers(userId, id);
+  const { mediaId } = req.params;
+  const result = await StoryService.getStoryMediaViewers(userId, mediaId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Story viewers retrieved successfully',
@@ -135,7 +108,6 @@ export const StoryController = {
   viewStory,
   reactToStory,
   replyToStory,
-  getMyStories,
   getStoryFeed,
   getStoryViewers,
 };

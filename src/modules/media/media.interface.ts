@@ -6,12 +6,6 @@ export interface IMedia {
   sourceType: SourceType;
   mediaType: MediaType;
   mediaUrl: string;
-  duration?: number;
-  textContent?: string;
-  textFontFamily?: string;
-  backgroundColor?: string;
-  caption?: string;
-  expiresAt?: Date;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -30,6 +24,5 @@ export enum SourceType {
   USER = 'User',
   COMMENT = 'comment',
   GROUP = 'group',
-  EVENT = 'event',
-  STORY = 'story',
+  EVENT = 'event'
 }
