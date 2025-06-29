@@ -598,7 +598,7 @@ const deleteStoryMedia = async (
 // Get story feed for user with own stories prioritized at index 0
 const getStoryFeed = async (
   userId: string,
-  filters: { city?: string; country?: string; ageRange?: [number, number] },
+  filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IStory>> => {
   if (!Types.ObjectId.isValid(userId)) {
@@ -610,8 +610,9 @@ const getStoryFeed = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
-  const city = filters.city || currentUser.city;
-  const country = filters.country || currentUser.country;
+  const locationName = currentUser?.locationName;
+  const city = currentUser?.city;
+  const country = currentUser?.country;
 
   // Get user's connections and followers
   const connections = await Connections.find({
@@ -636,10 +637,9 @@ const getStoryFeed = async (
     userId: { $ne: new Types.ObjectId(userId) }, // Exclude own stories from public query
   };
 
-  const userMatch: any = { city, country };
-  if (filters.ageRange) {
-    userMatch.age = { $gte: filters.ageRange[0], $lte: filters.ageRange[1] };
-  }
+  const userMatch: any = {
+    $or: [{ locationName: locationName }, { city: city }, { country: country }],
+  };
 
   const matchedUsers = await User.find({
     _id: { $ne: userId },
