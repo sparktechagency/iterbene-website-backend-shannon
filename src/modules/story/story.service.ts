@@ -76,12 +76,6 @@ const createStory = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID');
   }
 
-  if (
-    payload.privacy &&
-    !Object.values(StoryPrivacy).includes(payload.privacy as StoryPrivacy)
-  ) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid privacy setting');
-  }
 
   const hasText = !!payload.textContent?.trim();
   const hasFiles = files && files.length > 0;

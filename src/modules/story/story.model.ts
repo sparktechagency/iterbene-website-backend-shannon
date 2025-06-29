@@ -13,8 +13,7 @@ import paginate from '../../common/plugins/paginate';
 const storyMediaSchema = new Schema<IStoryMedia>(
   {
     mediaUrl: {
-      type: String,
-      required:true
+      type: String
     },
     textContent: {
       type: String,
