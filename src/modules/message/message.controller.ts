@@ -13,23 +13,6 @@ import { MESSAGE_UPLOADS_FOLDER } from './message.constant';
 const sendMessage = catchAsync(async (req, res) => {
   const senderId = req.user.userId;
   const { message, receiverId } = req.body;
-  let chatId: string = '';
-  // Check if an existing chat exists
-  const existingChat = await ChatService.checkSenderIdExistInChat(
-    senderId,
-    receiverId
-  );
-  if (existingChat) {
-    chatId = existingChat._id;
-  } else {
-    // Create a new chat if none exists
-    const newChat = await ChatService.createSingleChat(senderId, receiverId);
-    if (!newChat) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Chat Not Found');
-    }
-    chatId = newChat._id as string;
-  }
-
   // Prepare message content
   const content: IContent = {
     messageType: MessageType.TEXT,
@@ -68,15 +51,8 @@ const sendMessage = catchAsync(async (req, res) => {
       content.messageType = MessageType.MIXED; // Supports both text and files
     }
   }
-
-  // Ensure chatId is not null
-  if (!chatId) {
-    throw new Error('chatId is required and could not be determined.');
-  }
-
   // Construct the message payload
   const payload: IMessage = {
-    chatId,
     senderId,
     receiverId,
     content,

@@ -25,6 +25,7 @@ export interface IMessage {
   seenBy?: Types.ObjectId[];
   deletedBy?: Types.ObjectId[];
   unsentBy?: Types.ObjectId[];
+  storyMedia?:Types.ObjectId; // For story messages
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

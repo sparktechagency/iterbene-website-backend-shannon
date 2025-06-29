@@ -666,9 +666,11 @@ import { Follower } from '../followers/followers.model';
 import { User } from '../user/user.model';
 import { ConnectionStatus } from '../connections/connections.interface';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
+import { MessageService } from '../message/message.service';
+import { IContent, IMessage, MessageType } from '../message/message.interface';
 
 const UPLOADS_FOLDER = 'uploads/stories';
-const MAX_REPLY_LENGTH = 500;
+
 const DEFAULT_STORY_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Helper function to check story access permissions
@@ -839,7 +841,10 @@ const createStory = async (
         },
       ]);
       if (!updatedStory) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found after update');
+        throw new ApiError(
+          StatusCodes.NOT_FOUND,
+          'Story not found after update'
+        );
       }
       story = updatedStory;
     } else {
@@ -847,7 +852,7 @@ const createStory = async (
       story = await Story.create({
         userId: new Types.ObjectId(userId),
         mediaIds,
-        privacy: payload.privacy || StoryPrivacy.FOLLOWERS,
+        privacy: payload.privacy || StoryPrivacy.PUBLIC,
         status: StoryStatus.ACTIVE,
         expiresAt,
         isDeleted: false,
@@ -864,7 +869,10 @@ const createStory = async (
         },
       ]);
       if (!populatedStory) {
-        throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found after creation');
+        throw new ApiError(
+          StatusCodes.NOT_FOUND,
+          'Story not found after creation'
+        );
       }
       story = populatedStory;
     }
@@ -1050,7 +1058,7 @@ const getStory = async (
     {
       path: 'mediaIds',
       match: { expiresAt: { $gt: new Date() }, isDeleted: false },
-      select: '_id createdAt',
+      select: '-createdAt -updatedAt -__v -isDeleted -expiresAt',
     },
     {
       path: 'userId',
@@ -1156,12 +1164,33 @@ const reactToStoryMedia = async (
 // Reply to story media
 const replyToStoryMedia = async (
   mediaId: string,
-  userId: string
+  userId: string,
+  message: string
 ) => {
   if (!Types.ObjectId.isValid(mediaId) || !Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid media ID or user ID');
   }
+  const story = await Story.findOne({
+    mediaIds: mediaId,
+    status: StoryStatus.ACTIVE,
+    isDeleted: false,
+  });
+  if (!story) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found');
+  }
 
+  const content: IContent = {
+    messageType: MessageType.TEXT,
+    text: message || '', // Ensure message is set or empty string
+    fileUrls: [], // Initialize fileUrls as an empty array
+  };
+  const messagePayload: IMessage = {
+    senderId: new Types.ObjectId(userId),
+    receiverId: new Types.ObjectId(story.userId),
+    content,
+  };
+  const result = await MessageService.sendMessage(messagePayload);
+  return result;
 };
 
 // Delete entire story
@@ -1246,61 +1275,62 @@ const getStoryFeed = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
-  // Get user's social connections
-  const [connections, followers] = await Promise.all([
-    Connections.find({
-      $or: [{ sentBy: userId }, { receivedBy: userId }],
-      status: ConnectionStatus.ACCEPTED,
-    }).lean(),
-    Follower.find({ followerId: userId }).lean(),
-  ]);
-
-  const friendIds = connections.map(conn =>
-    conn.sentBy.toString() === userId ? conn.receivedBy : conn.sentBy
-  );
-  const followedIds = followers.map(f => f.followedId);
-  const socialUserIds = [...new Set([...friendIds, ...followedIds])];
-
-  // Build location-based query for public stories
   const city = filters.city || currentUser.city;
   const country = filters.country || currentUser.country;
 
-  let locationQuery: any = { city, country };
-  if (filters.ageRange) {
-    locationQuery.age = {
-      $gte: filters.ageRange[0],
-      $lte: filters.ageRange[1],
-    };
-  }
+  const connections = await Connections.find({
+    $or: [{ sentBy: userId }, { receivedBy: userId }],
+    status: ConnectionStatus.ACCEPTED,
+  }).lean();
+  const friendIds = connections.map(conn =>
+    conn.sentBy.toString() === userId ? conn.receivedBy : conn.sentBy
+  );
 
-  const locationUsers = await User.find({
-    ...locationQuery,
-    _id: { $ne: userId },
-  })
-    .select('_id')
-    .lean();
+  const followers = await Follower.find({ followerId: userId }).lean();
+  const followedIds = followers.map(f => f.followedId);
 
-  const locationUserIds = locationUsers.map(u => u._id);
+  const socialUserIds = [
+    ...new Set([...friendIds, ...followedIds, new Types.ObjectId(userId)]),
+  ];
 
-  // Combined query for stories
-  const query = {
+  let publicStoryQuery: any = {
+    privacy: StoryPrivacy.PUBLIC,
     isDeleted: false,
     status: StoryStatus.ACTIVE,
     expiresAt: { $gt: new Date() },
+  };
+
+  const userMatch: any = { city, country };
+  if (filters.ageRange) {
+    userMatch.age = { $gte: filters.ageRange[0], $lte: filters.ageRange[1] };
+  }
+
+  const matchedUsers = await User.find({
+    _id: { $ne: userId },
+    ...userMatch,
+  })
+    .select('_id')
+    .lean();
+  const matchedUserIds = matchedUsers.map(u => u._id);
+
+  if (matchedUserIds.length > 0) {
+    publicStoryQuery.userId = { $in: matchedUserIds };
+  } else {
+    publicStoryQuery = { _id: null };
+  }
+
+  const query = {
     $or: [
-      // Public stories from location-based users
-      ...(locationUserIds.length > 0
-        ? [
-            {
-              userId: { $in: locationUserIds },
-              privacy: StoryPrivacy.PUBLIC,
-            },
-          ]
-        : []),
-      // Stories from social connections
+      publicStoryQuery,
       {
         userId: { $in: socialUserIds },
-        privacy: { $in: [StoryPrivacy.PUBLIC, StoryPrivacy.FOLLOWERS] },
+        isDeleted: false,
+        status: StoryStatus.ACTIVE,
+        expiresAt: { $gt: new Date() },
+        $or: [
+          { privacy: StoryPrivacy.PUBLIC },
+          { privacy: StoryPrivacy.FOLLOWERS },
+        ],
       },
     ],
   };
@@ -1311,16 +1341,29 @@ const getStoryFeed = async (
       {
         path: 'mediaIds',
         match: { expiresAt: { $gt: new Date() }, isDeleted: false },
-        select: '_id mediaType createdAt', // Only basic info for feed
+        select: '-createdAt -updatedAt -__v -isDeleted -expiresAt',
+        populate: [
+          {
+            path: 'viewedBy',
+            select: 'firstName lastName username nickname profileImage',
+          },
+          {
+            path: 'reactions.userId',
+            select: 'firstName lastName username nickname profileImage',
+          },
+        ],
       },
       {
         path: 'userId',
-        select: 'firstName lastName username nickname profileImage',
+        select: 'firstName lastName username nickname profileImage coverImage',
       },
     ],
-    sortBy: options.sortBy || '-createdAt',
+    select: '-isDeleted -updatedAt -__v',
   });
 
+  if (result.results.length === 0) {
+    return { ...result, results: [] };
+  }
   return result;
 };
 

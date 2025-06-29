@@ -18,6 +18,10 @@ const messageSchema = new Schema<IMessage, IMessageModel>(
       ref: 'User',
       required: [true, 'Receiver ID is required'],
     },
+    storyMedia: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StoryMedia',
+    },
     content: {
       type: {
         messageType: {
@@ -33,7 +37,8 @@ const messageSchema = new Schema<IMessage, IMessageModel>(
         fileUrls: {
           type: [String],
           validate: {
-            validator: (urls: string[]) => Array.isArray(urls) && urls.length <= 10,
+            validator: (urls: string[]) =>
+              Array.isArray(urls) && urls.length <= 10,
             message: 'Maximum 10 files are allowed per message',
           },
         },
@@ -103,5 +108,8 @@ messageSchema.index({ chatId: 1, createdAt: -1 });
 // Add pagination plugin
 messageSchema.plugin(paginate);
 
-const Message = mongoose.model<IMessage, IMessageModel>('Message', messageSchema);
+const Message = mongoose.model<IMessage, IMessageModel>(
+  'Message',
+  messageSchema
+);
 export default Message;

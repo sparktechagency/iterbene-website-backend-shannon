@@ -9,6 +9,7 @@ import { Types } from 'mongoose';
 import { NotificationService } from '../notification/notification.services';
 import { INotification } from '../notification/notification.interface';
 import { Notification } from '../notification/notification.model';
+import { ChatService } from '../chat/chat.service';
 
 // View all messages by receiver ID (aligned with GET /:receiverId)
 const getAllMessagesByReceiverId = async (
@@ -53,6 +54,10 @@ const getAllMessagesByReceiverId = async (
       path: 'forwardedFrom',
       select: 'content senderId',
     },
+    {
+      path: 'storyMedia',
+      select: 'mediaUrl',
+    },
   ];
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = 1;
@@ -92,6 +97,28 @@ const unviewedMessagesCount = async (
 
 // Send a message
 const sendMessage = async (payload: IMessage) => {
+  let chatId: string = '';
+  // Check if an existing chat exists
+  const existingChat = await ChatService.checkSenderIdExistInChat(
+    payload.senderId.toString(),
+    payload.receiverId.toString()
+  );
+  if (existingChat) {
+    chatId = existingChat._id;
+  } else {
+    // Create a new chat if none exists
+    const newChat = await ChatService.createSingleChat(
+      payload.senderId.toString(),
+      payload.receiverId.toString()
+    );
+    if (!newChat) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Chat Not Found');
+    }
+    chatId = newChat._id as string;
+  }
+
+  // Set chatId in payload
+  payload.chatId = new Types.ObjectId(chatId);
   const newMessage = await Message.create(payload);
 
   // Update last message in chat
