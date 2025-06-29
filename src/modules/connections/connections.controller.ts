@@ -32,7 +32,7 @@ const acceptConnection = catchAsync(async (req: Request, res: Response) => {
 const declineConnection = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { connectionId } = req.params;
-  const result = await ConnectionsService.declineConnection(
+ await ConnectionsService.declineConnection(
     connectionId,
     userId
   );
@@ -46,7 +46,7 @@ const declineConnection = catchAsync(async (req: Request, res: Response) => {
 const removeConnection = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { removedByUserId } = req.params;
-  const result = await ConnectionsService.removeConnection(
+  const result = await ConnectionsService.removeFromSuggestions(
     userId,
     removedByUserId
   );
@@ -60,7 +60,7 @@ const removeConnection = catchAsync(async (req: Request, res: Response) => {
 const cancelRequest = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { friendId } = req.params;
-  const result = await ConnectionsService.cancelRequest(userId, friendId);
+  await ConnectionsService.cancelRequest(userId, friendId);
   sendResponse(res, {
     code: 200,
     message: 'Connection request cancelled successfully',
@@ -130,23 +130,6 @@ const getMutualConnections = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
-const checkConnectionStatus = catchAsync(
-  async (req: Request, res: Response) => {
-    const { userId } = req.user;
-    const { userId2 } = req.params;
-    const result = await ConnectionsService.checkConnectionStatus(
-      userId,
-      userId2
-    );
-    sendResponse(res, {
-      code: 200,
-      message: 'Connection status retrieved successfully',
-      data: result,
-    });
-  }
-);
-
 const getConnectionSuggestions = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
@@ -169,6 +152,9 @@ const checkIsSentConnectionExists = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
     const { friendId } = req.params;
+
+    console.log("User ID:", userId);
+    console.log("Friend ID:", friendId);
     const result = await ConnectionsService.checkIsSentConnectionExists(
       userId,
       friendId
@@ -192,6 +178,5 @@ export const ConnectionsController = {
   getMyAllRequests,
   getSentMyRequests,
   getMutualConnections,
-  checkConnectionStatus,
   getConnectionSuggestions,
 };

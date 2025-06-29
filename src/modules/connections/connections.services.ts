@@ -24,30 +24,30 @@ const addConnection = async (
     'Connect'
   );
 
+  // Check for existing connection (any status)
+  const existingConnection = await Connections.findOne({
+    $or: [
+      { sentBy: sentByUserId, receivedBy: receivedByUserId },
+      { sentBy: receivedByUserId, receivedBy: sentByUserId },
+    ],
+  });
+
+  if (existingConnection) {
+    if (existingConnection.status === ConnectionStatus.ACCEPTED) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Connection already exists');
+    } else if (existingConnection.status === ConnectionStatus.PENDING) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Connection request already sent'
+      );
+    }
+  }
+
+  // Check connection privacy settings
   if (receivedByUser.connectionPrivacy === ConnectionPrivacy.FRIEND_TO_FRIEND) {
-    const senderFriends = await Connections.find({
-      $or: [{ sentBy: sentByUserId }, { receivedBy: sentByUserId }],
-      status: ConnectionStatus.ACCEPTED,
-    }).select('sentBy receivedBy');
-
-    const receiverFriends = await Connections.find({
-      $or: [{ sentBy: receivedByUserId }, { receivedBy: receivedByUserId }],
-      status: ConnectionStatus.ACCEPTED,
-    }).select('sentBy receivedBy');
-
-    const senderFriendIds = senderFriends.map(conn =>
-      conn.sentBy.toString() === sentByUserId
-        ? conn.receivedBy.toString()
-        : conn.sentBy.toString()
-    );
-    const receiverFriendIds = receiverFriends.map(conn =>
-      conn.sentBy.toString() === receivedByUserId
-        ? conn.receivedBy.toString()
-        : conn.sentBy.toString()
-    );
-
-    const hasMutualFriends = senderFriendIds.some(id =>
-      receiverFriendIds.includes(id)
+    const hasMutualFriends = await checkMutualFriends(
+      sentByUserId,
+      receivedByUserId
     );
     if (!hasMutualFriends) {
       throw new ApiError(
@@ -55,19 +55,6 @@ const addConnection = async (
         'You must have mutual friends to send a connection request'
       );
     }
-  }
-
-  const existingConnection = await Connections.findOne({
-    $or: [
-      { sentBy: sentByUserId, receivedBy: receivedByUserId },
-      { sentBy: receivedByUserId, receivedBy: sentByUserId },
-    ],
-  });
-  if (existingConnection) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      `Connection already exists with status: ${existingConnection.status}`
-    );
   }
 
   const newConnection = new Connections({
@@ -120,9 +107,25 @@ const declineConnection = async (connectionId: string, userId: string) => {
       `Connection is already ${connection.status}`
     );
   }
-  //delete connection request
+
+  // Delete connection request on decline
   await Connections.findByIdAndDelete(connectionId);
   return connection;
+};
+
+const cancelRequest = async (userId: string, friendId: string) => {
+  const connection = await Connections.findOne({
+    sentBy: userId,
+    receivedBy: friendId,
+    status: ConnectionStatus.PENDING,
+  });
+
+  if (!connection) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Connection request not found');
+  }
+
+  const result = await Connections.findByIdAndDelete(connection._id);
+  return result;
 };
 
 const deleteConnection = async (deleteByUserId: string, userId: string) => {
@@ -132,6 +135,7 @@ const deleteConnection = async (deleteByUserId: string, userId: string) => {
       { sentBy: userId, receivedBy: deleteByUserId },
     ],
   });
+
   if (!connection) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Connection not found');
   }
@@ -153,28 +157,84 @@ const deleteConnection = async (deleteByUserId: string, userId: string) => {
     );
   }
 
-  const result = await Connections.findByIdAndDelete(connection?._id);
+  const result = await Connections.findByIdAndDelete(connection._id);
+
+  // Add to removed connections for temporary exclusion from suggestions
+  await RemovedConnection.create({
+    userId: userId,
+    removedUserId: deleteByUserId,
+  });
 
   return result;
 };
 
-const removeConnection = async (
-  sentByUserId: string,
-  removedByUserId: string
+const removeFromSuggestions = async (userId: string, removedUserId: string) => {
+  // Check if already exists to avoid duplicates
+  const existing = await RemovedConnection.findOne({
+    userId,
+    removedUserId,
+  });
+
+  if (!existing) {
+    const result = await RemovedConnection.create({
+      userId,
+      removedUserId,
+    });
+    return result;
+  }
+
+  return existing;
+};
+
+// Helper function to check mutual friends
+const checkMutualFriends = async (
+  userId1: string,
+  userId2: string
+): Promise<boolean> => {
+  const mutualFriends = await getMutualConnections(userId1, userId2);
+  return mutualFriends.length > 0;
+};
+
+const getMutualConnections = async (
+  userId1: string,
+  userId2: string
+): Promise<string[]> => {
+  const connections1 = await Connections.find({
+    $or: [{ sentBy: userId1 }, { receivedBy: userId1 }],
+    status: ConnectionStatus.ACCEPTED,
+  }).select('sentBy receivedBy');
+
+  const connections2 = await Connections.find({
+    $or: [{ sentBy: userId2 }, { receivedBy: userId2 }],
+    status: ConnectionStatus.ACCEPTED,
+  }).select('sentBy receivedBy');
+
+  const friends1 = connections1.map(conn =>
+    conn.sentBy.toString() === userId1
+      ? conn.receivedBy.toString()
+      : conn.sentBy.toString()
+  );
+  const friends2 = connections2.map(conn =>
+    conn.sentBy.toString() === userId2
+      ? conn.receivedBy.toString()
+      : conn.sentBy.toString()
+  );
+
+  const mutualFriends = friends1.filter(friend => friends2.includes(friend));
+  return mutualFriends;
+};
+
+const checkIsSentConnectionExists = async (
+  userId: string,
+  friendId: string
 ) => {
-  const result = await RemovedConnection.create({
-    userId: sentByUserId,
-    removedUserId: removedByUserId,
+  const connection = await Connections.findOne({
+    $or: [
+      { sentBy: userId, receivedBy: friendId },
+      { sentBy: friendId, receivedBy: userId },
+    ],
   });
-  return result;
-};
-const cancelRequest = async (userId: string, friendId: string) => {
-  const result = await Connections.findOneAndDelete({
-    sentBy: userId,
-    receivedBy: friendId,
-    status: ConnectionStatus.PENDING,
-  });
-  return result;
+  return connection;
 };
 
 const getMyAllConnections = async (
@@ -189,7 +249,7 @@ const getMyAllConnections = async (
     status: ConnectionStatus.ACCEPTED,
     $or: [{ sentBy: filters.userId }, { receivedBy: filters.userId }],
   };
-  // Populate both sentBy and receivedBy to get user details
+
   options.populate = [
     {
       path: 'sentBy',
@@ -202,12 +262,9 @@ const getMyAllConnections = async (
   ];
   options.sortBy = options.sortBy || '-createdAt';
 
-  // Use the custom paginate plugin
   const connections = await Connections.paginate(query, options);
 
-  // Transform results to include only the friend's information
   const transformedResults = connections.results.map((connection: any) => {
-    // Determine which user is the friend (not the requesting user)
     const friend =
       connection.sentBy._id.toString() === filters.userId
         ? connection.receivedBy
@@ -238,15 +295,18 @@ const getMyAllRequests = async (
     status: ConnectionStatus.PENDING,
     receivedBy: filters.userId,
   };
+
   options.populate = [
     {
       path: 'sentBy',
-      select: 'fullName  profileImage username',
+      select: 'fullName profileImage username',
     },
   ];
   options.sortBy = options.sortBy || '-createdAt';
+
   const connections = await Connections.paginate(query, options);
   const requestCount = await Connections.countDocuments(query);
+
   return { ...connections, requestCount };
 };
 
@@ -259,65 +319,16 @@ const getSentMyRequests = async (
     sentBy: filters.userId,
   };
 
+  options.populate = [
+    {
+      path: 'receivedBy',
+      select: 'fullName profileImage username',
+    },
+  ];
   options.sortBy = options.sortBy || '-createdAt';
+
   const connections = await Connections.paginate(query, options);
   return connections;
-};
-const checkIsSentConnectionExists = async (
-  userId: string,
-  friendId: string
-) => {
-  const result = await Connections.findOne({
-    $or: [
-      { sentBy: userId },
-      { receivedBy: friendId },
-      { sentBy: friendId },
-      { receivedBy: userId },
-    ],
-  });
-  return result;
-};
-const getMutualConnections = async (
-  userId1: string,
-  userId2: string
-): Promise<string[]> => {
-  const connections1 = await Connections.find({
-    $or: [{ sentBy: userId1 }, { receivedBy: userId1 }],
-    status: ConnectionStatus.ACCEPTED,
-  }).select('sentBy receivedBy');
-
-  const connections2 = await Connections.find({
-    $or: [{ sentBy: userId2 }, { receivedBy: userId2 }],
-    status: ConnectionStatus.ACCEPTED,
-  }).select('sentBy receivedBy');
-
-  const friends1 = connections1.map(conn =>
-    conn.sentBy.toString() === userId1
-      ? conn.receivedBy.toString()
-      : conn.sentBy.toString()
-  );
-  const friends2 = connections2.map(conn =>
-    conn.sentBy.toString() === userId2
-      ? conn.receivedBy.toString()
-      : conn.sentBy.toString()
-  );
-
-  const mutualFriends = friends1.filter(friend => friends2.includes(friend));
-  return mutualFriends;
-};
-
-const checkConnectionStatus = async (
-  userId1: string,
-  userId2: string
-): Promise<ConnectionStatus | null> => {
-  const connection = await Connections.findOne({
-    $or: [
-      { sentBy: userId1, receivedBy: userId2 },
-      { sentBy: userId2, receivedBy: userId1 },
-    ],
-  });
-
-  return connection ? connection.status : null;
 };
 
 const getConnectionSuggestions = async (
@@ -325,41 +336,25 @@ const getConnectionSuggestions = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ) => {
-  // Fetch the user to get their attributes
   const user = await User.findById(userId).select(
-    'city locationName country profession privacySettings connectionPrivacy'
+    'city locationName country profession privacySettings connectionPrivacy ageRange'
   );
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
-  // Fetch user's accepted connections to exclude them
+  // Get all user connections (any status)
   const connections = await Connections.find({
     $or: [{ sentBy: userId }, { receivedBy: userId }],
-    status: ConnectionStatus.ACCEPTED,
-  }).select('sentBy receivedBy');
+  }).select('sentBy receivedBy status');
 
-  const friends = connections.map(conn =>
+  const connectedUserIds = connections.map(conn =>
     conn.sentBy.toString() === userId
       ? conn.receivedBy.toString()
       : conn.sentBy.toString()
   );
 
-  // Fetch pending or declined connections to exclude them
-  const pendingOrDeclined = await Connections.find({
-    $or: [
-      {
-        sentBy: userId,
-        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
-      },
-      {
-        receivedBy: userId,
-        status: { $in: [ConnectionStatus.PENDING, ConnectionStatus.DECLINED] },
-      },
-    ],
-  }).select('sentBy receivedBy createdAt');
-
-  // Fetch blocked users to exclude them
+  // Get blocked users
   const blockedUsers = await BlockedUser.find({
     $or: [{ blockerId: userId }, { blockedId: userId }],
   }).select('blockerId blockedId');
@@ -370,32 +365,25 @@ const getConnectionSuggestions = async (
       : block.blockerId.toString()
   );
 
-  // Fetch recently removed connections to exclude them
+  // Get recently removed connections (exclude for 24 hours)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const removedConnections = await RemovedConnection.find({
     userId,
+    createdAt: { $gte: oneDayAgo }, // Only recent removals
   }).select('removedUserId');
 
   const removedUserIds = removedConnections.map(conn =>
     conn.removedUserId.toString()
   );
 
-  // Exclude users: self, friends, blocked users, removed users, and recent pending connections
+  // Exclude all connected, blocked, and recently removed users
   const excludeUsers = [
     userId,
-    ...friends,
+    ...connectedUserIds,
     ...blockedUserIds,
     ...removedUserIds,
   ];
 
-  // Fetch pending or declined connections to exclude them
-  const pendingOrDeclinedIds = pendingOrDeclined.map(conn =>
-    conn.sentBy.toString() === userId
-      ? conn.receivedBy.toString()
-      : conn.sentBy.toString()
-  );
-  excludeUsers.push(...pendingOrDeclinedIds);
-
-  // Build query for suggestions based on attributes
   const query: Record<string, any> = {
     _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
     isDeleted: false,
@@ -404,7 +392,7 @@ const getConnectionSuggestions = async (
     $or: [],
   };
 
-  // Add matching attributes to query if they are public
+  // Build suggestions based on matching attributes
   if (
     user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
     user.locationName
@@ -448,7 +436,6 @@ const getConnectionSuggestions = async (
     });
   }
 
-  // If no matching attributes are available, return empty result
   if (query.$or.length === 0) {
     return {
       results: [],
@@ -459,11 +446,9 @@ const getConnectionSuggestions = async (
     };
   }
 
-  // Set pagination options
   options.select = '_id fullName profileImage username';
   options.sortBy = options.sortBy || '-createdAt';
 
-  // Fetch paginated users matching the query
   const paginatedResult = await User.paginate(query, options);
 
   return {
@@ -475,18 +460,26 @@ const getConnectionSuggestions = async (
   };
 };
 
+// Clean up old removed connections (run this as a cron job)
+const cleanupOldRemovedConnections = async () => {
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  await RemovedConnection.deleteMany({
+    createdAt: { $lt: threeDaysAgo },
+  });
+};
+
 export const ConnectionsService = {
   addConnection,
   acceptConnection,
   declineConnection,
-  removeConnection,
   cancelRequest,
   deleteConnection,
+  removeFromSuggestions,
   getMyAllConnections,
   getMyAllRequests,
   getSentMyRequests,
   checkIsSentConnectionExists,
   getMutualConnections,
-  checkConnectionStatus,
   getConnectionSuggestions,
+  cleanupOldRemovedConnections,
 };

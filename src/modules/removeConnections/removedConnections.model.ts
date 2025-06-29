@@ -1,20 +1,25 @@
 import mongoose, { Schema } from 'mongoose';
-import { IRemovedConnection } from './removedConnections.interface';
+
+interface IRemovedConnection {
+  userId: mongoose.Types.ObjectId;
+  removedUserId: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const removedConnectionSchema = new Schema<IRemovedConnection>(
   {
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: [true, 'User ID is required'],
+      index: true,
     },
     removedUserId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-    },
-    removedAt: {
-      type: Date,
-      default: Date.now,
+      required: [true, 'Removed User ID is required'],
+      index: true,
     },
   },
   {
@@ -22,10 +27,16 @@ const removedConnectionSchema = new Schema<IRemovedConnection>(
   }
 );
 
-// Index to automatically expire removed connections after 30 days (optional)
+// Compound index for efficient queries
 removedConnectionSchema.index(
-  { removedAt: 1 },
-  { expireAfterSeconds: 30 * 24 * 60 * 60 }
+  { userId: 1, removedUserId: 1 },
+  { unique: true }
+);
+
+// TTL index to automatically delete documents after 3 days
+removedConnectionSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 3 * 24 * 60 * 60 }
 );
 
 export const RemovedConnection = mongoose.model<IRemovedConnection>(

@@ -62,12 +62,6 @@ router.get(
 );
 
 router.get(
-  '/status/:userId2',
-  auth('User'),
-  ConnectionsController.checkConnectionStatus
-);
-
-router.get(
   '/suggestions',
   auth('User'),
   ConnectionsController.getConnectionSuggestions
