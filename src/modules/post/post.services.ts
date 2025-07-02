@@ -226,9 +226,44 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
 }
 
 async function getPostById(postId: string): Promise<IPost> {
-  const post = await Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  );
+  const post = await Post.findById(postId).populate([
+    {
+      path: 'media',
+      select: 'mediaType mediaUrl',
+    },
+    { path: 'itinerary' },
+    {
+      path: 'userId',
+      select: 'fullName username profileImage',
+    },
+    {
+      path: 'reactions',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
+    {
+      path: 'comments',
+      populate: [
+        {
+          path: 'userId',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'mentions',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
+        },
+      ],
+    },
+  ]);
   if (!post || post.isDeleted) throw new ApiError(404, 'Post not found');
   return post;
 }
@@ -825,14 +860,33 @@ async function getGroupPosts(
     sourceId: filters.groupId,
   };
   options.populate = [
-    'media',
-    'itinerary',
-    'userId',
+    {
+      path: 'media',
+      select: 'mediaType mediaUrl',
+    },
+    { path: 'itinerary' },
+    {
+      path: 'userId',
+      select: 'fullName username profileImage',
+    },
+    {
+      path: 'reactions',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
     {
       path: 'comments',
       populate: [
-        { path: 'userId', select: 'fullName username profileImage' },
-        { path: 'mentions', select: 'fullName username profileImage' },
+        {
+          path: 'userId',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'mentions',
+          select: 'fullName username profileImage',
+        },
         {
           path: 'reactions',
           populate: {
@@ -857,14 +911,33 @@ async function getEventPosts(
     sourceId: filters.eventId,
   };
   options.populate = [
-    'media',
-    'itinerary',
-    'userId',
+    {
+      path: 'media',
+      select: 'mediaType mediaUrl',
+    },
+    { path: 'itinerary' },
+    {
+      path: 'userId',
+      select: 'fullName username profileImage',
+    },
+    {
+      path: 'reactions',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
     {
       path: 'comments',
       populate: [
-        { path: 'userId', select: 'fullName username profileImage' },
-        { path: 'mentions', select: 'fullName username profileImage' },
+        {
+          path: 'userId',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'mentions',
+          select: 'fullName username profileImage',
+        },
         {
           path: 'reactions',
           populate: {

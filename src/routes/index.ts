@@ -19,6 +19,7 @@ import { PostRoutes } from '../modules/post/post.routes';
 import { ItineraryRoutes } from '../modules/Itinerary/itinerary.routes';
 import { HashtagRoutes } from '../modules/hastag/hashtag.routes';
 import { MapsRoutes } from '../modules/maps/maps.routes';
+import { SearchRoutes } from '../modules/search/search.routes';
 const router = express.Router();
 
 const apiRoutes = [
@@ -69,6 +70,10 @@ const apiRoutes = [
   {
     path: '/hashtag',
     route: HashtagRoutes,
+  },
+  {
+    path: '/search',
+    route: SearchRoutes,
   },
   {
     path: '/chats',
