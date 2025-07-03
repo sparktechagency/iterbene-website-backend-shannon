@@ -100,6 +100,7 @@ const postSchema = new Schema<IPost, IPostModel>({
     type: String,
     enum: Object.values(PostPrivacy),
     required: true,
+    default: PostPrivacy.PUBLIC,
   },
   itinerary: {
     type: Schema.Types.ObjectId,

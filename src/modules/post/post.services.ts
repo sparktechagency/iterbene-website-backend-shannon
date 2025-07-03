@@ -87,6 +87,8 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     visitedLocationName,
   } = payload;
 
+  
+
   if (sourceId && postType === PostType.GROUP) {
     const group = await Group.findById(sourceId);
     if (!group || group.isDeleted) throw new ApiError(404, 'Group not found');
@@ -612,8 +614,6 @@ async function feedPosts(
   let connectedUserIds: Types.ObjectId[] = [];
   let followedUserIds: Types.ObjectId[] = [];
   let eligibleUserIds: Types.ObjectId[] = [];
-  let groupIds: Types.ObjectId[] = [];
-  let eventIds: Types.ObjectId[] = [];
   let blockedUserIds: Types.ObjectId[] = [];
 
   if (userId) {
@@ -646,10 +646,6 @@ async function feedPosts(
       ]),
     ].map(id => new Types.ObjectId(id));
 
-    const groups = await Group.find({ members: currentUserId });
-    const events = await Event.find({ members: currentUserId });
-    groupIds = groups.map(g => g._id);
-    eventIds = events.map(e => e._id);
 
     const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
     blockedUserIds = blockedUsers.map(b => b.blockedId);
@@ -662,18 +658,11 @@ async function feedPosts(
           {
             userId: { $in: eligibleUserIds },
             postType: PostType.USER,
-          },
-          {
-            postType: PostType.GROUP,
-            sourceId: { $in: groupIds },
-          },
-          {
-            postType: PostType.EVENT,
-            sourceId: { $in: eventIds },
-          },
+          }
         ]
       : [
           {
+            postType: PostType.USER,
             privacy: PostPrivacy.PUBLIC,
           },
         ],

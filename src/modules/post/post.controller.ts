@@ -14,6 +14,8 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
     [fieldname: string]: Express.Multer.File[];
   };
 
+  console.log("Create Post Body", req.body);
+
   const files = Object.values(filesObject).flat();
   const {
     content,

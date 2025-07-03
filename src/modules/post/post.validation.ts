@@ -7,7 +7,6 @@ export const PostValidation = {
       content: z.string().optional(),
       itineraryId: z.string().optional(),
       postType: z.enum(Object.values(PostType) as [string, ...string[]]),
-      privacy: z.enum(Object.values(PostPrivacy) as [string, ...string[]]),
       sourceId: z.string().optional(),
       visitedLocationName: z.string().optional(),
     }),
