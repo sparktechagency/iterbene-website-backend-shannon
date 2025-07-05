@@ -185,6 +185,7 @@ const getMyInvites = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ) => {
+
   const foundInvites = await EventInvite.find({ to: filters.userId });
   if (foundInvites.length === 0) {
     return {

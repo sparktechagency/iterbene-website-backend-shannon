@@ -813,7 +813,7 @@ async function getUserTimelinePosts(
     },
   ];
 
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
 
   let posts = await Post.paginate(query, options);
 
@@ -886,7 +886,7 @@ async function getGroupPosts(
       ],
     },
   ];
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
   return Post.paginate(query, options);
 }
 
@@ -937,7 +937,7 @@ async function getEventPosts(
       ],
     },
   ];
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
   return Post.paginate(query, options);
 }
 

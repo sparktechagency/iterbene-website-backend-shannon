@@ -49,7 +49,7 @@ const cancelInvite = catchAsync(async (req, res) => {
 });
 
 const getMyInvites = catchAsync(async (req, res) => {
-  const { userId } = req.user;
+  const { userId } = req?.user;
   const filters = pick(req.query, ['name']);
   const options = pick(req.query, ['limit', 'page', 'sortBy']);
   filters.userId = userId;

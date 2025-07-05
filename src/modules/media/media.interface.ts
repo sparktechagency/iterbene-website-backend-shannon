@@ -22,7 +22,7 @@ export enum MediaType {
 
 export enum SourceType {
   USER = 'User',
-  COMMENT = 'comment',
-  GROUP = 'group',
-  EVENT = 'event'
+  COMMENT = 'Comment',
+  GROUP = 'Group',
+  EVENT = 'Event',
 }
