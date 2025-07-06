@@ -39,7 +39,7 @@ const userSchema = new Schema<TUser, UserModal>(
       type: String,
       required: false,
       default:
-        'https://marray-meet.s3.eu-north-1.amazonaws.com/cover.iter-bene.webp',
+        'https://iter-bene.s3.eu-north-1.amazonaws.com/uploads/users/9793d60c-1261-4faf-889a-335a6c532584.png',
     },
     email: {
       type: String,

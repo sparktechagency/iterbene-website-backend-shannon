@@ -29,9 +29,9 @@ const allowedOrigins = [
   'http://localhost:3000', // Next.js dev server
   'http://localhost:5173', // Custom port if used
   'https://rakib3000.sobhoy.com',
-  'http://10.0.80.220:3000',
-  'http://10.0.80.220:7002',
-  'http://10.0.80.220:4173',
+  'http://10.10.7.66:3000',
+  'http://10.10.7.66:7002',
+  'http://10.10.7.66:4173',
   'http://localhost:7003',
   'https://rakib7002.sobhoy.com',
 ];
