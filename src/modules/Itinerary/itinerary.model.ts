@@ -1,6 +1,11 @@
 import { Schema, model } from 'mongoose';
 import paginate from '../../common/plugins/paginate';
-import { IItinerary, ItineraryModel } from './Itinerary.interface';
+import {
+  IActivity,
+  IDay,
+  IItinerary,
+  ItineraryModel,
+} from './Itinerary.interface';
 
 const activitySchema = new Schema({
   time: { type: String, required: true },
@@ -44,18 +49,67 @@ const itinerarySchema = new Schema<IItinerary, ItineraryModel>({
 
 itinerarySchema.plugin(paginate);
 //calculate overall rating
+// Helper function to calculate overall rating
+function calculateOverallRating(days: IDay[]): number {
+  if (!days || !Array.isArray(days) || days.length === 0) {
+    return 0;
+  }
+
+  let totalRating = 0;
+  let totalActivities = 0;
+
+  days.forEach((day: IDay) => {
+    if (day.activities && Array.isArray(day.activities)) {
+      day.activities.forEach((activity: IActivity) => {
+        if (activity?.rating && activity.rating > 0) {
+          totalRating += activity.rating;
+          totalActivities++;
+        }
+      });
+    }
+  });
+
+  if (totalActivities === 0) {
+    return 0;
+  }
+
+  // Return average rating rounded to 2 decimal places
+  return Math.round((totalRating / totalActivities) * 100) / 100;
+}
+
+// Pre-save hook for document save operations
 itinerarySchema.pre('save', function (next) {
-  this.overAllRating = this.days.reduce((acc, day) => {
-    return (
-      acc +
-      day.activities.reduce((acc, activity) => {
-        return acc + (activity?.rating ?? 0);
-      }, 0)
-    );
-  }, 0);
+  try {
+    // Only calculate if days field exists and is modified (or new document)
+    if (this.isNew || this.isModified('days')) {
+      this.overAllRating = calculateOverallRating(this.days);
+    }
+  } catch (error) {
+    console.error('Error calculating overall rating on save:', error);
+    this.overAllRating = 0;
+  }
   next();
 });
 
+// Pre-hook for update operations
+itinerarySchema.pre(
+  ['findOneAndUpdate', 'updateOne', 'updateMany'],
+  function (next) {
+    try {
+      const update = this.getUpdate() as Partial<IItinerary>;
+
+      // Only calculate if days field is being updated
+      if (update && update.days) {
+        const overAllRating = calculateOverallRating(update.days);
+        this.set({ overAllRating });
+      }
+    } catch (error) {
+      console.error('Error calculating overall rating on update:', error);
+      this.set({ overAllRating: 0 });
+    }
+    next();
+  }
+);
 export const Itinerary = model<IItinerary, ItineraryModel>(
   'Itinerary',
   itinerarySchema

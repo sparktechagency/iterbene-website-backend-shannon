@@ -46,4 +46,27 @@ const getUserItineraries = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const ItineraryController = { createItinerary, getItinerary, getUserItineraries };
+const updateItinerary = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { itineraryId } = req.params;
+  const payload = req.body;
+
+  const result = await ItineraryService.updateItinerary(
+    userId,
+    itineraryId,
+    payload
+  );
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Itinerary updated successfully',
+    data: result,
+  });
+});
+
+export const ItineraryController = {
+  createItinerary,
+  getItinerary,
+  getUserItineraries,
+  updateItinerary,
+};

@@ -7,7 +7,8 @@ const router = Router();
 router.route('/').post(auth('User'), ItineraryController.createItinerary);
 
 router
-    .route('/:itineraryId')
-    .get(auth('User'), ItineraryController.getItinerary)
+  .route('/:itineraryId')
+  .get(auth('User'), ItineraryController.getItinerary)
+  .patch(auth('User'), ItineraryController.updateItinerary)
 
 export const ItineraryRoutes = router;
