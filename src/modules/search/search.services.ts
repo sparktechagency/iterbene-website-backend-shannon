@@ -6,11 +6,8 @@ import { User } from '../user/user.model';
 import { Hashtag } from '../hastag/hashtag.model';
 import { Post } from '../post/post.model';
 import { config } from '../../config';
-import { Itinerary } from '../Itinerary/itinerary.model';
-
 // Initialize Google Maps client
 const googleMapsClient = new Client({});
-
 
 // Interfaces according to your format
 interface ISearchingLocation {
@@ -19,21 +16,9 @@ interface ISearchingLocation {
   visitedPlacesCount: number;
 }
 
-interface ISearchingLocationPost {
-  userId: {
-    _id: string;
-    fullName: string;
-    profileImage: string;
-  };
-  visitedLocationName: string;
-  distance: number;
-  days: number;
-  rating: number;
-}
-
 interface SearchResult {
   locations: ISearchingLocation[];
-  posts: ISearchingLocationPost[];
+  posts: IPost[];
 }
 
 interface UsersHashtagsResult {
@@ -41,25 +26,34 @@ interface UsersHashtagsResult {
   hashtags: IHashtag[];
 }
 
-
 // Helper function to calculate distance between two coordinates
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number => {
   const R = 6371; // Radius of the Earth in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c; // Distance in kilometers
   return Math.round(distance);
 };
 
 // Helper function to get photo URL from Google Places
-const getPhotoUrl = (photoReference: string, maxWidth: number = 500): string => {
+const getPhotoUrl = (
+  photoReference: string,
+  maxWidth: number = 500
+): string => {
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photoreference=${photoReference}&key=${config.googleMapsApiKey}`;
 };
-
 
 // Modified search for locations with your specified format
 const searchLocationPost = async (
@@ -68,14 +62,14 @@ const searchLocationPost = async (
 ): Promise<SearchResult> => {
   try {
     let userLocation: { lat: number; lng: number } | null = null;
-    
+
     // Get user location if userId is provided
     if (userId) {
       const user = await User.findById(userId).select('location');
       if (user && user.location) {
         userLocation = {
           lat: user.location.latitude || 0,
-          lng: user.location.longitude || 0
+          lng: user.location.longitude || 0,
         };
       }
     }
@@ -94,7 +88,7 @@ const searchLocationPost = async (
     }
 
     const locations: ISearchingLocation[] = [];
-    const posts: ISearchingLocationPost[] = [];
+    const posts = [];
 
     for (const place of places) {
       const locationName = place.name || '';
@@ -132,40 +126,16 @@ const searchLocationPost = async (
       const relatedPosts = await Post.find({
         $or: [
           { visitedLocationName: { $regex: new RegExp(searchTerm, 'i') } },
-          { content: { $regex: new RegExp(searchTerm, 'i') } }
+          { content: { $regex: new RegExp(searchTerm, 'i') } },
         ],
-        isDeleted: false
-      })
-      .populate('userId', '_id fullName profileImage')
-      .populate('itinerary')
-      .lean();
-
-      // Step 3: Search in itineraries for more posts
-      const relatedItineraries = await Itinerary.find({
-        $or: [
-          { 'days.locationName': { $regex: new RegExp(searchTerm, 'i') } },
-          { tripName: { $regex: new RegExp(searchTerm, 'i') } },
-          { departure: { $regex: new RegExp(searchTerm, 'i') } },
-          { arrival: { $regex: new RegExp(searchTerm, 'i') } }
-        ],
-        isDeleted: false
-      })
-      .populate({
-        path: 'postId',
-        populate: {
-          path: 'userId',
-          select: '_id fullName profileImage'
-        }
-      })
-      .lean();
+        isDeleted: false,
+      }).populate('userId', '_id fullName profileImage');
 
       // Process regular posts
       for (const post of relatedPosts) {
         if (!post.userId || typeof post.userId !== 'object') continue;
 
         let distance = 0;
-        let days = 0;
-        let rating = 0;
 
         // Calculate distance if user location and post location available
         if (userLocation && post.visitedLocation) {
@@ -176,76 +146,19 @@ const searchLocationPost = async (
             post.visitedLocation.longitude
           );
         }
-
-        // Get itinerary details if available
-        if (post.itinerary && typeof post.itinerary === 'object') {
-          const itinerary = post.itinerary as any;
-          days = itinerary.days?.length || 0;
-          rating = itinerary.overAllRating || 0;
-        }
-
         posts.push({
-          userId: {
-            _id: (post.userId as any)._id.toString(),
-            fullName: (post.userId as any).fullName || '',
-            profileImage: (post.userId as any).profileImage || '',
-          },
+          post,
           visitedLocationName: post.visitedLocationName || locationName,
           distance,
-          days,
-          rating,
         });
       }
-
-      // Process itinerary posts
-      for (const itinerary of relatedItineraries) {
-        if (!itinerary.postId || !itinerary.postId?.userId) continue;
-
-        const post = itinerary.postId as any;
-        const user = post.userId;
-
-        let distance = 0;
-
-        // Calculate distance from itinerary location
-        if (userLocation && itinerary.days && itinerary.days.length > 0) {
-          const firstDay = itinerary.days[0];
-          if (firstDay.location) {
-            distance = calculateDistance(
-              userLocation.lat,
-              userLocation.lng,
-              firstDay.location.latitude,
-              firstDay.location.longitude
-            );
-          }
-        }
-
-        posts.push({
-          userId: {
-            _id: user._id.toString(),
-            fullName: user.fullName || '',
-            profileImage: user.profileImage || '',
-          },
-          visitedLocationName: itinerary.departure || itinerary.arrival || locationName,
-          distance,
-          days: itinerary.days?.length || 0,
-          rating: itinerary.overAllRating || 0,
-        });
-      }
+      return { locations, posts };
     }
-
-    // Remove duplicate posts based on userId and locationName
-    const uniquePosts = posts.filter((post, index, self) =>
-      index === self.findIndex((p) => 
-        p.userId._id === post.userId._id && 
-        p.visitedLocationName === post.visitedLocationName
-      )
-    );
 
     return {
       locations,
-      posts: uniquePosts,
+      posts,
     };
-
   } catch (error: any) {
     console.error('Error in searchLocationPost:', error.message);
     throw new Error('Failed to search for location data');
@@ -285,5 +198,5 @@ const searchUsersHashtags = async (
 };
 export const searchServices = {
   searchLocationPost,
-  searchUsersHashtags
+  searchUsersHashtags,
 };

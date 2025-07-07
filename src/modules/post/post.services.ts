@@ -381,7 +381,8 @@ const updatePost = async (
   };
 
   if (content !== undefined) updateData.content = content;
-  if (newMediaIds?.length > 0) updateData.media = [...post.media, ...newMediaIds];
+  if (newMediaIds?.length > 0)
+    updateData.media = [...post.media, ...newMediaIds];
   if (itineraryId !== undefined) updateData.itinerary = itinerary;
   if (postType !== undefined) updateData.postType = postType;
   if (privacy !== undefined) updateData.privacy = privacy;
@@ -449,7 +450,9 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
   const post = await Post.findOne({
     _id: postId,
     userId: new Types.ObjectId(userId),
+    isDeleted: false,
   });
+
   if (!post) {
     throw new ApiError(404, 'Post not found');
   }
