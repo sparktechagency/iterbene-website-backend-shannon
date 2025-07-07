@@ -8,6 +8,9 @@ export const awsConfig = {
     accessKeyId: config.aws.accessKeyId,
     secretAccessKey: config.aws.secretAccessKey,
   },
+  httpOptions: {
+     timeout: 30000 // 30 seconds
+  }
 };
 
 export const s3Client = new S3Client({

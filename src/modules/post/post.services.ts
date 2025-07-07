@@ -74,7 +74,7 @@ interface DeleteCommentPayload {
   commentId: string;
 }
 
-async function createPost(payload: CreatePostPayload): Promise<IPost> {
+const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
   const {
     userId,
     content,
@@ -86,8 +86,6 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     visitedLocation,
     visitedLocationName,
   } = payload;
-
-  
 
   if (sourceId && postType === PostType.GROUP) {
     const group = await Group.findById(sourceId);
@@ -211,23 +209,200 @@ async function createPost(payload: CreatePostPayload): Promise<IPost> {
     )
   );
 
-  if (sourceId && postType === PostType.GROUP) {
-    await Group.updateOne(
-      { _id: sourceId },
-      { $addToSet: { posts: post._id } }
-    );
-  }
-  if (sourceId && postType === PostType.EVENT) {
-    await Event.updateOne(
-      { _id: sourceId },
-      { $addToSet: { posts: post._id } }
-    );
-  }
-
   return post.populate('media itinerary userId sourceId');
-}
+};
 
-async function getPostById(postId: string): Promise<IPost> {
+const updatePost = async (
+  postId: string,
+  payload: Partial<CreatePostPayload>
+): Promise<IPost | null> => {
+  const {
+    userId,
+    content,
+    files,
+    itineraryId,
+    postType,
+    privacy,
+    sourceId,
+    visitedLocation,
+    visitedLocationName,
+  } = payload;
+
+  // Validate user exists
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  // Find the post
+  const post = await Post.findOne({
+    _id: postId,
+    userId: new Types.ObjectId(userId),
+    isDeleted: false,
+  });
+  if (!post) throw new ApiError(404, 'Post not found');
+
+  // Validate sourceId if postType is being updated
+  if (postType && sourceId) {
+    if (postType === PostType.GROUP) {
+      const group = await Group.findById(sourceId);
+      if (!group || group.isDeleted) throw new ApiError(404, 'Group not found');
+    }
+    if (postType === PostType.EVENT) {
+      const event = await Event.findById(sourceId);
+      if (!event || event.isDeleted) throw new ApiError(404, 'Event not found');
+    }
+  }
+
+  // Handle itinerary update
+  let itinerary: Types.ObjectId | undefined;
+  if (itineraryId !== undefined) {
+    if (itineraryId) {
+      const itineraryDoc = await Itinerary.findById(itineraryId);
+      if (!itineraryDoc) throw new ApiError(404, 'Itinerary not found');
+      itinerary = itineraryDoc._id;
+    } else {
+      itinerary = undefined;
+    }
+  }
+
+  // Handle media update if files are provided
+  let newMediaIds: Types.ObjectId[] = [];
+  if (files && files.length > 0) {
+    // Upload new media files
+    const mediaData = await Promise.all(
+      files.map(async file => {
+        const mediaUrl = await uploadFilesToS3([file], UPLOADS_FOLDER);
+        const fileMediaType = file.mimetype.startsWith('image')
+          ? MediaType.IMAGE
+          : file.mimetype.startsWith('video')
+          ? MediaType.VIDEO
+          : file.mimetype.startsWith('audio')
+          ? MediaType.AUDIO
+          : MediaType.DOCUMENT;
+        return {
+          sourceId: new Types.ObjectId(postId),
+          sourceType: postType || post.postType,
+          mediaType: fileMediaType,
+          mediaUrl: mediaUrl[0],
+          isDeleted: false,
+        };
+      })
+    );
+
+    const mediaDocs = await Media.insertMany(mediaData);
+    newMediaIds = mediaDocs.map(m => m._id);
+  }
+
+  // Handle hashtags update if content is provided
+  let uniqueHashtags: string[] = [];
+  if (content !== undefined) {
+    // Remove old hashtags from hashtag collection
+    if (post.hashtags && post.hashtags.length > 0) {
+      await Hashtag.updateMany(
+        { _id: { $in: post.hashtags } },
+        {
+          $inc: { postCount: -1 },
+          $pull: { posts: post._id },
+        }
+      );
+    }
+
+    // Extract and process new hashtags
+    const hashtags = extractHashtags(content || '');
+    uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace(/^#/, '')))];
+
+    if (uniqueHashtags.length > 0) {
+      await Promise.all(
+        uniqueHashtags.map(async tag => {
+          await Hashtag.findOneAndUpdate(
+            { _id: tag },
+            {
+              $setOnInsert: { name: tag, createdAt: new Date() },
+              $inc: { postCount: 1 },
+              $addToSet: { posts: post._id },
+            },
+            { upsert: true }
+          );
+        })
+      );
+    }
+  }
+
+  // Handle visited location update
+  if (visitedLocation !== undefined && visitedLocationName !== undefined) {
+    if (visitedLocation && visitedLocationName) {
+      const mapsUser = await Maps.findOne({ userId });
+      if (mapsUser) {
+        // Check if this location already exists for this user
+        const existingLocation = mapsUser.visitedLocation.find(
+          loc => loc.visitedLocationName === visitedLocationName
+        );
+        if (!existingLocation) {
+          mapsUser.visitedLocation.push({
+            latitude: visitedLocation.latitude || 0,
+            longitude: visitedLocation.longitude || 0,
+            visitedLocationName: visitedLocationName,
+          });
+          await mapsUser.save();
+        }
+      } else {
+        await Maps.create({
+          userId,
+          visitedLocation: [
+            {
+              latitude: visitedLocation.latitude || 0,
+              longitude: visitedLocation.longitude || 0,
+              visitedLocationName: visitedLocationName,
+            },
+          ],
+        });
+      }
+    }
+  }
+
+  // Handle itinerary relationship update
+  if (itineraryId !== undefined) {
+    // Remove old itinerary relationship
+    if (post.itinerary) {
+      await Itinerary.updateOne(
+        { _id: post.itinerary },
+        { $unset: { postId: '' } }
+      );
+    }
+
+    // Add new itinerary relationship
+    if (itinerary) {
+      await Itinerary.updateOne({ _id: itinerary }, { postId: post._id });
+    }
+  }
+
+  // Prepare update data
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
+
+  if (content !== undefined) updateData.content = content;
+  if (newMediaIds?.length > 0) updateData.media = [...post.media, ...newMediaIds];
+  if (itineraryId !== undefined) updateData.itinerary = itinerary;
+  if (postType !== undefined) updateData.postType = postType;
+  if (privacy !== undefined) updateData.privacy = privacy;
+  if (sourceId !== undefined)
+    updateData.sourceId = sourceId ? new Types.ObjectId(sourceId) : undefined;
+  if (visitedLocation !== undefined)
+    updateData.visitedLocation = visitedLocation;
+  if (visitedLocationName !== undefined)
+    updateData.visitedLocationName = visitedLocationName;
+  if (uniqueHashtags.length > 0 || content !== undefined)
+    updateData.hashtags = uniqueHashtags;
+
+  // Update the post
+  const response = await Post.findOneAndUpdate({ _id: postId }, updateData, {
+    new: true,
+  });
+
+  return response;
+};
+
+const getPostById = async (postId: string): Promise<IPost> => {
   const post = await Post.findById(postId).populate([
     {
       path: 'media',
@@ -268,29 +443,9 @@ async function getPostById(postId: string): Promise<IPost> {
   ]);
   if (!post || post.isDeleted) throw new ApiError(404, 'Post not found');
   return post;
-}
+};
 
-async function updatePost(
-  postId: string,
-  payload: Partial<CreatePostPayload>
-): Promise<IPost | null> {
-  const user = await User.findById(payload?.userId);
-  if (!user) throw new ApiError(404, 'User not found');
-  const post = await Post.findById(postId);
-  if (!post) throw new ApiError(404, 'Post not found');
-  if (
-    !payload?.userId ||
-    post.userId.toString() !== payload?.userId.toString()
-  ) {
-    throw new ApiError(403, 'Not authorized to update this post');
-  }
-  await Post.findOneAndUpdate({ _id: postId }, payload, { new: true });
-  return Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  );
-}
-
-async function deletePost(userId: string, postId: string): Promise<IPost> {
+const deletePost = async (userId: string, postId: string): Promise<IPost> => {
   const post = await Post.findOne({
     _id: postId,
     userId: new Types.ObjectId(userId),
@@ -309,9 +464,9 @@ async function deletePost(userId: string, postId: string): Promise<IPost> {
     { isDeleted: true }
   );
   return post.populate('media itinerary userId sourceId comments.mentions');
-}
+};
 
-async function sharePost(payload: SharePostPayload): Promise<IPost> {
+const sharePost = async (payload: SharePostPayload): Promise<IPost> => {
   const { userId, originalPostId, content, privacy } = payload;
 
   const originalPost = await Post.findById(originalPostId);
@@ -338,11 +493,11 @@ async function sharePost(payload: SharePostPayload): Promise<IPost> {
   return sharedPost.populate(
     'media itinerary userId originalPostId comments.mentions'
   );
-}
+};
 
-async function addOrRemoveReaction(
+const addOrRemoveReaction = async (
   payload: AddOrRemoveReactionPayload
-): Promise<IPost> {
+): Promise<IPost> => {
   const { userId, postId, reactionType } = payload;
   const post = await Post.findById(postId);
   if (!post) {
@@ -404,11 +559,11 @@ async function addOrRemoveReaction(
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
-}
+};
 
-async function addOrRemoveCommentReaction(
+const addOrRemoveCommentReaction = async (
   payload: AddOrRemoveCommentReactionPayload
-): Promise<IPost> {
+): Promise<IPost> => {
   const { userId, postId, commentId, reactionType } = payload;
 
   const post = await Post.findById(postId);
@@ -471,9 +626,9 @@ async function addOrRemoveCommentReaction(
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
-}
+};
 
-async function createComment(payload: CreateCommentPayload): Promise<IPost> {
+const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   const { userId, postId, comment, replyTo, parentCommentId, mentions } =
     payload;
 
@@ -525,9 +680,9 @@ async function createComment(payload: CreateCommentPayload): Promise<IPost> {
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
-}
+};
 
-async function updateComment(payload: UpdateCommentPayload): Promise<IPost> {
+const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
   const { userId, postId, commentId, comment, mentions } = payload;
 
   const post = await Post.findById(postId);
@@ -576,9 +731,9 @@ async function updateComment(payload: UpdateCommentPayload): Promise<IPost> {
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
-}
+};
 
-async function deleteComment(payload: DeleteCommentPayload): Promise<IPost> {
+const deleteComment = async (payload: DeleteCommentPayload): Promise<IPost> => {
   const { userId, postId, commentId } = payload;
 
   const post = await Post.findById(postId);
@@ -602,12 +757,12 @@ async function deleteComment(payload: DeleteCommentPayload): Promise<IPost> {
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
-}
+};
 
-async function feedPosts(
+const feedPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IPost>> {
+): Promise<PaginateResult<IPost>> => {
   const { userId } = filters;
 
   let currentUserId: Types.ObjectId | null = null;
@@ -646,7 +801,6 @@ async function feedPosts(
       ]),
     ].map(id => new Types.ObjectId(id));
 
-
     const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
     blockedUserIds = blockedUsers.map(b => b.blockedId);
   }
@@ -658,7 +812,7 @@ async function feedPosts(
           {
             userId: { $in: eligibleUserIds },
             postType: PostType.USER,
-          }
+          },
         ]
       : [
           {
@@ -753,12 +907,12 @@ async function feedPosts(
   });
 
   return posts;
-}
+};
 
-async function getUserTimelinePosts(
+const getUserTimelinePosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IPost>> {
+): Promise<PaginateResult<IPost>> => {
   const query: Record<string, any> = {
     postType: PostType.USER,
     privacy: PostPrivacy.PUBLIC,
@@ -837,12 +991,12 @@ async function getUserTimelinePosts(
   }
 
   return posts;
-}
+};
 
-async function getGroupPosts(
+const getGroupPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IPost>> {
+): Promise<PaginateResult<IPost>> => {
   const query: Record<string, any> = {
     isDeleted: false,
     postType: PostType.GROUP,
@@ -888,12 +1042,12 @@ async function getGroupPosts(
   ];
   options.sortBy = options.sortBy || 'createdAt';
   return Post.paginate(query, options);
-}
+};
 
-async function getEventPosts(
+const getEventPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
-): Promise<PaginateResult<IPost>> {
+): Promise<PaginateResult<IPost>> => {
   const query: Record<string, any> = {
     isDeleted: false,
     postType: PostType.EVENT,
@@ -939,18 +1093,12 @@ async function getEventPosts(
   ];
   options.sortBy = options.sortBy || 'createdAt';
   return Post.paginate(query, options);
-}
+};
 
 function extractHashtags(content: string): string[] {
   const regex = /#(\w+)/g;
   const matches = content.match(regex) || [];
   return matches;
-}
-
-function extractMentions(content: string): string[] {
-  const regex = /@(\w+)/g;
-  const matches = content.match(regex) || [];
-  return matches.map(mention => mention.replace(/^@/, ''));
 }
 
 export const PostServices = {

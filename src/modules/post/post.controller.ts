@@ -13,9 +13,6 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
   const filesObject = req.files as {
     [fieldname: string]: Express.Multer.File[];
   };
-
-  console.log("Create Post Body", req.body);
-
   const files = Object.values(filesObject).flat();
   const {
     content,
@@ -58,6 +55,54 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updatePost = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { postId } = req.params;
+  const filesObject = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  };
+
+  const files = Object.values(filesObject).flat();
+  const {
+    content,
+    itineraryId,
+    postType,
+    privacy,
+    sourceId,
+    visitedLocationName,
+  } = req.body;
+
+  let visitedLocation = req.body.visitedLocation;
+  if (typeof visitedLocation === 'string') {
+    try {
+      visitedLocation = JSON.parse(visitedLocation);
+    } catch (error) {
+      return sendResponse(res, {
+        code: StatusCodes.BAD_REQUEST,
+        message: 'Invalid JSON format for visitedLocation',
+        data: null,
+      });
+    }
+  }
+
+  const result = await PostServices.updatePost(postId, {
+    userId,
+    content,
+    files,
+    itineraryId,
+    postType,
+    privacy,
+    sourceId,
+    visitedLocation,
+    visitedLocationName,
+  });
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Post updated successfully',
+    data: result,
+  });
+});
 const sharePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { originalPostId, content, privacy } = req.body;
@@ -262,56 +307,6 @@ const getEventPosts = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
-const updatePost = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const { postId } = req.params;
-  const filesObject = req.files as {
-    [fieldname: string]: Express.Multer.File[];
-  };
-
-  const files = Object.values(filesObject).flat();
-  const {
-    content,
-    itineraryId,
-    postType,
-    privacy,
-    sourceId,
-    visitedLocationName,
-  } = req.body;
-
-  let visitedLocation = req.body.visitedLocation;
-  if (typeof visitedLocation === 'string') {
-    try {
-      visitedLocation = JSON.parse(visitedLocation);
-    } catch (error) {
-      return sendResponse(res, {
-        code: StatusCodes.BAD_REQUEST,
-        message: 'Invalid JSON format for visitedLocation',
-        data: null,
-      });
-    }
-  }
-
-  const result = await PostServices.updatePost(postId, {
-    userId,
-    content,
-    files,
-    itineraryId,
-    postType,
-    privacy,
-    sourceId,
-    visitedLocation,
-    visitedLocationName,
-  });
-
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Post updated successfully',
-    data: result,
-  });
-});
-
 const deletePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId } = req.params;
