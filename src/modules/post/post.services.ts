@@ -172,8 +172,36 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
     comments: [],
   });
 
+  if (itinerary) {
+    await Itinerary.updateOne({ _id: itinerary }, { postId: post._id });
+  }
+
+  if (uniqueHashtags.length) {
+    await Hashtag.updateMany(
+      { _id: { $in: uniqueHashtags } },
+      { $addToSet: { posts: post._id } }
+    );
+  }
+
+  await Promise.all(
+    mediaDocs.map(media =>
+      Media.updateOne({ _id: media._id }, { sourceId: post._id })
+    )
+  );
+
+  // add visited location for user maps
   if (visitedLocation && visitedLocationName) {
     const mapsUser = await Maps.findOne({ userId });
+    // cannot entry duplicate visitedLocation
+    const existingSameLocation = mapsUser?.visitedLocation.find(
+      item =>
+        item.latitude === visitedLocation?.latitude &&
+        item.longitude === visitedLocation?.longitude &&
+        item.visitedLocationName === visitedLocationName
+    );
+    if (existingSameLocation) {
+      return post.populate('media itinerary userId sourceId');
+    }
     if (mapsUser) {
       mapsUser.visitedLocation.push({
         latitude: visitedLocation?.latitude || 0,
@@ -194,23 +222,6 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
       });
     }
   }
-
-  if (itinerary) {
-    await Itinerary.updateOne({ _id: itinerary }, { postId: post._id });
-  }
-
-  if (uniqueHashtags.length) {
-    await Hashtag.updateMany(
-      { _id: { $in: uniqueHashtags } },
-      { $addToSet: { posts: post._id } }
-    );
-  }
-
-  await Promise.all(
-    mediaDocs.map(media =>
-      Media.updateOne({ _id: media._id }, { sourceId: post._id })
-    )
-  );
 
   return post.populate('media itinerary userId sourceId');
 };
@@ -330,39 +341,6 @@ const updatePost = async (
       );
     }
   }
-
-  // Handle visited location update
-  if (visitedLocation !== undefined && visitedLocationName !== undefined) {
-    if (visitedLocation && visitedLocationName) {
-      const mapsUser = await Maps.findOne({ userId });
-      if (mapsUser) {
-        // Check if this location already exists for this user
-        const existingLocation = mapsUser.visitedLocation.find(
-          loc => loc.visitedLocationName === visitedLocationName
-        );
-        if (!existingLocation) {
-          mapsUser.visitedLocation.push({
-            latitude: visitedLocation.latitude || 0,
-            longitude: visitedLocation.longitude || 0,
-            visitedLocationName: visitedLocationName,
-          });
-          await mapsUser.save();
-        }
-      } else {
-        await Maps.create({
-          userId,
-          visitedLocation: [
-            {
-              latitude: visitedLocation.latitude || 0,
-              longitude: visitedLocation.longitude || 0,
-              visitedLocationName: visitedLocationName,
-            },
-          ],
-        });
-      }
-    }
-  }
-
   // Handle itinerary relationship update
   if (itineraryId !== undefined) {
     // Remove old itinerary relationship
@@ -403,7 +381,42 @@ const updatePost = async (
   const response = await Post.findOneAndUpdate({ _id: postId }, updateData, {
     new: true,
   });
-
+  // Handle visited location update
+  if (visitedLocation !== undefined && visitedLocationName !== undefined) {
+    // add visited location for user maps
+    if (visitedLocation && visitedLocationName) {
+      const mapsUser = await Maps.findOne({ userId });
+      // cannot entry duplicate visitedLocation
+      const existingSameLocation = mapsUser?.visitedLocation.find(
+        item =>
+          item.latitude === visitedLocation?.latitude &&
+          item.longitude === visitedLocation?.longitude &&
+          item.visitedLocationName === visitedLocationName
+      );
+      if (existingSameLocation) {
+        return response;
+      }
+      if (mapsUser) {
+        mapsUser.visitedLocation.push({
+          latitude: visitedLocation?.latitude || 0,
+          longitude: visitedLocation?.longitude || 0,
+          visitedLocationName: visitedLocationName as string,
+        });
+        await mapsUser.save();
+      } else {
+        await Maps.create({
+          userId,
+          visitedLocation: [
+            {
+              latitude: visitedLocation?.latitude || 0,
+              longitude: visitedLocation?.longitude || 0,
+              visitedLocationName: visitedLocationName as string,
+            },
+          ],
+        });
+      }
+    }
+  }
   return response;
 };
 
@@ -584,18 +597,6 @@ const addOrRemoveReaction = async (
   ) as Promise<IPost>;
 };
 
-/**
- * Adds or removes a reaction to a comment on a post.
- * If the reaction exists, it is removed. If the reaction does not exist, it is added.
- * If the reaction exists with a different type, it is updated to the new type.
- * The post is returned with the updated comment and reactions.
- *
- * @param {AddOrRemoveCommentReactionPayload} payload - The payload to add or remove the reaction.
- * @returns {Promise<IPost>} The updated post with the comment and reactions.
- * @throws {ApiError} - If the post is not found.
- * @throws {ApiError} - If the comment is not found.
- * @throws {ApiError} - If the reaction type is invalid.
- */
 const addOrRemoveCommentReaction = async (
   payload: AddOrRemoveCommentReactionPayload
 ): Promise<IPost> => {
@@ -662,28 +663,6 @@ const addOrRemoveCommentReaction = async (
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
 };
-
-/**
- * Creates a new comment on a post.
- *
- * This function adds a comment to a specified post. If a parent comment ID is provided,
- * the new comment is added as a reply to the parent comment. If mentions are included,
- * their usernames are validated against existing users.
- *
- * @param {CreateCommentPayload} payload - The payload containing details of the comment to be created.
- * @param {Types.ObjectId} payload.userId - The ID of the user creating the comment.
- * @param {string} payload.postId - The ID of the post to which the comment is being added.
- * @param {string} payload.comment - The content of the comment.
- * @param {string} [payload.replyTo] - The ID of the comment to which this comment is a reply.
- * @param {string} [payload.parentCommentId] - The ID of the parent comment for nested comments.
- * @param {string[]} [payload.mentions] - List of usernames mentioned in the comment.
- *
- * @returns {Promise<IPost>} The updated post with the new comment.
- *
- * @throws {ApiError} - Throws an error if the post is not found.
- * @throws {ApiError} - Throws an error if the parent comment does not exist.
- * @throws {ApiError} - Throws an error if any mentioned usernames are invalid.
- */
 
 const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   const { userId, postId, comment, replyTo, parentCommentId, mentions } =
@@ -1170,8 +1149,6 @@ const getVisitedPostsWithDistance = async (
   if (!user || !user?.location) {
     throw new Error('User location not found');
   }
-
-  console.log("Reached here 1");
   const userLat = user?.location?.latitude;
   const userLon = user?.location?.longitude;
 
@@ -1187,12 +1164,12 @@ const getVisitedPostsWithDistance = async (
   };
 
   // Set up population options
-  options.select = 'media visitedLocation visitedLocationName content'
+  options.select = 'media visitedLocation visitedLocationName content';
   options.populate = [
     {
       path: 'media',
       select: 'mediaType mediaUrl',
-    }
+    },
   ];
 
   // Get paginated posts
@@ -1218,7 +1195,6 @@ const getVisitedPostsWithDistance = async (
 
     return postObj;
   });
-
 
   return {
     ...result,
