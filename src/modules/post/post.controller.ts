@@ -320,6 +320,18 @@ const deletePost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getVisitedPostsWithDistance = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const options = pick(req.query, ['page', 'limit']);
+  const result = await PostServices.getVisitedPostsWithDistance(userId, options);
+
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Visited posts retrieved successfully',
+    data: result,
+  });
+});
+
 export const PostController = {
   createPost,
   sharePost,
@@ -335,4 +347,5 @@ export const PostController = {
   updateComment,
   deletePost,
   deleteComment,
+  getVisitedPostsWithDistance,
 };

@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { MediaType, SourceType } from '../media/media.interface';
+import { MediaType } from '../media/media.interface';
 import { IPost, PostPrivacy, PostType, ReactionType } from './post.interface';
 import ApiError from '../../errors/ApiError';
 import Group from '../group/group.model';
@@ -16,6 +16,8 @@ import { Follower } from '../followers/followers.model';
 import { User } from '../user/user.model';
 import { Maps } from '../maps/maps.model';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
+import { StatusCodes } from 'http-status-codes';
+import calculateDistance from '../../utils/calculateDistance';
 
 const UPLOADS_FOLDER = 'uploads/posts';
 
@@ -74,6 +76,7 @@ interface DeleteCommentPayload {
   commentId: string;
 }
 
+// Create a new post
 const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
   const {
     userId,
@@ -212,6 +215,7 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
   return post.populate('media itinerary userId sourceId');
 };
 
+// Update post
 const updatePost = async (
   postId: string,
   payload: Partial<CreatePostPayload>
@@ -403,6 +407,7 @@ const updatePost = async (
   return response;
 };
 
+// Get post by id
 const getPostById = async (postId: string): Promise<IPost> => {
   const post = await Post.findById(postId).populate([
     {
@@ -446,6 +451,7 @@ const getPostById = async (postId: string): Promise<IPost> => {
   return post;
 };
 
+// Delete post
 const deletePost = async (userId: string, postId: string): Promise<IPost> => {
   const post = await Post.findOne({
     _id: postId,
@@ -469,6 +475,7 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
   return post.populate('media itinerary userId sourceId comments.mentions');
 };
 
+// Share post
 const sharePost = async (payload: SharePostPayload): Promise<IPost> => {
   const { userId, originalPostId, content, privacy } = payload;
 
@@ -498,6 +505,11 @@ const sharePost = async (payload: SharePostPayload): Promise<IPost> => {
   );
 };
 
+/**
+ * Add or remove a reaction to/from a post
+ * @param {AddOrRemoveReactionPayload} payload
+ * @returns {Promise<IPost>}
+ */
 const addOrRemoveReaction = async (
   payload: AddOrRemoveReactionPayload
 ): Promise<IPost> => {
@@ -507,21 +519,26 @@ const addOrRemoveReaction = async (
     throw new ApiError(404, 'Post not found');
   }
 
+  // Check if the reaction type is valid
   if (!Object.values(ReactionType).includes(reactionType)) {
     throw new ApiError(400, 'Invalid reaction type');
   }
 
+  // Find the existing reaction
   const existingReaction = post.reactions.find(
     r => r.userId.toString() === userId.toString()
   );
 
+  // If the reaction exists, check if it's the same type
   if (existingReaction) {
     if (existingReaction.reactionType === reactionType) {
+      // Remove the reaction if it's the same type
       await Post.updateOne(
         { _id: postId },
         { $pull: { reactions: { userId } } }
       );
     } else {
+      // Update the reaction type if it's different
       await Post.updateOne(
         { _id: postId, 'reactions.userId': userId },
         {
@@ -533,6 +550,7 @@ const addOrRemoveReaction = async (
       );
     }
   } else {
+    // Add a new reaction
     await Post.updateOne(
       { _id: postId },
       {
@@ -549,6 +567,7 @@ const addOrRemoveReaction = async (
     );
   }
 
+  // Recalculate the sorted reactions
   const reactions = await Post.findById(postId).select('reactions');
   const reactionCounts = Object.values(ReactionType).map(type => ({
     type,
@@ -559,11 +578,24 @@ const addOrRemoveReaction = async (
     { $set: { sortedReactions: reactionCounts } }
   );
 
+  // Return the updated post
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
 };
 
+/**
+ * Adds or removes a reaction to a comment on a post.
+ * If the reaction exists, it is removed. If the reaction does not exist, it is added.
+ * If the reaction exists with a different type, it is updated to the new type.
+ * The post is returned with the updated comment and reactions.
+ *
+ * @param {AddOrRemoveCommentReactionPayload} payload - The payload to add or remove the reaction.
+ * @returns {Promise<IPost>} The updated post with the comment and reactions.
+ * @throws {ApiError} - If the post is not found.
+ * @throws {ApiError} - If the comment is not found.
+ * @throws {ApiError} - If the reaction type is invalid.
+ */
 const addOrRemoveCommentReaction = async (
   payload: AddOrRemoveCommentReactionPayload
 ): Promise<IPost> => {
@@ -630,6 +662,28 @@ const addOrRemoveCommentReaction = async (
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
 };
+
+/**
+ * Creates a new comment on a post.
+ *
+ * This function adds a comment to a specified post. If a parent comment ID is provided,
+ * the new comment is added as a reply to the parent comment. If mentions are included,
+ * their usernames are validated against existing users.
+ *
+ * @param {CreateCommentPayload} payload - The payload containing details of the comment to be created.
+ * @param {Types.ObjectId} payload.userId - The ID of the user creating the comment.
+ * @param {string} payload.postId - The ID of the post to which the comment is being added.
+ * @param {string} payload.comment - The content of the comment.
+ * @param {string} [payload.replyTo] - The ID of the comment to which this comment is a reply.
+ * @param {string} [payload.parentCommentId] - The ID of the parent comment for nested comments.
+ * @param {string[]} [payload.mentions] - List of usernames mentioned in the comment.
+ *
+ * @returns {Promise<IPost>} The updated post with the new comment.
+ *
+ * @throws {ApiError} - Throws an error if the post is not found.
+ * @throws {ApiError} - Throws an error if the parent comment does not exist.
+ * @throws {ApiError} - Throws an error if any mentioned usernames are invalid.
+ */
 
 const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   const { userId, postId, comment, replyTo, parentCommentId, mentions } =
@@ -912,6 +966,7 @@ const feedPosts = async (
   return posts;
 };
 
+//
 const getUserTimelinePosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -996,6 +1051,7 @@ const getUserTimelinePosts = async (
   return posts;
 };
 
+// get group posts
 const getGroupPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -1047,6 +1103,7 @@ const getGroupPosts = async (
   return Post.paginate(query, options);
 };
 
+// Get event posts
 const getEventPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -1104,19 +1161,119 @@ function extractHashtags(content: string): string[] {
   return matches;
 }
 
+const getVisitedPostsWithDistance = async (
+  userId: string,
+  options: PaginateOptions
+): Promise<PaginateResult<IPost[]>> => {
+  // Get user's current location
+  const user = await User.findById(userId).select('location');
+  if (!user || !user?.location) {
+    throw new Error('User location not found');
+  }
+
+  const userLat = user?.location?.latitude;
+  const userLon = user?.location?.longitude;
+
+  // Build query for posts with visited location
+  const query: Record<string, any> = {
+    isDeleted: false,
+    postType: PostType.USER,
+    userId: userId,
+    visitedLocation: { $exists: true, $ne: null },
+    visitedLocationName: { $exists: true, $ne: null },
+    'visitedLocation.latitude': { $exists: true, $ne: null },
+    'visitedLocation.longitude': { $exists: true, $ne: null },
+  };
+
+  // Set up population options
+  options.populate = [
+    {
+      path: 'media',
+      select: 'mediaType mediaUrl',
+    },
+    {
+      path: 'itinerary',
+      select: 'title description',
+    },
+    {
+      path: 'userId',
+      select: 'fullName username profileImage',
+    },
+    {
+      path: 'reactions',
+      populate: {
+        path: 'userId',
+        select: 'fullName username profileImage',
+      },
+    },
+    {
+      path: 'comments',
+      populate: [
+        {
+          path: 'userId',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'mentions',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
+        },
+      ],
+    },
+  ];
+  options.sortBy = options.sortBy || 'createdAt';
+
+  // Get paginated posts
+  const result = await Post.paginate(query, options);
+
+  // Calculate distance for each post and add it to the post object
+  const postsWithDistance = result?.results?.map((post: any) => {
+    const postObj = post.toObject();
+
+    if (
+      postObj.visitedLocation?.latitude &&
+      postObj.visitedLocation?.longitude
+    ) {
+      const distance = calculateDistance(
+        userLat as number,
+        userLon as number,
+        postObj.visitedLocation.latitude,
+        postObj.visitedLocation.longitude
+      );
+      postObj.distance = distance;
+    } else {
+      postObj.distance = null;
+    }
+
+    return postObj;
+  });
+
+  return {
+    ...result,
+    results: postsWithDistance,
+  };
+};
+
 export const PostServices = {
   createPost,
   sharePost,
-  getPostById,
   addOrRemoveReaction,
   addOrRemoveCommentReaction,
   createComment,
   updateComment,
-  deletePost,
-  updatePost,
   deleteComment,
   feedPosts,
+  getPostById,
   getUserTimelinePosts,
   getGroupPosts,
   getEventPosts,
+  updatePost,
+  deletePost,
+  getVisitedPostsWithDistance,
 };

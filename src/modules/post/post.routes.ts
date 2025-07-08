@@ -87,6 +87,13 @@ router.delete(
   PostController.deleteComment
 );
 
+// get visited posts
+router.get(
+  '/visited-posts',
+  auth('User'),
+  PostController.getVisitedPostsWithDistance
+);
+
 // single post routes
 router
   .route('/:postId')

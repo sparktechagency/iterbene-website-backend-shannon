@@ -123,6 +123,8 @@ const postSchema = new Schema<IPost, IPostModel>({
   updatedAt: { type: Date, default: Date.now },
 });
 
+postSchema.index({ visitedLocation: '2dsphere' });
+
 postSchema.plugin(paginate);
 
 export const Post = model<IPost, IPostModel>('Post', postSchema);
