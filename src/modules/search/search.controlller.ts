@@ -41,11 +41,7 @@ const searchUsersHashtags = catchAsync(async (req, res) => {
     });
   }
 
-  const result = await searchServices.searchUsersHashtags(
-    searchTerm,
-    page ? parseInt(page as string) : 1,
-    limit ? parseInt(limit as string) : 10
-  );
+  const result = await searchServices.searchUsersHashtags(searchTerm);
 
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -58,7 +54,11 @@ const getLocationVisitedPlaces = catchAsync(async (req, res) => {
   const { locationName, locationId, userId, radius, page, limit } = req.query;
 
   // Validate required parameters
-  if (!locationName || typeof locationName !== 'string' || !locationName.trim()) {
+  if (
+    !locationName ||
+    typeof locationName !== 'string' ||
+    !locationName.trim()
+  ) {
     return sendResponse(res, {
       code: StatusCodes.BAD_REQUEST,
       message: 'Location name is required and must be a non-empty string',

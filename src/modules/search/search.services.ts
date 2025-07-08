@@ -44,15 +44,9 @@ interface SearchResult {
 interface UsersHashtagsResult {
   users: TUser[];
   hashtags: IHashtag[];
-  totalUsers: number;
-  totalHashtags: number;
-  totalPages: number;
 }
 
 interface VisitedPlacesResult {
-  locationName: string;
-  locationImage: string | null;
-  totalVisitedPlaces: number;
   visitedPlaces: IVisitedPlace[];
   totalPages: number;
 }
@@ -235,7 +229,13 @@ const searchLocationPost = async (
 
     const totalPosts = await Post.countDocuments(locationQuery);
     const relatedPosts = await Post.find(locationQuery)
-      .populate('userId', '_id fullName profileImage')
+      .populate([
+        {
+          path: 'media',
+          select: 'mediaType mediaUrl',
+        }
+      ])
+      .select('media visitedLocation visitedLocationName')
       .skip(skip)
       .limit(validatedLimit)
       .lean();
@@ -441,9 +441,6 @@ const getLocationVisitedPlaces = async (
     }
 
     return {
-      locationName,
-      locationImage: locationImageUrl,
-      totalVisitedPlaces,
       visitedPlaces,
       totalPages,
     };
@@ -455,21 +452,12 @@ const getLocationVisitedPlaces = async (
 
 // Search for users and hashtags with pagination and metadata
 const searchUsersHashtags = async (
-  searchTerm: string,
-  page: number = 1,
-  limit: number = 10
+  searchTerm: string
 ): Promise<UsersHashtagsResult> => {
   try {
     if (!searchTerm?.trim()) {
       throw new Error('Search term is required');
     }
-
-    const { page: validatedPage, limit: validatedLimit } = validatePagination(
-      page,
-      limit
-    );
-    const skip = (validatedPage - 1) * validatedLimit;
-
     const userQuery = {
       $or: [{ fullName: { $regex: new RegExp(searchTerm, 'i') } }],
       role: { $nin: ['Admin', 'Super_Admin'] },
@@ -480,32 +468,19 @@ const searchUsersHashtags = async (
     const totalUsers = await User.countDocuments(userQuery);
     const users = await User.find(userQuery)
       .select('fullName username profileImage')
-      .skip(skip)
-      .limit(validatedLimit)
       .lean();
 
     const hashtagQuery = {
       name: { $regex: new RegExp(searchTerm, 'i') },
     };
 
-    const totalHashtags = await Hashtag.countDocuments(hashtagQuery);
     const hashtags = await Hashtag.find(hashtagQuery)
       .select('name postCount')
-      .skip(skip)
-      .limit(validatedLimit)
       .lean();
-
-    const totalPages = Math.max(
-      Math.ceil(totalUsers / validatedLimit),
-      Math.ceil(totalHashtags / validatedLimit)
-    );
 
     return {
       users,
       hashtags,
-      totalUsers,
-      totalHashtags,
-      totalPages,
     };
   } catch (error: any) {
     console.error('Error in searchUsersHashtags:', error.message);
