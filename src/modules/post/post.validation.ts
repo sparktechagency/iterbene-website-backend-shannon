@@ -67,19 +67,8 @@ export const PostValidation = {
     body: z.object({
       content: z.string().optional(),
       itineraryId: z.string().optional(),
-      postType: z
-        .enum(Object.values(PostType) as [string, ...string[]])
-        .optional(),
-      privacy: z
-        .enum(Object.values(PostPrivacy) as [string, ...string[]])
-        .optional(),
+      postType: z.enum(Object.values(PostType) as [string, ...string[]]),
       sourceId: z.string().optional(),
-      visitedLocation: z
-        .object({
-          latitude: z.number(),
-          longitude: z.number(),
-        })
-        .optional(),
       visitedLocationName: z.string().optional(),
     }),
   }),

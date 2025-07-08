@@ -1171,6 +1171,7 @@ const getVisitedPostsWithDistance = async (
     throw new Error('User location not found');
   }
 
+  console.log("Reached here 1");
   const userLat = user?.location?.latitude;
   const userLon = user?.location?.longitude;
 
@@ -1186,48 +1187,13 @@ const getVisitedPostsWithDistance = async (
   };
 
   // Set up population options
+  options.select = 'media visitedLocation visitedLocationName content'
   options.populate = [
     {
       path: 'media',
       select: 'mediaType mediaUrl',
-    },
-    {
-      path: 'itinerary',
-      select: 'title description',
-    },
-    {
-      path: 'userId',
-      select: 'fullName username profileImage',
-    },
-    {
-      path: 'reactions',
-      populate: {
-        path: 'userId',
-        select: 'fullName username profileImage',
-      },
-    },
-    {
-      path: 'comments',
-      populate: [
-        {
-          path: 'userId',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'mentions',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'reactions',
-          populate: {
-            path: 'userId',
-            select: 'fullName username profileImage',
-          },
-        },
-      ],
-    },
+    }
   ];
-  options.sortBy = options.sortBy || 'createdAt';
 
   // Get paginated posts
   const result = await Post.paginate(query, options);
@@ -1235,7 +1201,6 @@ const getVisitedPostsWithDistance = async (
   // Calculate distance for each post and add it to the post object
   const postsWithDistance = result?.results?.map((post: any) => {
     const postObj = post.toObject();
-
     if (
       postObj.visitedLocation?.latitude &&
       postObj.visitedLocation?.longitude
@@ -1253,6 +1218,7 @@ const getVisitedPostsWithDistance = async (
 
     return postObj;
   });
+
 
   return {
     ...result,

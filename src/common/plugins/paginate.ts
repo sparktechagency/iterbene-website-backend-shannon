@@ -1,51 +1,6 @@
-// import { FilterQuery, Schema } from 'mongoose';
-// import { PaginateOptions, PaginateResult } from '../../types/paginate';
-
-// // Plugin function for pagination
-// const paginate = <T>(schema: Schema<T>) => {
-//   schema.statics.paginate = async function (
-//     filter: FilterQuery<T>,
-//     options: PaginateOptions
-//   ): Promise<PaginateResult<T>> {
-//     const limit = options.limit ?? 10;
-//     const page = options.page ?? 1;
-//     const skip = (page - 1) * limit;
-//     const sort = options.sortBy ?? 'createdAt';
-//     const select = options.select; // Get select option
-
-//     const countPromise = this.countDocuments(filter).exec();
-//     let query = this.find(filter).sort(sort).skip(skip).limit(limit);
-
-//     // Apply select if provided
-//     if (select) {
-//       query = query.select(select);
-//     }
-
-//     // Apply populate if provided
-//     if (options.populate) {
-//       query = query.populate(options.populate);
-//     }
-
-//     const [totalResults, results] = await Promise.all([
-//       countPromise,
-//       query.exec(),
-//     ]);
-
-//     return {
-//       results,
-//       page,
-//       limit,
-//       totalPages: Math.ceil(totalResults / limit),
-//       totalResults,
-//     };
-//   };
-// };
-
-// export default paginate;
-
-
 import { FilterQuery, Schema } from 'mongoose';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
+
 
 const paginate = <T>(schema: Schema<T>) => {
   schema.statics.paginate = async function (
@@ -56,32 +11,44 @@ const paginate = <T>(schema: Schema<T>) => {
     const page = options.page ?? 1;
     const sortBy = options.sortBy ?? 'createdAt';
     const sortOrder = options.sortOrder ?? 1; 
-    const select = options.select; // Get select option
+    const select = options.select;
+    const reverse = options.reverse ?? false; // Default to normal pagination (false)
 
     // Count total documents
     const totalResults = await this.countDocuments(filter).exec();
     const totalPages = Math.ceil(totalResults / limit);
 
     // Ensure page is within valid range
-    const effectivePage = Math.min(Math.max(1, page), totalPages);
+    const effectivePage = Math.min(Math.max(1, page), totalPages || 1);
 
-    // Calculate skip for reverse pagination (most recent on last page)
-    // Total results = 16, limit = 10, totalPages = 2
-    // Page 1: skip = 0 (show first 10, older messages)
-    // Page 2: skip = 6 (show last 6 messages, most recent)
-    const skip = Math.max(0, totalResults - limit * effectivePage);
+    // Calculate skip based on pagination type
+    let skip: number;
+    if (reverse) {
+      // Reverse pagination: newest first, then go backwards
+      if (totalResults === 0) {
+        skip = 0;
+      } else {
+        skip = Math.max(0, totalResults - limit * effectivePage);
+      }
+    } else {
+      // Normal pagination: oldest first, then go forwards
+      skip = Math.max(0, (effectivePage - 1) * limit);
+    }
+
+    // Final safety check to ensure skip is never negative
+    skip = Math.max(0, skip);
 
     let query = this.find(filter)
       .sort({ [sortBy]: sortOrder }) 
       .skip(skip)
       .limit(limit);
 
-      // Apply select if provided
+    // Apply select if provided
     if (select) {
       query = query.select(select);
     }
 
-      // populate if provided
+    // populate if provided
     if (options.populate) {
       query = query.populate(options.populate);
     }
