@@ -13,6 +13,18 @@ const myMaps = catchAsync(async (req, res) => {
   });
 });
 
+const addInterestedLocation = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const payload = req.body;
+  const result = await MapsService.addInterestedLocation(userId, payload);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Location added successfully',
+    data: result,
+  });
+});
+
 export const MapsController = {
   myMaps,
+  addInterestedLocation
 };

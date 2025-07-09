@@ -106,14 +106,23 @@ const acceptInvite = async (
   await Promise.all([invite.save(), event.save()]);
 
   //update or add maps user interested locations
-  const mapsUser = await Maps.findOne({ userId });
-  if (mapsUser) {
-    mapsUser.interestedLocation.push({
-      latitude: event.location.latitude,
-      longitude: event.location.longitude,
-      interestedLocationName: event.locationName,
-    });
-    await mapsUser.save();
+  const maps = await Maps.findOne({ userId });
+  if (maps) {
+    // Check for duplicate interestedLocation
+    const isDuplicate = maps.interestedLocation.find(
+      location =>
+        location.latitude == event.location.latitude &&
+        location.longitude == event.location.longitude &&
+        location.interestedLocationName == event.locationName
+    );
+    if (!isDuplicate) {
+      maps.interestedLocation.push({
+        latitude: event.location.latitude,
+        longitude: event.location.longitude,
+        interestedLocationName: event.locationName,
+      });
+      await maps.save();
+    }
   } else {
     await Maps.create({
       userId,
@@ -185,7 +194,6 @@ const getMyInvites = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ) => {
-
   const foundInvites = await EventInvite.find({ to: filters.userId });
   if (foundInvites.length === 0) {
     return {
@@ -210,7 +218,10 @@ const getMyInvites = async (
     };
   }
 
-  const query: Record<string, any> = { to: filters.userId , status: EventInviteStatus.PENDING};
+  const query: Record<string, any> = {
+    to: filters.userId,
+    status: EventInviteStatus.PENDING,
+  };
 
   //invitation count
   const invitationCount = await EventInvite.countDocuments({

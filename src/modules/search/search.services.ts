@@ -17,6 +17,8 @@ interface ISearchingLocation {
   imageUrl: string;
   visitedPlacesCount: number;
   locationId: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface IVisitedPlace {
@@ -62,7 +64,7 @@ const getPhotoUrl = (
 // Helper function to get multiple photo URLs
 const getPhotoUrls = (photos: any[], maxPhotos: number = 5): string[] => {
   if (!photos || photos.length === 0) return [];
-  
+
   return photos
     .slice(0, maxPhotos)
     .map(photo => getPhotoUrl(photo.photo_reference))
@@ -233,6 +235,8 @@ const searchLocationPost = async (
         imageUrl: locationImageUrl,
         visitedPlacesCount,
         locationId: place.place_id || `${latitude}_${longitude}`,
+        latitude,
+        longitude,
       });
     }
 
@@ -255,9 +259,7 @@ const searchLocationPost = async (
           select: 'days overAllRating',
         },
       ])
-      .select(
-        'media visitedLocation visitedLocationName'
-      )
+      .select('media visitedLocation visitedLocationName')
       .skip(skip)
       .limit(validatedLimit)
       .lean();
@@ -384,7 +386,7 @@ const getLocationVisitedPlaces = async (
       'library',
       'stadium',
       'cemetery',
-      'place_of_worship'
+      'place_of_worship',
     ];
 
     for (const placeType of touristPlaceTypes) {
@@ -418,12 +420,17 @@ const getLocationVisitedPlaces = async (
     );
 
     // Filter places that have photos and rating
-    const filteredAttractions = uniqueAttractions.filter(place => 
-      place.photos && place.photos.length > 0 && place.rating && place.rating > 0
+    const filteredAttractions = uniqueAttractions.filter(
+      place =>
+        place.photos &&
+        place.photos.length > 0 &&
+        place.rating &&
+        place.rating > 0
     );
 
-    const sortedAttractions = filteredAttractions
-      .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    const sortedAttractions = filteredAttractions.sort(
+      (a, b) => (b.rating || 0) - (a.rating || 0)
+    );
 
     const totalVisitedPlaces = sortedAttractions.length;
     const paginatedAttractions = sortedAttractions.slice(
@@ -490,7 +497,7 @@ const searchUsersHashtags = async (
     if (!searchTerm?.trim()) {
       throw new Error('Search term is required');
     }
-    
+
     const userQuery = {
       $or: [{ fullName: { $regex: new RegExp(searchTerm, 'i') } }],
       role: { $nin: ['Admin', 'Super_Admin'] },

@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { MediaType } from '../media/media.interface';
 import { IPost, PostPrivacy, PostType, ReactionType } from './post.interface';
 import ApiError from '../../errors/ApiError';
@@ -192,23 +192,22 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
   // add visited location for user maps
   if (visitedLocation && visitedLocationName) {
     const mapsUser = await Maps.findOne({ userId });
-    // cannot entry duplicate visitedLocation
-    const existingSameLocation = mapsUser?.visitedLocation.find(
-      item =>
-        item.latitude === visitedLocation?.latitude &&
-        item.longitude === visitedLocation?.longitude &&
-        item.visitedLocationName === visitedLocationName
-    );
-    if (existingSameLocation) {
-      return post.populate('media itinerary userId sourceId');
-    }
     if (mapsUser) {
-      mapsUser.visitedLocation.push({
-        latitude: visitedLocation?.latitude || 0,
-        longitude: visitedLocation?.longitude || 0,
-        visitedLocationName: visitedLocationName as string,
-      });
-      await mapsUser.save();
+      // cannot entry duplicate visitedLocation
+      const existingSameLocation = mapsUser?.visitedLocation.find(
+        item =>
+          item.latitude == visitedLocation?.latitude &&
+          item.longitude == visitedLocation?.longitude &&
+          item.visitedLocationName == visitedLocationName
+      );
+      if (!existingSameLocation) {
+        mapsUser.visitedLocation.push({
+          latitude: visitedLocation?.latitude || 0,
+          longitude: visitedLocation?.longitude || 0,
+          visitedLocationName: visitedLocationName as string,
+        });
+        await mapsUser.save();
+      }
     } else {
       await Maps.create({
         userId,
@@ -377,46 +376,43 @@ const updatePost = async (
   if (uniqueHashtags.length > 0 || content !== undefined)
     updateData.hashtags = uniqueHashtags;
 
-  // Update the post
-  const response = await Post.findOneAndUpdate({ _id: postId }, updateData, {
-    new: true,
-  });
   // Handle visited location update
-  if (visitedLocation !== undefined && visitedLocationName !== undefined) {
-    // add visited location for user maps
-    if (visitedLocation && visitedLocationName) {
-      const mapsUser = await Maps.findOne({ userId });
+  if (visitedLocation && visitedLocationName) {
+    const mapsUser = await Maps.findOne({ userId });
+    if (mapsUser) {
       // cannot entry duplicate visitedLocation
       const existingSameLocation = mapsUser?.visitedLocation.find(
         item =>
-          item.latitude === visitedLocation?.latitude &&
-          item.longitude === visitedLocation?.longitude &&
-          item.visitedLocationName === visitedLocationName
+          item.latitude == visitedLocation?.latitude &&
+          item.longitude == visitedLocation?.longitude &&
+          item.visitedLocationName == visitedLocationName
       );
-      if (existingSameLocation) {
-        return response;
-      }
-      if (mapsUser) {
+      if (!existingSameLocation) {
         mapsUser.visitedLocation.push({
           latitude: visitedLocation?.latitude || 0,
           longitude: visitedLocation?.longitude || 0,
           visitedLocationName: visitedLocationName as string,
         });
         await mapsUser.save();
-      } else {
-        await Maps.create({
-          userId,
-          visitedLocation: [
-            {
-              latitude: visitedLocation?.latitude || 0,
-              longitude: visitedLocation?.longitude || 0,
-              visitedLocationName: visitedLocationName as string,
-            },
-          ],
-        });
       }
+    } else {
+      await Maps.create({
+        userId,
+        visitedLocation: [
+          {
+            latitude: visitedLocation?.latitude || 0,
+            longitude: visitedLocation?.longitude || 0,
+            visitedLocationName: visitedLocationName as string,
+          },
+        ],
+      });
     }
   }
+  // Update the post
+  const response = await Post.findOneAndUpdate({ _id: postId }, updateData, {
+    new: true,
+  });
+
   return response;
 };
 
@@ -466,26 +462,83 @@ const getPostById = async (postId: string): Promise<IPost> => {
 
 // Delete post
 const deletePost = async (userId: string, postId: string): Promise<IPost> => {
-  const post = await Post.findOne({
-    _id: postId,
-    userId: new Types.ObjectId(userId),
-    isDeleted: false,
-  });
+  // Start a transaction to ensure atomicity
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (!post) {
-    throw new ApiError(404, 'Post not found');
+  try {
+    // Find the post with userId and isDeleted checks
+    const post = await Post.findOne({
+      _id: new Types.ObjectId(postId),
+      userId: new Types.ObjectId(userId),
+      isDeleted: false,
+    }).session(session);
+
+    if (!post) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
+    }
+
+    // Remove visited location from Maps if it exists
+    if (
+      post?.visitedLocation?.latitude &&
+      post?.visitedLocation?.longitude  &&
+      post?.visitedLocationName
+    ) {
+      const mapsUser = await Maps.findOne({ userId }).session(session);
+      if (mapsUser) {
+        mapsUser.visitedLocation = mapsUser.visitedLocation.filter(
+          item =>
+            !(
+              item?.latitude === post?.visitedLocation?.latitude &&
+              item?.longitude === post?.visitedLocation?.longitude &&
+              item?.visitedLocationName === post?.visitedLocationName
+            )
+        );
+        await mapsUser.save({ session });
+      }
+    }
+
+    // Soft-delete the post
+    post.isDeleted = true;
+    await post.save({ session });
+
+    // Soft-delete associated Media and Itinerary documents
+    await Media.updateMany(
+      { postId: new Types.ObjectId(postId), isDeleted: false },
+      { isDeleted: true },
+      { session }
+    );
+
+    await Itinerary.updateMany(
+      { postId: new Types.ObjectId(postId), isDeleted: false },
+      { isDeleted: true },
+      { session }
+    );
+
+    // Commit the transaction
+    await session.commitTransaction();
+
+    // Populate the post after transaction to avoid modifying during session
+    const populatedPost = await Post.findById(postId)
+      .populate('media itinerary userId sourceId comments.mentions')
+      .lean();
+
+    if (!populatedPost) {
+      throw new ApiError(
+        StatusCodes.NOT_FOUND,
+        'Failed to retrieve populated post'
+      );
+    }
+
+    return populatedPost;
+  } catch (error) {
+    // Abort the transaction on error
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    // End the session
+    session.endSession();
   }
-  post.isDeleted = true;
-  await post.save();
-  await Media.updateMany(
-    { postId: new Types.ObjectId(postId) },
-    { isDeleted: true }
-  );
-  await Itinerary.updateMany(
-    { postId: new Types.ObjectId(postId) },
-    { isDeleted: true }
-  );
-  return post.populate('media itinerary userId sourceId comments.mentions');
 };
 
 // Share post

@@ -4,6 +4,7 @@ import { Event } from './event.model';
 import { IEvent, EventPrivacy } from './event.interface';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import ApiError from '../../errors/ApiError';
+import { Maps } from '../maps/maps.model';
 
 const createEvent = async (
   userId: string,
@@ -20,6 +21,7 @@ const createEvent = async (
   const event = await Event.create(eventData);
   return event;
 };
+
 const interestEvent = async (
   userId: string,
   eventId: string
@@ -43,8 +45,39 @@ const interestEvent = async (
   event.interestedUsers.push(userObjectId);
   event.interestCount = event.interestedUsers.length;
   await event.save();
+  // Update or add maps user interested locations
+  const maps = await Maps.findOne({ userId });
+  if (maps) {
+    // Check for duplicate interestedLocation
+    const isDuplicate = maps.interestedLocation.some(
+      (location) =>
+        location.latitude === event.location.latitude &&
+        location.longitude === event.location.longitude &&
+        location.interestedLocationName === event.locationName
+    );
+    if (!isDuplicate) {
+      maps.interestedLocation.push({
+        latitude: event.location.latitude,
+        longitude: event.location.longitude,
+        interestedLocationName: event.locationName,
+      });
+      await maps.save();
+    }
+  } else {
+    await Maps.create({
+      userId,
+      interestedLocation: [
+        {
+          latitude: event.location.latitude,
+          longitude: event.location.longitude,
+          interestedLocationName: event.locationName,
+        },
+      ],
+    });
+  }
   return event;
 };
+
 const notInterestEvent = async (
   userId: string,
   eventId: string
@@ -55,16 +88,29 @@ const notInterestEvent = async (
   }
   const userObjectId = new Types.ObjectId(userId);
   event.interestedUsers = event.interestedUsers.filter(
-    id => !id.equals(userObjectId)
+    (id) => !id.equals(userObjectId)
   );
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    id => !id.equals(userObjectId)
+    (id) => !id.equals(userObjectId)
   );
   event.interestCount = event.interestedUsers.length;
   if (event.interestCount < 0) {
     event.interestCount = 0;
   }
   await event.save();
+  // Remove maps user interested locations
+  const maps = await Maps.findOne({ userId });
+  if (maps) {
+    maps.interestedLocation = maps.interestedLocation.filter(
+      (location) =>
+        !(
+          location.latitude === event.location.latitude &&
+          location.longitude === event.location.longitude &&
+          location.interestedLocationName === event.locationName
+        )
+    );
+    await maps.save();
+  }
   return event;
 };
 
@@ -91,7 +137,7 @@ const approveJoinEvent = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending join request');
   }
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    id => !id.equals(targetUserObjectId)
+    (id) => !id.equals(targetUserObjectId)
   );
   event.interestedUsers.push(targetUserObjectId);
   await event.save();
@@ -121,7 +167,7 @@ const rejectJoinEvent = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending join request');
   }
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    id => !id.equals(targetUserObjectId)
+    (id) => !id.equals(targetUserObjectId)
   );
   await event.save();
   return event;
@@ -156,10 +202,10 @@ const removeUser = async (
     );
   }
   event.interestedUsers = event.interestedUsers.filter(
-    id => !id.equals(targetUserObjectId)
+    (id) => !id.equals(targetUserObjectId)
   );
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    id => !id.equals(targetUserObjectId)
+    (id) => !id.equals(targetUserObjectId)
   );
   await event.save();
   return event;
@@ -217,7 +263,7 @@ const demoteCoHost = async (
   if (!event.coHosts.includes(coHostObjectId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not a co-host');
   }
-  event.coHosts = event.coHosts.filter(id => !id.equals(coHostObjectId));
+  event.coHosts = event.coHosts.filter((id) => !id.equals(coHostObjectId));
   await event.save();
   return event;
 };
@@ -227,19 +273,19 @@ const getEvent = async (eventId: string, userId: string): Promise<IEvent> => {
     .populate([
       {
         path: 'creatorId',
-        select: 'fullName  profileImage username createdAt description',
+        select: 'fullName profileImage username createdAt description',
       },
       {
         path: 'coHosts',
-        select: 'fullName  profileImage username',
+        select: 'fullName profileImage username',
       },
       {
         path: 'interestedUsers',
-        select: 'fullName  profileImage username',
+        select: 'fullName profileImage username',
       },
       {
         path: 'pendingInterestedUsers',
-        select: 'fullName  profileImage username',
+        select: 'fullName profileImage username',
       },
     ])
     .select('-isDeleted -createdAt -updatedAt -__v');
@@ -387,4 +433,9 @@ export const EventService = {
   getMyEvents,
   getMyInterestedEvents,
   getEventSuggestions,
+  approveJoinEvent,
+  rejectJoinEvent,
+  removeUser,
+  promoteToCoHost,
+  demoteCoHost,
 };
