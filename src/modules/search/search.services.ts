@@ -224,6 +224,8 @@ const searchLocationPost = async (
     // Step 3: Search posts by location type
     const locationQuery = {
       visitedLocationName: { $regex: new RegExp(searchTerm, 'i') },
+      itinerary: { $exists: true, $ne: null },
+      visitedLocation: { $exists: true, $ne: null },
       isDeleted: false,
     };
 
@@ -231,18 +233,25 @@ const searchLocationPost = async (
     const relatedPosts = await Post.find(locationQuery)
       .populate([
         {
+          path: 'userId',
+          select: 'fullName username profileImage',
+        },
+        {
           path: 'media',
           select: 'mediaType mediaUrl',
-        }
+        },
+        {
+          path: 'itinerary',
+          select: 'days overAllRating',
+        },
       ])
-      .select('media visitedLocation visitedLocationName')
+      .select(
+        'userId content privacy media visitedLocation itinerary visitedLocationName'
+      )
       .skip(skip)
       .limit(validatedLimit)
       .lean();
-
     for (const post of relatedPosts) {
-      if (!post.userId || typeof post.userId !== 'object') continue;
-
       let distance = 0;
       if (
         userLocation &&
