@@ -14,7 +14,7 @@ const googleMapsClient = new Client({});
 // Interfaces
 interface ISearchingLocation {
   locationName: string;
-  imageUrl: string | null;
+  imageUrl: string;
   visitedPlacesCount: number;
   locationId: string;
 }
@@ -22,7 +22,7 @@ interface ISearchingLocation {
 interface IVisitedPlace {
   placeName: string;
   placeId: string;
-  imageUrl: string | null;
+  imageUrls: string[];
   rating: number;
   address: string;
   location: {
@@ -57,6 +57,16 @@ const getPhotoUrl = (
   maxWidth: number = 500
 ): string => {
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photoreference=${photoReference}&key=${config.googleMapsApiKey}`;
+};
+
+// Helper function to get multiple photo URLs
+const getPhotoUrls = (photos: any[], maxPhotos: number = 5): string[] => {
+  if (!photos || photos.length === 0) return [];
+  
+  return photos
+    .slice(0, maxPhotos)
+    .map(photo => getPhotoUrl(photo.photo_reference))
+    .filter(url => url);
 };
 
 // Helper function to generate Google Maps directions URL
@@ -179,13 +189,18 @@ const searchLocationPost = async (
       const latitude = place.geometry?.location?.lat || 0;
       const longitude = place.geometry?.location?.lng || 0;
 
-      let locationImageUrl: string | null = null;
+      let locationImageUrl: string = '';
       if (place?.photos && place?.photos?.length > 0) {
         const photoReference = place?.photos[0]?.photo_reference;
         locationImageUrl = getPhotoUrl(photoReference);
       }
 
-      // Fetch all tourist attractions for accurate count
+      // Only include if we have a valid image
+      if (!locationImageUrl) {
+        continue;
+      }
+
+      // Fetch only tourist attractions for accurate count
       let allAttractions: any[] = [];
       let attractionNextPageToken: string | undefined;
 
@@ -224,7 +239,6 @@ const searchLocationPost = async (
     // Step 3: Search posts by location type
     const locationQuery = {
       visitedLocationName: { $regex: new RegExp(searchTerm, 'i') },
-      itinerary: { $exists: true, $ne: null },
       visitedLocation: { $exists: true, $ne: null },
       isDeleted: false,
     };
@@ -232,10 +246,6 @@ const searchLocationPost = async (
     const totalPosts = await Post.countDocuments(locationQuery);
     const relatedPosts = await Post.find(locationQuery)
       .populate([
-        {
-          path: 'userId',
-          select: 'fullName username profileImage',
-        },
         {
           path: 'media',
           select: 'mediaType mediaUrl',
@@ -246,11 +256,12 @@ const searchLocationPost = async (
         },
       ])
       .select(
-        'userId content privacy media visitedLocation itinerary visitedLocationName'
+        'media visitedLocation visitedLocationName'
       )
       .skip(skip)
       .limit(validatedLimit)
       .lean();
+
     for (const post of relatedPosts) {
       let distance = 0;
       if (
@@ -316,7 +327,6 @@ const getLocationVisitedPlaces = async (
       }
     }
 
-    let locationImageUrl: string | null = null;
     let latitude = 0;
     let longitude = 0;
 
@@ -325,25 +335,21 @@ const getLocationVisitedPlaces = async (
         params: {
           place_id: locationId,
           key: config.googleMapsApiKey,
-          fields: ['photos', 'geometry'],
+          fields: ['geometry'],
         },
       });
 
       const placeDetails = placeDetailsResponse?.data?.result;
-      if (placeDetails?.photos && placeDetails?.photos?.length > 0) {
-        const photoReference = placeDetails?.photos[0]?.photo_reference;
-        locationImageUrl = getPhotoUrl(photoReference);
-      }
       latitude = placeDetails?.geometry?.location?.lat || 0;
       longitude = placeDetails?.geometry?.location?.lng || 0;
     } catch (error) {
-      console.error('Could not fetch location image or geometry:', error);
+      console.error('Could not fetch location geometry:', error);
     }
 
+    // First search for tourist attractions
     let allAttractions: any[] = [];
     let nextPageToken: string | undefined;
 
-    // Fetch tourist attractions
     do {
       const nearbySearchResponse = await googleMapsClient.placesNearby({
         params: {
@@ -360,46 +366,66 @@ const getLocationVisitedPlaces = async (
       );
       nextPageToken = nearbySearchResponse.data.next_page_token;
 
-      // Add delay to handle Google's pagination rate limit
       if (nextPageToken) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    } while (nextPageToken && allAttractions.length < skip + validatedLimit);
+    } while (nextPageToken);
 
-    // Fetch popular places
-    nextPageToken = undefined;
-    do {
-      const popularPlacesResponse = await googleMapsClient.placesNearby({
-        params: {
-          location: { lat: latitude, lng: longitude },
-          radius,
-          key: config.googleMapsApiKey,
-          type: 'point_of_interest',
-          pagetoken: nextPageToken,
-        },
-      });
+    // Then search for places with specific tourist-related types
+    const touristPlaceTypes = [
+      'museum',
+      'amusement_park',
+      'zoo',
+      'park',
+      'church',
+      'hindu_temple',
+      'mosque',
+      'synagogue',
+      'library',
+      'stadium',
+      'cemetery',
+      'place_of_worship'
+    ];
 
-      allAttractions = allAttractions.concat(
-        popularPlacesResponse.data.results || []
-      );
-      nextPageToken = popularPlacesResponse.data.next_page_token;
+    for (const placeType of touristPlaceTypes) {
+      nextPageToken = undefined;
+      do {
+        const nearbySearchResponse = await googleMapsClient.placesNearby({
+          params: {
+            location: { lat: latitude, lng: longitude },
+            radius,
+            key: config.googleMapsApiKey,
+            type: placeType as any,
+            pagetoken: nextPageToken,
+          },
+        });
 
-      // Add delay to handle Google's pagination rate limit
-      if (nextPageToken) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    } while (nextPageToken && allAttractions.length < skip + validatedLimit);
+        allAttractions = allAttractions.concat(
+          nearbySearchResponse.data.results || []
+        );
+        nextPageToken = nearbySearchResponse.data.next_page_token;
 
+        if (nextPageToken) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } while (nextPageToken);
+    }
+
+    // Remove duplicates based on place_id
     const uniqueAttractions = allAttractions.filter(
       (place, index, self) =>
         index === self.findIndex(p => p.place_id === place.place_id)
     );
 
-    const sortedAttractions = uniqueAttractions
-      .filter(place => place.rating && place.rating > 0)
+    // Filter places that have photos and rating
+    const filteredAttractions = uniqueAttractions.filter(place => 
+      place.photos && place.photos.length > 0 && place.rating && place.rating > 0
+    );
+
+    const sortedAttractions = filteredAttractions
       .sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
-    const totalVisitedPlaces = uniqueAttractions.length;
+    const totalVisitedPlaces = sortedAttractions.length;
     const paginatedAttractions = sortedAttractions.slice(
       skip,
       skip + validatedLimit
@@ -416,11 +442,8 @@ const getLocationVisitedPlaces = async (
       const placeLat = attraction.geometry?.location?.lat || 0;
       const placeLng = attraction.geometry?.location?.lng || 0;
 
-      let placeImageUrl: string | null = null;
-      if (attraction.photos && attraction.photos.length > 0) {
-        const photoReference = attraction.photos[0].photo_reference;
-        placeImageUrl = getPhotoUrl(photoReference);
-      }
+      // Get multiple image URLs
+      const imageUrls = getPhotoUrls(attraction.photos);
 
       const directionsUrl = getDirectionsUrl(placeLat, placeLng, placeName);
 
@@ -437,7 +460,7 @@ const getLocationVisitedPlaces = async (
       visitedPlaces.push({
         placeName,
         placeId,
-        imageUrl: placeImageUrl,
+        imageUrls,
         rating: placeRating,
         address: placeAddress,
         location: {
@@ -467,6 +490,7 @@ const searchUsersHashtags = async (
     if (!searchTerm?.trim()) {
       throw new Error('Search term is required');
     }
+    
     const userQuery = {
       $or: [{ fullName: { $regex: new RegExp(searchTerm, 'i') } }],
       role: { $nin: ['Admin', 'Super_Admin'] },

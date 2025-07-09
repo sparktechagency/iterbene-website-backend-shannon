@@ -1154,21 +1154,23 @@ const getVisitedPostsWithDistance = async (
 
   // Build query for posts with visited location
   const query: Record<string, any> = {
-    isDeleted: false,
     postType: PostType.USER,
     userId: userId,
-    visitedLocation: { $exists: true, $ne: null },
     visitedLocationName: { $exists: true, $ne: null },
-    'visitedLocation.latitude': { $exists: true, $ne: null },
-    'visitedLocation.longitude': { $exists: true, $ne: null },
+    visitedLocation: { $exists: true, $ne: null },
+    isDeleted: false,
   };
 
   // Set up population options
-  options.select = 'media visitedLocation visitedLocationName content';
+  options.select = 'media visitedLocation visitedLocationName';
   options.populate = [
     {
       path: 'media',
       select: 'mediaType mediaUrl',
+    },
+    {
+      path: 'itinerary',
+      select: 'days overAllRating',
     },
   ];
 
