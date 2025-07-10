@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../errors/ApiError';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
-import { IReport } from './reports.interface';
+import { IReport, ReportType } from './reports.interface';
 import { Report } from './reports.model';
 import { User } from '../user/user.model';
 import {
@@ -11,32 +11,75 @@ import {
 } from '../../helpers/emailService';
 import { INotification } from '../notification/notification.interface';
 import { NotificationService } from '../notification/notification.services';
+import { Post } from '../post/post.model';
+import Message from '../message/message.model';
 
 const addReport = async (payload: IReport): Promise<IReport> => {
-  if (payload.reporter === payload.reportedUser) {
+  if (payload.reporter.equals(payload.reportedUser)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot report yourself');
   }
+
   const reporter = await User.findById(payload.reporter);
   if (!reporter) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Reporter Not Found');
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Reporter does not exist');
   }
-  // check if reportedUser user exist or not
+
   const reportedUser = await User.findById(payload.reportedUser);
   if (!reportedUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Reported User Not Found');
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Reported user does not exist');
   }
+
+  // Validate reported entities based on reportType
+  if (payload.reportType === ReportType.MESSAGE && payload.reportedMessage) {
+    const message = await Message.findById(payload.reportedMessage);
+    if (!message) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Reported message does not exist'
+      );
+    }
+  }
+  if (payload.reportType === ReportType.POST && payload.reportedPost) {
+    const post = await Post.findById(payload.reportedPost);
+    if (!post) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Reported post does not exist'
+      );
+    }
+  }
+  if (
+    payload.reportType === ReportType.COMMENT &&
+    payload.reportedPost &&
+    payload.reportedCommentId
+  ) {
+    const post = await Post.findOne({
+      _id: payload.reportedPost,
+      'comments._id': payload.reportedCommentId,
+    });
+    if (!post) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Reported comment or post does not exist'
+      );
+    }
+  }
+
   const result = await Report.create(payload);
-  await sendReportConfirmation(reporter?.email, reporter?.fullName as string);
-  // Send notification to admin
+
+  try {
+    await sendReportConfirmation(reporter.email, reporter.fullName as string);
+  } catch (error) {
+    console.error('Failed to send report confirmation email:', error);
+  }
+
   const adminNotificationEvent = 'admin-notification';
   const adminNotificationPayload: INotification = {
-    title: `New User Report Submitted`,
-    message: `${reporter?.fullName || 'A user'} (ID: ${
-      payload.reporter
-    }) has reported ${reportedUser?.fullName || 'another user'} (ID: ${
-      payload.reportedUser
-    }) for "${
-      payload.reportReason || 'unspecified reasons'
+    title: `New ${payload.reportType} Report Submitted`,
+    message: `${reporter.fullName || 'A user'} has reported a ${
+      payload.reportType
+    } by ${reportedUser.fullName || 'another user'} for "${
+      payload.reportReason.join(', ') || 'unspecified reasons'
     }". Please review the report.`,
     linkId: result._id,
     type: 'report',
@@ -46,6 +89,7 @@ const addReport = async (payload: IReport): Promise<IReport> => {
     adminNotificationEvent,
     adminNotificationPayload
   );
+
   return result;
 };
 
@@ -56,13 +100,11 @@ const getAllReports = async (
   options.populate = [
     {
       path: 'reporter',
-      select:
-        'fullName email profileImage age gender aboutMe address city country state continent ethnicity denomination education maritalStatus hobby occupation interests',
+      select: 'fullName email profileImage username ',
     },
     {
       path: 'reportedUser',
-      select:
-        'fullName email profileImage age gender aboutMe address city country state continent ethnicity denomination education maritalStatus hobby occupation interests',
+      select: 'fullName email profileImage username ',
     },
   ];
   const result = await Report.paginate(filters, options);
@@ -73,13 +115,11 @@ const getSingleReport = async (reportId: string): Promise<IReport> => {
   const result = await Report.findById(reportId).populate([
     {
       path: 'reporter',
-      select:
-        'fullName email profileImage age gender aboutMe address city country state continent ethnicity denomination education maritalStatus hobby occupation interests',
+      select: 'fullName email profileImage username',
     },
     {
       path: 'reportedUser',
-      select:
-        'fullName email profileImage age gender aboutMe address city country state continent ethnicity denomination education maritalStatus hobby occupation interests',
+      select: 'fullName email profileImage username',
     },
   ]);
   if (!result) {

@@ -46,8 +46,16 @@ const getSavedPostItinerary = async (
   return await SavedPostItinerary.paginate(query, options);
 };
 
+const removePostItinerary = async (userId: string, postItineraryId: string) => {
+  const savedPostItinerary = await SavedPostItinerary.findOneAndDelete({
+    userId,
+    postItineraryId,
+  });
+  return savedPostItinerary;
+};
+
 export const SavedPostItineraryService = {
   addPostItinerary,
   getSavedPostItinerary,
+  removePostItinerary,
 };
-

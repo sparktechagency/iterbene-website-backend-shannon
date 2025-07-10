@@ -3,27 +3,35 @@ import auth from '../../middlewares/auth';
 import { ReportController } from './reports.controllers';
 import validateRequest from '../../shared/validateRequest';
 import { ReportValidation } from './reports.validation';
-import fileUploadHandler from '../../shared/fileUploadHandler';
-
-const UPLOADS_FOLDER = 'uploads/reports';
-const upload = fileUploadHandler(UPLOADS_FOLDER);
-
 const router = Router();
 
 router
-  .route('/send-waring-message')
-  .post(auth('admin'), ReportController.sendWarningMessageForReportedUser);
+  .route('/send-warning-message')
+  .post(
+    auth('admin'),
+    validateRequest(ReportValidation.sendWarningMessageValidationSchema),
+    ReportController.sendWarningMessageForReportedUser
+  );
 
-router.post('/banned-user', auth('admin'), ReportController.banUser);
+router.patch(
+  '/users/:userId/ban',
+  auth('admin'),
+  validateRequest(ReportValidation.banUserValidationSchema),
+  ReportController.banUser
+);
 
-router.post('/unbanned-user', auth('admin'), ReportController.unbanUser);
+router.patch(
+  '/users/:userId/unban',
+  auth('admin'),
+  validateRequest(ReportValidation.unbanUserValidationSchema),
+  ReportController.unbanUser
+);
 
 router
   .route('/')
   .get(auth('admin'), ReportController.getAllReports)
   .post(
     auth('common'),
-    upload.array('reportFiles', 10),
     validateRequest(ReportValidation.addReportValidationSchema),
     ReportController.addReport
   );

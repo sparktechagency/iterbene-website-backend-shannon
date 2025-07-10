@@ -20,6 +20,7 @@ import { ItineraryRoutes } from '../modules/Itinerary/itinerary.routes';
 import { HashtagRoutes } from '../modules/hastag/hashtag.routes';
 import { MapsRoutes } from '../modules/maps/maps.routes';
 import { SearchRoutes } from '../modules/search/search.routes';
+import { SavedPostItineraryRoutes } from '../modules/savedPostItinerary/savedPostItinerary.route';
 const router = express.Router();
 
 const apiRoutes = [
@@ -64,8 +65,8 @@ const apiRoutes = [
     route: PostRoutes,
   },
   {
-    path:"/itinerary",
-    route:ItineraryRoutes
+    path: '/itinerary',
+    route: ItineraryRoutes,
   },
   {
     path: '/hashtag',
@@ -92,8 +93,12 @@ const apiRoutes = [
     route: CountryRoutes,
   },
   {
-    path: "/maps",
-    route:MapsRoutes
+    path: '/maps',
+    route: MapsRoutes,
+  },
+  {
+    path: '/saved-post-itinerary',
+    route: SavedPostItineraryRoutes,
   },
   {
     path: '/settings',
