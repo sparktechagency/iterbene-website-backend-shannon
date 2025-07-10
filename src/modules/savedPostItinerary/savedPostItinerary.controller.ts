@@ -4,10 +4,14 @@ import { SavedPostItineraryService } from './savedPostItinerary.services';
 
 const addPostItinerary = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const { postItineraryId } = req.body;
+  const { postId, itineraryId } = req.body;
+  const payload = {
+    postId,
+    itineraryId,
+  };
   const result = await SavedPostItineraryService.addPostItinerary(
     userId,
-    postItineraryId
+    payload
   );
   res.status(201).json({
     status: 'success',
@@ -24,6 +28,20 @@ const getSavedPostItinerary = catchAsync(async (req, res) => {
   const result = await SavedPostItineraryService.getSavedPostItinerary(
     filters,
     options
+  );
+  res.status(201).json({
+    status: 'success',
+    message: 'Post itinerary saved successfully',
+    data: result,
+  });
+});
+
+const isPostItineraryAlreadySaved = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const { postItineraryId} = req.params;
+  const result = await SavedPostItineraryService.isPostItineraryAlreadySaved(
+    userId,
+    postItineraryId
   );
   res.status(201).json({
     status: 'success',
@@ -50,4 +68,5 @@ export const SavedPostItineraryController = {
   addPostItinerary,
   getSavedPostItinerary,
   removePostItinerary,
+  isPostItineraryAlreadySaved
 };
