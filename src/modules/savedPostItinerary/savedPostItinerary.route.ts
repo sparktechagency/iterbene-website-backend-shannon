@@ -5,17 +5,17 @@ import { SavedPostItineraryController } from './savedPostItinerary.controller';
 const router = Router();
 
 router.get(
-  '/already-saved/:postItineraryId',
+  '/already-saved/:postId',
   auth('User'),
-  SavedPostItineraryController.isPostItineraryAlreadySaved
+  SavedPostItineraryController.isPostAlreadySaved
 );
 router
   .route('/')
-  .post(auth('User'), SavedPostItineraryController.addPostItinerary)
-  .get(auth('User'), SavedPostItineraryController.getSavedPostItinerary);
+  .post(auth('User'), SavedPostItineraryController.addPostSaved)
+  .get(auth('User'), SavedPostItineraryController.getSavedPost);
 
 router
-  .route('/:postItineraryId')
-  .delete(auth('User'), SavedPostItineraryController.removePostItinerary);
+  .route('/:postId')
+  .delete(auth('User'), SavedPostItineraryController.removePostSaved);
 
 export const SavedPostItineraryRoutes = router;

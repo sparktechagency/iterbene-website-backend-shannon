@@ -1,10 +1,10 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 
 export interface ISavedPostItinerary {
-  _id: string;
-  userId: string;
-  postId: string;
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  postId:  Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }

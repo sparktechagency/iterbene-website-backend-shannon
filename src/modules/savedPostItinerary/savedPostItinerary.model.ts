@@ -1,4 +1,4 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Types } from 'mongoose';
 import {
   ISavedPostItinerary,
   ISavedPostItineraryModel,
@@ -11,15 +11,15 @@ const savedPostItineraryModel = new Schema<
 >(
   {
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
     postId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       ref: 'Post',
       required: true,
-    },
+    }
   },
   {
     timestamps: true,

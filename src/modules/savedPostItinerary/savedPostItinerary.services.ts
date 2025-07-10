@@ -4,51 +4,38 @@ import { User } from '../user/user.model';
 import SavedPostItinerary from './savedPostItinerary.model';
 import { Post } from '../post/post.model';
 import { PaginateOptions } from '../../types/paginate';
-interface IAddPostItinerary {
-  postId: string;
-  itineraryId?: string;
-}
-const addPostItinerary = async (userId: string, payload: IAddPostItinerary) => {
+const addPostSaved = async (userId: string, postId: string) => {
   // check if user exist
   const user = await User.findById(userId);
   if (!user || user.isDeleted || user.isBlocked || user.isBanned) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
   //   check post itinerary exist
-  const postItinerary = await Post.findById(payload?.postId);
-  if (!postItinerary || postItinerary.isDeleted) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Post itinerary not found');
-  }
-  if (payload?.itineraryId) {
-    const itinerary = await Post.findById(payload?.itineraryId);
-    if (!itinerary || itinerary.isDeleted) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
-    }
+  const post = await Post.findById(postId);
+  if (!post || post.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
   const existing = await SavedPostItinerary.findOne({
     userId,
-    postId: payload?.postId,
+    postId,
   });
   if (!existing) {
     const savedPostItinerary = await SavedPostItinerary.create({
       userId,
-      postId: payload?.postId,
+      postId,
     });
     return savedPostItinerary;
   }
 };
 
-const isPostItineraryAlreadySaved = async (
-  userId: string,
-  postItineraryId: string
-) => {
+const isPostAlreadySaved = async (userId: string, postId: string) => {
   const savedPostItinerary = await SavedPostItinerary.findOne({
     userId,
-    postId: postItineraryId,
+    postId,
   });
   return !!savedPostItinerary;
 };
-const getSavedPostItinerary = async (
+const getSavedPost = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ) => {
@@ -65,17 +52,17 @@ const getSavedPostItinerary = async (
   return await SavedPostItinerary.paginate(query, options);
 };
 
-const removePostItinerary = async (userId: string, postItineraryId: string) => {
+const removePostSaved = async (userId: string, postId: string) => {
   const savedPostItinerary = await SavedPostItinerary.findOneAndDelete({
     userId,
-    postId:postItineraryId,
+    postId,
   });
   return savedPostItinerary;
 };
 
 export const SavedPostItineraryService = {
-  addPostItinerary,
-  getSavedPostItinerary,
-  removePostItinerary,
-  isPostItineraryAlreadySaved,
+  addPostSaved,
+getSavedPost,
+  removePostSaved,
+  isPostAlreadySaved,
 };
