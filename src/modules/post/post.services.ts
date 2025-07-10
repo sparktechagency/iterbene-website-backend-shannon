@@ -481,7 +481,7 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
     // Remove visited location from Maps if it exists
     if (
       post?.visitedLocation?.latitude &&
-      post?.visitedLocation?.longitude  &&
+      post?.visitedLocation?.longitude &&
       post?.visitedLocationName
     ) {
       const mapsUser = await Maps.findOne({ userId }).session(session);
@@ -1257,6 +1257,22 @@ const getVisitedPostsWithDistance = async (
   };
 };
 
+const incrementItineraryViewCount = async (
+  postId: string,
+  itineraryId: string
+) => {
+  const post = await Post.findOne({
+    _id: new Types.ObjectId(postId),
+    itinerary: new Types.ObjectId(itineraryId),
+  });
+  if (!post) {
+    throw new ApiError(404, 'Post not found');
+  }
+  post.itineraryViewCount += 1;
+  await post.save();
+  return post;
+};
+
 export const PostServices = {
   createPost,
   sharePost,
@@ -1273,4 +1289,5 @@ export const PostServices = {
   updatePost,
   deletePost,
   getVisitedPostsWithDistance,
+  incrementItineraryViewCount
 };

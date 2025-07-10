@@ -320,18 +320,37 @@ const deletePost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getVisitedPostsWithDistance = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const options = pick(req.query, ['page', 'limit']);
-  const result = await PostServices.getVisitedPostsWithDistance(userId, options);
+const getVisitedPostsWithDistance = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const options = pick(req.query, ['page', 'limit']);
+    const result = await PostServices.getVisitedPostsWithDistance(
+      userId,
+      options
+    );
 
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Visited posts retrieved successfully',
-    data: result,
-  });
-});
+    sendResponse(res, {
+      code: StatusCodes.OK,
+      message: 'Visited posts retrieved successfully',
+      data: result,
+    });
+  }
+);
 
+const incrementItineraryViewCount = catchAsync(
+  async (req: Request, res: Response) => {
+    const { postId, itineraryId } = req.body;
+    const result = await PostServices.incrementItineraryViewCount(
+      postId,
+      itineraryId
+    );
+    sendResponse(res, {
+      code: StatusCodes.OK,
+      message: 'Itinerary view count incremented successfully',
+      data: result,
+    });
+  }
+);
 export const PostController = {
   createPost,
   sharePost,
@@ -348,4 +367,5 @@ export const PostController = {
   deletePost,
   deleteComment,
   getVisitedPostsWithDistance,
+  incrementItineraryViewCount
 };
