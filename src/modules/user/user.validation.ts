@@ -41,7 +41,25 @@ const setLatestLocationValidationSchema = z.object({
     locationName: z.string({
       required_error: 'Location name is required.',
       invalid_type_error: 'Location name must be a string.',
-    })
+    }),
+    city: z
+      .string({
+        required_error: 'City is required.',
+        invalid_type_error: 'City must be a string.',
+      })
+      .optional(),
+    state: z
+      .string({
+        required_error: 'State is required.',
+        invalid_type_error: 'State must be a string.',
+      })
+      .optional(),
+    country: z
+      .string({
+        required_error: 'Country is required.',
+        invalid_type_error: 'Country must be a string.',
+      })
+      .optional(),
   }),
 });
 
@@ -66,8 +84,7 @@ const completeProfileValidationSchema = z.object({
     }),
     kids: z.enum(['Yes', 'No'], {
       errorMap: () => ({
-        message:
-          'Invalid kids status. Valid options: Yes, NO',
+        message: 'Invalid kids status. Valid options: Yes, NO',
       }),
     }),
     maritalStatus: z.enum(['Single', 'Divorced', 'Separated', 'Widowed'], {
@@ -96,4 +113,3 @@ export const UserValidation = {
   setLatestLocationValidationSchema,
   completeProfileValidationSchema,
 };
-

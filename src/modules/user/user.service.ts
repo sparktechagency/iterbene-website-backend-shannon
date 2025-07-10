@@ -137,16 +137,16 @@ const getSingleUser = async (
   userName: string,
   requesterId?: string
 ): Promise<Partial<TUser> | null> => {
-  const user = await User.findOne({ username: userName, isDeleted: false }).select(
+  const user = await User.findOne({
+    username: userName,
+    isDeleted: false,
+  }).select(
     '-password -isBlocked -isResetPassword -failedLoginAttempts -lockUntil -lastPasswordChange -passwordHistory -banUntil -isBanned -isDeleted -__v'
   );
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  return filterUserFields(
-    user,
-    requesterId as string
-  );
+  return filterUserFields(user, requesterId as string);
 };
 
 const getSingleUserByUser = async (
@@ -159,15 +159,19 @@ const getSingleUserByUser = async (
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  return filterUserFields(
-    user,
-    requesterId as string
-  );
+  return filterUserFields(user, requesterId as string);
 };
 
 const setUserLatestLocation = async (
   userId: string,
-  payload: { latitude: number; longitude: number; locationName: string }
+  payload: {
+    latitude: number;
+    longitude: number;
+    locationName: string;
+    city?: string;
+    state?: string;
+    country?: string;
+  }
 ) => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.');
@@ -178,6 +182,9 @@ const setUserLatestLocation = async (
       longitude: payload.longitude,
     },
     locationName: payload.locationName,
+    city: payload.city,
+    state: payload.state,
+    country: payload.country,
   };
   const user = await User.findByIdAndUpdate(userId, updatedData, {
     new: true,
@@ -188,7 +195,7 @@ const setUserLatestLocation = async (
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  return filterUserFields(user, userId);
+  return 
 };
 
 const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
