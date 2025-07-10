@@ -10,7 +10,7 @@ router
   .get(auth('User'), SavedPostItineraryController.getSavedPostItinerary);
 
 router
-  .route('/id')
-  .delete(auth('User'), SavedPostItineraryController.getSavedPostItinerary);
+  .route('/:postItineraryId')
+  .delete(auth('User'), SavedPostItineraryController.removePostItinerary);
 
   export const SavedPostItineraryRoutes = router;

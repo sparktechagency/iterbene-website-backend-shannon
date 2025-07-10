@@ -6,8 +6,11 @@ import pick from '../../shared/pick';
 
 const addReport = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  req.body.reporter = userId;
-  const result = await ReportServices.addReport(req.body);
+  const payload = {
+    reporter: userId,
+    ...req.body,
+  };
+  const result = await ReportServices.addReport(payload);
   sendResponse(res, {
     code: StatusCodes.CREATED,
     message: 'Report added successfully',
@@ -16,10 +19,7 @@ const addReport = catchAsync(async (req, res) => {
 });
 
 const getAllReports = catchAsync(async (req, res) => {
-  const filters = pick(req.query, [
-    'reporterName',
-    'reportedName',
-  ]);
+  const filters = pick(req.query, ['reporterName', 'reportedName']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   const result = await ReportServices.getAllReports(filters, options);
   sendResponse(res, {
@@ -38,7 +38,6 @@ const getSingleReport = catchAsync(async (req, res) => {
     data: result,
   });
 });
-
 
 const sendWarningMessageForReportedUser = catchAsync(async (req, res) => {
   const { reportedUserId, warningMessage } = req.body;

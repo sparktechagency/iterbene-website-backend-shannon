@@ -9,8 +9,8 @@ export interface IReport {
   reportReason: string[];
   reportStatus: ReportStatus;
   reportType: ReportType;
-  reportedMessage?: Types.ObjectId; // Reference to Message for MESSAGE reports
-  reportedPost?: Types.ObjectId; // Reference to Post for POST or COMMENT reports
+  reportedMessageId?: Types.ObjectId; // Reference to Message for MESSAGE reports
+  reportedPostId?: Types.ObjectId; // Reference to Post for POST or COMMENT reports
   reportedCommentId?: Types.ObjectId; // ID of the comment within the Post for COMMENT reports
   createdAt: Date;
   updatedAt: Date;

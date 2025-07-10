@@ -5,52 +5,13 @@ import { ReportType } from './reports.interface';
 const addReportValidationSchema = z.object({
   body: z
     .object({
-      reporter: z.string().nonempty('Reporter ID is required'),
       reportedUser: z.string().nonempty('Reported User ID is required'),
       reportMessage: z.string().optional(),
       reportReason: z.array(z.string()).nonempty('Report Reason is required'),
-      reportType: z.enum(Object.values(ReportType) as [string, ...string[]]),
       reportedMessage: z.string().optional(),
       reportedPost: z.string().optional(),
       reportedCommentId: z.string().optional(),
     })
-    .refine(
-      data => {
-        if (data.reportType === ReportType.MESSAGE) {
-          return (
-            !!data.reportedMessage &&
-            !data.reportedPost &&
-            !data.reportedCommentId
-          );
-        }
-        if (data.reportType === ReportType.COMMENT) {
-          return (
-            !!data.reportedPost &&
-            !!data.reportedCommentId &&
-            !data.reportedMessage
-          );
-        }
-        if (data.reportType === ReportType.POST) {
-          return (
-            !!data.reportedPost &&
-            !data.reportedCommentId &&
-            !data.reportedMessage
-          );
-        }
-        if (data.reportType === ReportType.USER) {
-          return (
-            !data.reportedMessage &&
-            !data.reportedPost &&
-            !data.reportedCommentId
-          );
-        }
-        return true;
-      },
-      {
-        message: 'Invalid reported entity for the given report type',
-        path: ['reportType'],
-      }
-    ),
 });
 
 const sendWarningMessageValidationSchema = z.object({

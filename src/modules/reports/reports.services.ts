@@ -15,7 +15,7 @@ import { Post } from '../post/post.model';
 import Message from '../message/message.model';
 
 const addReport = async (payload: IReport): Promise<IReport> => {
-  if (payload.reporter.equals(payload.reportedUser)) {
+  if (payload.reporter === payload.reportedUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot report yourself');
   }
 
@@ -30,8 +30,8 @@ const addReport = async (payload: IReport): Promise<IReport> => {
   }
 
   // Validate reported entities based on reportType
-  if (payload.reportType === ReportType.MESSAGE && payload.reportedMessage) {
-    const message = await Message.findById(payload.reportedMessage);
+  if (payload.reportType === ReportType.MESSAGE && payload.reportedMessageId) {
+    const message = await Message.findById(payload.reportedMessageId);
     if (!message) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
@@ -39,8 +39,8 @@ const addReport = async (payload: IReport): Promise<IReport> => {
       );
     }
   }
-  if (payload.reportType === ReportType.POST && payload.reportedPost) {
-    const post = await Post.findById(payload.reportedPost);
+  if (payload.reportType === ReportType.POST && payload.reportedPostId) {
+    const post = await Post.findById(payload.reportedPostId);
     if (!post) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
@@ -50,11 +50,11 @@ const addReport = async (payload: IReport): Promise<IReport> => {
   }
   if (
     payload.reportType === ReportType.COMMENT &&
-    payload.reportedPost &&
+    payload.reportedPostId &&
     payload.reportedCommentId
   ) {
     const post = await Post.findOne({
-      _id: payload.reportedPost,
+      _id: payload.reportedPostId,
       'comments._id': payload.reportedCommentId,
     });
     if (!post) {
@@ -71,24 +71,28 @@ const addReport = async (payload: IReport): Promise<IReport> => {
     await sendReportConfirmation(reporter.email, reporter.fullName as string);
   } catch (error) {
     console.error('Failed to send report confirmation email:', error);
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to send report confirmation email'
+    );
   }
 
-  const adminNotificationEvent = 'admin-notification';
-  const adminNotificationPayload: INotification = {
-    title: `New ${payload.reportType} Report Submitted`,
-    message: `${reporter.fullName || 'A user'} has reported a ${
-      payload.reportType
-    } by ${reportedUser.fullName || 'another user'} for "${
-      payload.reportReason.join(', ') || 'unspecified reasons'
-    }". Please review the report.`,
-    linkId: result._id,
-    type: 'report',
-    role: 'admin',
-  };
-  await NotificationService.addCustomNotification(
-    adminNotificationEvent,
-    adminNotificationPayload
-  );
+  // const adminNotificationEvent = 'admin-notification';
+  // const adminNotificationPayload: INotification = {
+  //   title: `New ${payload.reportType} Report Submitted`,
+  //   message: `${reporter.fullName || 'A user'} has reported a ${
+  //     payload.reportType
+  //   } by ${reportedUser.fullName || 'another user'} for "${
+  //     payload.reportReason.join(', ') || 'unspecified reasons'
+  //   }". Please review the report.`,
+  //   linkId: result._id,
+  //   type: 'report',
+  //   role: 'admin',
+  // };
+  // await NotificationService.addCustomNotification(
+  //   adminNotificationEvent,
+  //   adminNotificationPayload
+  // );
 
   return result;
 };

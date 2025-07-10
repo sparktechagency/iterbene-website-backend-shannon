@@ -8,36 +8,36 @@ const router = Router();
 router
   .route('/send-warning-message')
   .post(
-    auth('admin'),
+    auth('Admin'),
     validateRequest(ReportValidation.sendWarningMessageValidationSchema),
     ReportController.sendWarningMessageForReportedUser
   );
 
 router.patch(
   '/users/:userId/ban',
-  auth('admin'),
+  auth('Admin'),
   validateRequest(ReportValidation.banUserValidationSchema),
   ReportController.banUser
 );
 
 router.patch(
   '/users/:userId/unban',
-  auth('admin'),
+  auth('Admin'),
   validateRequest(ReportValidation.unbanUserValidationSchema),
   ReportController.unbanUser
 );
 
 router
   .route('/')
-  .get(auth('admin'), ReportController.getAllReports)
+  .get(auth('Admin'), ReportController.getAllReports)
   .post(
-    auth('common'),
+    auth('Common'),
     validateRequest(ReportValidation.addReportValidationSchema),
     ReportController.addReport
   );
 
 router
   .route('/:reportId')
-  .get(auth('admin'), ReportController.getSingleReport);
+  .get(auth('Admin'), ReportController.getSingleReport);
 
 export const ReportRoutes = router;
