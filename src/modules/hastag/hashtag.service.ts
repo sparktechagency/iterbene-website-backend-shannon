@@ -15,7 +15,49 @@ const getHashtagPosts = async (
   const query: Record<string, any> = {
     name: { $regex: new RegExp(filters.hashtag, 'i') }, // Case-insensitive regex
   };
-  options.populate = [{ path: 'posts'}];
+  options.populate = [
+    {
+      path: 'posts',
+      populate: [
+        {
+          path: 'media',
+          select: 'mediaType mediaUrl',
+        },
+        { path: 'itinerary' },
+        {
+          path: 'userId',
+          select: 'fullName username profileImage',
+        },
+        {
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
+        },
+        {
+          path: 'comments',
+          populate: [
+            {
+              path: 'userId',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'mentions',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'reactions',
+              populate: {
+                path: 'userId',
+                select: 'fullName username profileImage',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ];
   return Hashtag.paginate(query, options);
 };
 

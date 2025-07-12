@@ -462,17 +462,13 @@ const getPostById = async (postId: string): Promise<IPost> => {
 
 // Delete post
 const deletePost = async (userId: string, postId: string): Promise<IPost> => {
-  // Start a transaction to ensure atomicity
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // Find the post with userId and isDeleted checks
     const post = await Post.findOne({
       _id: new Types.ObjectId(postId),
       userId: new Types.ObjectId(userId),
       isDeleted: false,
-    }).session(session);
+    });
 
     if (!post) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
@@ -484,7 +480,7 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
       post?.visitedLocation?.longitude &&
       post?.visitedLocationName
     ) {
-      const mapsUser = await Maps.findOne({ userId }).session(session);
+      const mapsUser = await Maps.findOne({ userId });
       if (mapsUser) {
         mapsUser.visitedLocation = mapsUser.visitedLocation.filter(
           item =>
@@ -494,31 +490,26 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
               item?.visitedLocationName === post?.visitedLocationName
             )
         );
-        await mapsUser.save({ session });
+        await mapsUser.save();
       }
     }
 
     // Soft-delete the post
     post.isDeleted = true;
-    await post.save({ session });
+    await post.save();
 
     // Soft-delete associated Media and Itinerary documents
     await Media.updateMany(
       { postId: new Types.ObjectId(postId), isDeleted: false },
-      { isDeleted: true },
-      { session }
+      { isDeleted: true }
     );
 
     await Itinerary.updateMany(
       { postId: new Types.ObjectId(postId), isDeleted: false },
-      { isDeleted: true },
-      { session }
+      { isDeleted: true }
     );
 
-    // Commit the transaction
-    await session.commitTransaction();
-
-    // Populate the post after transaction to avoid modifying during session
+    // Populate the post
     const populatedPost = await Post.findById(postId)
       .populate('media itinerary userId sourceId comments.mentions')
       .lean();
@@ -532,12 +523,7 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
 
     return populatedPost;
   } catch (error) {
-    // Abort the transaction on error
-    await session.abortTransaction();
     throw error;
-  } finally {
-    // End the session
-    session.endSession();
   }
 };
 
