@@ -396,7 +396,6 @@ const getMyInterestedEvents = async (
 };
 
 const getEventSuggestions = async (
-  userId: string,
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IEvent>> => {
@@ -404,10 +403,6 @@ const getEventSuggestions = async (
   const query = {
     isDeleted: false,
     privacy: EventPrivacy.PUBLIC,
-    interestedUsers: { $nin: [new Types.ObjectId(userId)] },
-    pendingInterestedUsers: { $nin: [new Types.ObjectId(userId)] },
-    creatorId: { $ne: new Types.ObjectId(userId) },
-    coHosts: { $nin: [new Types.ObjectId(userId)] },
     startDate: { $gte: newDate },
     endDate: { $gte: newDate },
   };

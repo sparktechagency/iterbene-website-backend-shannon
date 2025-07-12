@@ -39,7 +39,7 @@ router.get(
 );
 
 // Get event suggestions (any authenticated user)
-router.get('/suggestions', auth('Common'), EventController.getEventSuggestions);
+router.get('/suggestions', EventController.getEventSuggestions);
 
 // Event Invite Routes
 

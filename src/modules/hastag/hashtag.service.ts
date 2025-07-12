@@ -15,6 +15,7 @@ const getHashtagPosts = async (
   const query: Record<string, any> = {
     name: { $regex: new RegExp(filters.hashtag, 'i') }, // Case-insensitive regex
   };
+  options.populate = [{ path: 'posts'}];
   return Hashtag.paginate(query, options);
 };
 
@@ -27,7 +28,7 @@ const getHashtags = (
     name: { $regex: new RegExp(filters.searchTerm, 'i') }, // Case-insensitive regex
   };
   options.select = 'name postCount';
-  const result =  Hashtag.paginate(query, options);
+  const result = Hashtag.paginate(query, options);
   return result;
 };
 

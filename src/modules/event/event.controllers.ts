@@ -101,11 +101,9 @@ const getMyInterestedEvents = catchAsync(
 );
 
 const getEventSuggestions = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
   const filters = pick(req.query, ['name']);
   const options = pick(req.query, ['limit', 'skip', 'sortBy']);
   const result = await EventService.getEventSuggestions(
-    userId,
     filters,
     options
   );
