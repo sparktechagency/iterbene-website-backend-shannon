@@ -152,7 +152,6 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
       })
     );
   }
-
   const post = await Post.create({
     userId,
     sourceId: sourceId ? new Types.ObjectId(sourceId) : undefined,
@@ -162,7 +161,10 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
     itinerary,
     hashtags: uniqueHashtags,
     privacy,
-    visitedLocation,
+    visitedLocation: {
+      latitude: visitedLocation?.latitude,
+      longitude: visitedLocation?.longitude,
+    },
     visitedLocationName,
     shareCount: 0,
     isShared: false,
@@ -947,8 +949,9 @@ const feedPosts = async (
       ],
     },
   ];
-  options.sortBy = options.sortBy || '-createdAt';
 
+  options.sortBy = 'createdAt';
+  options.sortOrder = -1;
   const posts = await Post.paginate(query, options);
 
   if (
@@ -964,22 +967,6 @@ const feedPosts = async (
     posts.totalResults = posts.results.length;
     posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
   }
-
-  posts.results = posts.results.map(post => {
-    if (post.reactions) {
-      post.reactions.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    if (post.comments) {
-      post.comments.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    return post;
-  });
 
   return posts;
 };
@@ -1044,6 +1031,7 @@ const getUserTimelinePosts = async (
   ];
 
   options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
 
   let posts = await Post.paginate(query, options);
 
@@ -1118,6 +1106,8 @@ const getGroupPosts = async (
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
+
   return Post.paginate(query, options);
 };
 
@@ -1170,6 +1160,7 @@ const getEventPosts = async (
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
   return Post.paginate(query, options);
 };
 
@@ -1212,6 +1203,9 @@ const getVisitedPostsWithDistance = async (
       select: 'days overAllRating',
     },
   ];
+
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
 
   // Get paginated posts
   const result = await Post.paginate(query, options);
@@ -1275,5 +1269,5 @@ export const PostServices = {
   updatePost,
   deletePost,
   getVisitedPostsWithDistance,
-  incrementItineraryViewCount
+  incrementItineraryViewCount,
 };

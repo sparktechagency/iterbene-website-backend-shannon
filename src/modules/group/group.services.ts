@@ -488,7 +488,9 @@ const getMyGroups = async (
   }
   options.select =
     'name groupImage privacy participantCount createdAt updatedAt';
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
+
   const groups = await Group.paginate(query, options);
   return groups;
 };
@@ -505,11 +507,8 @@ const getMyJoinGroups = async (
 
   const query: Record<string, any> = {
     isDeleted: false,
-    creatorId: { $ne: userId }, 
-    $or: [
-      { members: { $in: [userId] } }, 
-      { coLeaders: { $in: [userId] } }, 
-    ],
+    creatorId: { $ne: userId },
+    $or: [{ members: { $in: [userId] } }, { coLeaders: { $in: [userId] } }],
   };
 
   // Apply privacy filter if provided
@@ -517,7 +516,8 @@ const getMyJoinGroups = async (
     query.privacy = filters.privacy;
   }
 
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
   options.select =
     'name  groupImage privacy participantCount  createdAt updatedAt';
   const groups = await Group.paginate(query, options);
@@ -582,9 +582,10 @@ const getGroupSuggestions = async (
     query.$or.push({ members: { $in: friends } });
   }
 
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
   options.select =
     'name groupImage privacy participantCount createdAt updatedAt';
-  options.sortBy = options.sortBy || '-createdAt';
 
   const groups = await Group.paginate(query, options);
   return groups;

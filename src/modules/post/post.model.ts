@@ -53,14 +53,6 @@ const commentSchema = new Schema<IComment>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-const visitedLocationSchema = new Schema<{
-  latitude: number;
-  longitude: number;
-}>({
-  latitude: { type: Number, required: false },
-  longitude: { type: Number, required: false },
-});
-
 const postSchema = new Schema<IPost, IPostModel>({
   userId: {
     type: Schema.Types.ObjectId,
@@ -89,8 +81,8 @@ const postSchema = new Schema<IPost, IPostModel>({
   ],
   sortedReactions: [sortedReactionSchema],
   visitedLocation: {
-    type: visitedLocationSchema,
-    required: false,
+    latitude: { type: Number, required: false },
+    longitude: { type: Number, required: false },
   },
   visitedLocationName: {
     type: String,
@@ -122,8 +114,6 @@ const postSchema = new Schema<IPost, IPostModel>({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
-
-postSchema.index({ visitedLocation: '2dsphere' });
 
 postSchema.plugin(paginate);
 

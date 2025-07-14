@@ -20,13 +20,10 @@ const getALLNotification = async (
 ) => {
   filters.receiverId = userId;
   filters.viewStatus = false;
-  const unViewNotificationCount = await Notification.countDocuments({
-    receiverId: userId,
-    viewStatus: false,
-  });
-
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
   const result = await Notification.paginate(filters, options);
-  return { ...result, unViewNotificationCount };
+  return result;
 };
 
 const getAdminNotifications = async (
@@ -52,8 +49,6 @@ const addCustomNotification = async (
   notifications: INotification,
   userId?: string
 ) => {
-
-
   const notificationEvent = `${eventName}::${userId}`;
   const result = await addNotification(notifications);
 
@@ -80,8 +75,8 @@ const getUnViewNotificationCount = async (userId: string) => {
     receiverId: userId,
     viewStatus: false,
   });
-  return {count: result};
-}
+  return { count: result };
+};
 
 const viewAllNotifications = async (userId: string) => {
   const result = await Notification.updateMany(
@@ -101,7 +96,7 @@ const viewSingleNotification = async (notificationId: string) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
   }
   return result;
-}
+};
 const deleteNotification = async (notificationId: string) => {
   const result = await Notification.findByIdAndDelete(notificationId);
   if (!result) {

@@ -260,8 +260,8 @@ const getMyAllConnections = async (
       select: 'fullName profileImage username',
     },
   ];
-  options.sortBy = options.sortBy || '-createdAt';
-
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
   const connections = await Connections.paginate(query, options);
 
   const transformedResults = connections.results.map((connection: any) => {
@@ -302,7 +302,8 @@ const getMyAllRequests = async (
       select: 'fullName profileImage username',
     },
   ];
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
 
   const connections = await Connections.paginate(query, options);
   const requestCount = await Connections.countDocuments(query);
@@ -392,62 +393,53 @@ const getConnectionSuggestions = async (
     $or: [],
   };
 
-  // Build suggestions based on matching attributes
-  if (
-    user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
-    user.locationName
-  ) {
-    query.$or.push({
-      locationName: user.locationName,
-      'privacySettings.locationName': PrivacyVisibility.PUBLIC,
-    });
-  }
-  if (
-    user.privacySettings.country === PrivacyVisibility.PUBLIC &&
-    user.country
-  ) {
-    query.$or.push({
-      country: user.country,
-      'privacySettings.country': PrivacyVisibility.PUBLIC,
-    });
-  }
-  if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
-    query.$or.push({
-      city: user.city,
-      'privacySettings.city': PrivacyVisibility.PUBLIC,
-    });
-  }
-  if (
-    user.privacySettings.ageRange === PrivacyVisibility.PUBLIC &&
-    user.ageRange
-  ) {
-    query.$or.push({
-      ageRange: user.ageRange,
-      'privacySettings.ageRange': PrivacyVisibility.PUBLIC,
-    });
-  }
-  if (
-    user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
-    user.profession
-  ) {
-    query.$or.push({
-      profession: user.profession,
-      'privacySettings.profession': PrivacyVisibility.PUBLIC,
-    });
-  }
-
-  if (query.$or.length === 0) {
-    return {
-      results: [],
-      page: 1,
-      limit: 10,
-      totalPages: 0,
-      totalResults: 0,
-    };
-  }
+  // // Build suggestions based on matching attributes
+  // if (
+  //   user.privacySettings.locationName === PrivacyVisibility.PUBLIC &&
+  //   user.locationName
+  // ) {
+  //   query.$or.push({
+  //     locationName: user.locationName,
+  //     'privacySettings.locationName': PrivacyVisibility.PUBLIC,
+  //   });
+  // }
+  // if (
+  //   user.privacySettings.country === PrivacyVisibility.PUBLIC &&
+  //   user.country
+  // ) {
+  //   query.$or.push({
+  //     country: user.country,
+  //     'privacySettings.country': PrivacyVisibility.PUBLIC,
+  //   });
+  // }
+  // if (user.privacySettings.city === PrivacyVisibility.PUBLIC && user.city) {
+  //   query.$or.push({
+  //     city: user.city,
+  //     'privacySettings.city': PrivacyVisibility.PUBLIC,
+  //   });
+  // }
+  // if (
+  //   user.privacySettings.ageRange === PrivacyVisibility.PUBLIC &&
+  //   user.ageRange
+  // ) {
+  //   query.$or.push({
+  //     ageRange: user.ageRange,
+  //     'privacySettings.ageRange': PrivacyVisibility.PUBLIC,
+  //   });
+  // }
+  // if (
+  //   user.privacySettings.profession === PrivacyVisibility.PUBLIC &&
+  //   user.profession
+  // ) {
+  //   query.$or.push({
+  //     profession: user.profession,
+  //     'privacySettings.profession': PrivacyVisibility.PUBLIC,
+  //   });
+  // }
 
   options.select = '_id fullName profileImage username';
-  options.sortBy = options.sortBy || '-createdAt';
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = 1;
 
   const paginatedResult = await User.paginate(query, options);
 

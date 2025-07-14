@@ -10,9 +10,10 @@ const paginate = <T>(schema: Schema<T>) => {
     const limit = options.limit ?? 10;
     const page = options.page ?? 1;
     const sortBy = options.sortBy ?? 'createdAt';
-    const sortOrder = options.sortOrder ?? 1; 
+    const sortOrder = options.sortOrder ?? -1; 
     const select = options.select;
-    const reverse = options.reverse ?? false; // Default to normal pagination (false)
+    const reverse = options.reverse ?? false;
+
 
     // Count total documents
     const totalResults = await this.countDocuments(filter).exec();
