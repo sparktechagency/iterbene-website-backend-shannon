@@ -19,7 +19,6 @@ const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
   const payload = req.body;
   const result = await UserService.createAdminOrSuperAdmin(payload);
 
-
   sendResponse(res, {
     code: StatusCodes.CREATED,
     data: result,
@@ -30,7 +29,7 @@ const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
 const getSingleUser = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const { userName } = req.params;
-  const result = await UserService.getSingleUser(userName,userId);
+  const result = await UserService.getSingleUser(userName, userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
@@ -39,15 +38,15 @@ const getSingleUser = catchAsync(async (req, res) => {
 });
 
 const getSingleUserByUser = catchAsync(async (req, res) => {
-  const { userId:requesterId } = req.user;
+  const { userId: requesterId } = req.user;
   const { userId } = req.params;
-  const result = await UserService.getSingleUserByUser(userId,requesterId);
+  const result = await UserService.getSingleUserByUser(userId, requesterId);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
     message: 'User fetched successfully.',
   });
-})
+});
 const setUserLatestLocation = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.setUserLatestLocation(userId, req.body);
@@ -83,12 +82,9 @@ const updateMyProfile = catchAsync(async (req, res) => {
 const updateProfileImage = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const file = req.file as Express.Multer.File;
-  const result = await uploadFilesToS3(
-    [file],
-    USER_UPLOADS_FOLDER
-  );
+  const result = await uploadFilesToS3([file], USER_UPLOADS_FOLDER);
 
- const updatedResult = await UserService.updateProfileImage(userId, result[0]);
+  const updatedResult = await UserService.updateProfileImage(userId, result[0]);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: updatedResult,
@@ -98,18 +94,15 @@ const updateProfileImage = catchAsync(async (req, res) => {
 const updateCoverImage = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const file = req.file as Express.Multer.File;
-  const result = await uploadFilesToS3(
-    [file],
-    USER_UPLOADS_FOLDER
-  );
+  const result = await uploadFilesToS3([file], USER_UPLOADS_FOLDER);
 
- const updatedResult = await UserService.updateCoverImage(userId, result[0]);
+  const updatedResult = await UserService.updateCoverImage(userId, result[0]);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: updatedResult,
     message: 'Cover image updated successfully.',
   });
-})
+});
 const updateUserStatus = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const { status } = req.body;
@@ -134,11 +127,25 @@ const getMyProfile = catchAsync(async (req, res) => {
 const deleteMyProfile = catchAsync(async (req, res) => {
   const { userId } = req.user;
   const result = await UserService.deleteMyProfile(userId);
-  
+
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,
     message: 'User profile deleted successfully.',
+  });
+});
+
+const updatePrivacySettings = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const { privacySettings } = req.body;
+  const result = await UserService.updatePrivacySettings(
+    userId,
+    privacySettings
+  );
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: result,
+    message: 'Privacy settings updated successfully.',
   });
 });
 
@@ -154,4 +161,5 @@ export const UserController = {
   updateCoverImage,
   updateMyProfile,
   deleteMyProfile,
+  updatePrivacySettings,
 };

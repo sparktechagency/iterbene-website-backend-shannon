@@ -19,7 +19,6 @@ const getALLNotification = async (
   userId: string
 ) => {
   filters.receiverId = userId;
-  filters.viewStatus = false;
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
   const result = await Notification.paginate(filters, options);

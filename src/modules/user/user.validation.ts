@@ -106,10 +106,34 @@ const changeUserStatusValidationSchema = z.object({
     }),
   }),
 });
+const PrivacyVisibility = z.enum(['Public', 'Only Me', 'Friends']);
+
+// Zod schema for privacy settings
+const privacySettingsValidationSchema = z.object({
+  body: z.object({
+    privacySettings: z
+      .object({
+        ageRange: PrivacyVisibility.optional(),
+        nickname: PrivacyVisibility.optional(),
+        gender: PrivacyVisibility.optional(),
+        location: PrivacyVisibility.optional(),
+        locationName: PrivacyVisibility.optional(),
+        country: PrivacyVisibility.optional(),
+        state: PrivacyVisibility.optional(),
+        city: PrivacyVisibility.optional(),
+        profession: PrivacyVisibility.optional(),
+        aboutMe: PrivacyVisibility.optional(),
+        phoneNumber: PrivacyVisibility.optional(),
+        maritalStatus: PrivacyVisibility.optional(),
+      })
+      .strict(), // Ensures no extra fields are allowed
+  }),
+});
 
 export const UserValidation = {
   createUserValidationSchema,
   changeUserStatusValidationSchema,
   setLatestLocationValidationSchema,
   completeProfileValidationSchema,
+  privacySettingsValidationSchema
 };

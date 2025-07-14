@@ -51,6 +51,7 @@ const filterUserFields = async (
     referredAs: user.referredAs,
     address: user.address,
     isOnline: user.isOnline,
+    privacySettings: user.privacySettings,
     createdAt: user.createdAt,
   };
 
@@ -66,6 +67,7 @@ const filterUserFields = async (
     'profession',
     'description',
     'phoneNumber',
+    "privacySettings",
     'maritalStatus',
   ];
 
@@ -195,7 +197,7 @@ const setUserLatestLocation = async (
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  return 
+  return;
 };
 
 const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
@@ -342,6 +344,22 @@ const deleteMyProfile = async (userId: string): Promise<TUser | null> => {
   return user;
 };
 
+const updatePrivacySettings = async (
+  userId: string,
+  payload: Partial<TUser['privacySettings']>
+) => {
+  const user = await User.findById(userId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
+  }
+  user.privacySettings = {
+    ...user.privacySettings,
+    ...payload,
+  };
+  await user.save();
+  return filterUserFields(user, userId);
+};
+
 export const UserService = {
   createAdminOrSuperAdmin,
   getSingleUser,
@@ -355,4 +373,5 @@ export const UserService = {
   getMyProfile,
   deleteMyProfile,
   filterUserFields,
+  updatePrivacySettings,
 };

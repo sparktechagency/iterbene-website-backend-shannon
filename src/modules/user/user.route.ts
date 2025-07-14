@@ -16,6 +16,14 @@ router.get(
   UserController.checkUserNameAlreadyExists
 );
 
+// update privacy
+router.patch(
+  '/privacy-settings',
+  auth('Common'),
+  validateRequest(UserValidation.privacySettingsValidationSchema),
+  UserController.updatePrivacySettings
+);
+
 //get single user by username
 router.get('/username/:userName', auth('Common'), UserController.getSingleUser);
 
