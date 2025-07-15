@@ -50,7 +50,7 @@ const interestEvent = async (
   if (maps) {
     // Check for duplicate interestedLocation
     const isDuplicate = maps.interestedLocation.some(
-      (location) =>
+      location =>
         location.latitude === event.location.latitude &&
         location.longitude === event.location.longitude &&
         location.interestedLocationName === event.locationName
@@ -88,10 +88,10 @@ const notInterestEvent = async (
   }
   const userObjectId = new Types.ObjectId(userId);
   event.interestedUsers = event.interestedUsers.filter(
-    (id) => !id.equals(userObjectId)
+    id => !id.equals(userObjectId)
   );
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    (id) => !id.equals(userObjectId)
+    id => !id.equals(userObjectId)
   );
   event.interestCount = event.interestedUsers.length;
   if (event.interestCount < 0) {
@@ -102,7 +102,7 @@ const notInterestEvent = async (
   const maps = await Maps.findOne({ userId });
   if (maps) {
     maps.interestedLocation = maps.interestedLocation.filter(
-      (location) =>
+      location =>
         !(
           location.latitude === event.location.latitude &&
           location.longitude === event.location.longitude &&
@@ -137,7 +137,7 @@ const approveJoinEvent = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending join request');
   }
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    (id) => !id.equals(targetUserObjectId)
+    id => !id.equals(targetUserObjectId)
   );
   event.interestedUsers.push(targetUserObjectId);
   await event.save();
@@ -167,7 +167,7 @@ const rejectJoinEvent = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No pending join request');
   }
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    (id) => !id.equals(targetUserObjectId)
+    id => !id.equals(targetUserObjectId)
   );
   await event.save();
   return event;
@@ -202,10 +202,10 @@ const removeUser = async (
     );
   }
   event.interestedUsers = event.interestedUsers.filter(
-    (id) => !id.equals(targetUserObjectId)
+    id => !id.equals(targetUserObjectId)
   );
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
-    (id) => !id.equals(targetUserObjectId)
+    id => !id.equals(targetUserObjectId)
   );
   await event.save();
   return event;
@@ -263,7 +263,7 @@ const demoteCoHost = async (
   if (!event.coHosts.includes(coHostObjectId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not a co-host');
   }
-  event.coHosts = event.coHosts.filter((id) => !id.equals(coHostObjectId));
+  event.coHosts = event.coHosts.filter(id => !id.equals(coHostObjectId));
   await event.save();
   return event;
 };
@@ -353,9 +353,6 @@ const getMyEvents = async (
     ...filters,
     isDeleted: false,
     $or: [{ creatorId: new Types.ObjectId(userId) }],
-    // filter by startDate and endDate
-    startDate: { $gte: newDate },
-    endDate: { $gte: newDate },
   };
   options.populate = [
     {
@@ -380,7 +377,6 @@ const getMyInterestedEvents = async (
     isDeleted: false,
     creatorId: { $ne: new Types.ObjectId(userId) },
     $or: [{ interestedUsers: { $in: [new Types.ObjectId(userId)] } }],
-    startDate: { $gte: newDate },
     endDate: { $gte: newDate },
   };
   options.populate = [
@@ -400,10 +396,62 @@ const getEventSuggestions = async (
   options: PaginateOptions
 ): Promise<PaginateResult<IEvent>> => {
   const newDate = new Date();
+
+  // my events
+  let myEventIds: Types.ObjectId[] = [];
+  if (filters.userId) {
+    const myEvents = await Event.find({
+      creatorId: filters.userId,
+      endDate: { $gte: newDate },
+      isDeleted: false,
+    });
+    myEventIds = myEvents.map(event => event._id);
+  }
+
+  // co-host events
+  let coHostEventIds: Types.ObjectId[] = [];
+  if (filters.userId) {
+    const coHostEvents = await Event.find({
+      coHosts: { $in: [filters.userId] },
+      endDate: { $gte: newDate },
+      isDeleted: false,
+    });
+    coHostEventIds = coHostEvents.map(event => event._id);
+  }
+
+  // my interested events
+  let myInterestedEventIds: Types.ObjectId[] = [];
+  if (filters.userId) {
+    const myInterestedEvents = await Event.find({
+      creatorId: { $ne: filters.userId },
+      interestedUsers: { $in: [filters.userId] },
+      endDate: { $gte: newDate },
+      isDeleted: false,
+    });
+    myInterestedEventIds = myInterestedEvents.map(event => event._id);
+  }
+
+  // already send event invite
+  let myPendingEventIds: Types.ObjectId[] = [];
+  if (filters.userId) {
+    const myPendingEvents = await Event.find({
+      creatorId: { $ne: filters.userId },
+      pendingInterestedUsers: { $in: [filters.userId] },
+      endDate: { $gte: newDate },
+      isDeleted: false,
+    });
+    myPendingEventIds = myPendingEvents.map(event => event?._id);
+  }
   const query = {
+    _id: {
+      $nin: [
+        ...myEventIds,
+        ...myInterestedEventIds,
+        ...coHostEventIds,
+        ...myPendingEventIds,
+      ],
+    },
     isDeleted: false,
-    privacy: EventPrivacy.PUBLIC,
-    startDate: { $gte: newDate },
     endDate: { $gte: newDate },
   };
   options.populate = [

@@ -7,7 +7,7 @@ export interface INotification {
   title: string;
   message?: string;
   image?: string;
-  type: 'favorite' | 'report' | 'payment' | 'subscription' | 'message';
+  type: 'post' | 'story' | 'comment' | 'event' | 'group' | 'connection' | 'message';
   linkId?: Types.ObjectId | string;
   role: 'admin' | 'user';
   viewStatus?: boolean;

@@ -8,15 +8,15 @@ import { uploadFilesToS3 } from '../../helpers/s3Service';
 import { EVENT_UPLOADS_FOLDER } from './event.constant';
 
 const createEvent = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user;
-  const file = req.file as Express.Multer.File;
-  const payload = req.body;
+  const { userId } = req?.user;
+  const file = req?.file as Express.Multer.File;
+  const payload = req?.body;
   // parse the JSON string location and coleaders
-  if (typeof req.body.location === 'string') {
-    req.body.location = JSON.parse(req.body.location);
+  if (typeof req?.body?.location === 'string') {
+    req.body.location = JSON.parse(req?.body?.location);
   }
-  if (typeof req.body.duration === 'string') {
-    req.body.duration = JSON.parse(req.body.duration);
+  if (typeof req?.body?.duration === 'string') {
+    req.body.duration = JSON.parse(req?.body?.duration);
   }
   const eventImage = await uploadFilesToS3([file], EVENT_UPLOADS_FOLDER);
   payload.eventImage = eventImage[0];
@@ -101,7 +101,7 @@ const getMyInterestedEvents = catchAsync(
 );
 
 const getEventSuggestions = catchAsync(async (req: Request, res: Response) => {
-  const filters = pick(req.query, ['name']);
+  const filters = pick(req.query, ['name',"userId"]);
   const options = pick(req.query, ['limit', 'skip', 'sortBy']);
   const result = await EventService.getEventSuggestions(
     filters,
