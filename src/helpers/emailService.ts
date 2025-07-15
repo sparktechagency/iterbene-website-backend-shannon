@@ -47,7 +47,7 @@ const sendVerificationEmail = async (to: string, otp: string) => {
   const html = `
   <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center;  padding: 50px 0px;">
    <img
-    src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+    src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
     alt="Logo"
     style="width: 80px; margin-bottom: 20px"
   />
@@ -85,7 +85,7 @@ const sendVerificationEmail = async (to: string, otp: string) => {
               rel="noopener noreferrer"
             >
               <img
-                src="https://github.com/rakibislam2233/Image-Server/blob/main/facebook.logo.png?raw=true"
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
                 alt="facebook"
                 width="20px"
               />
@@ -100,32 +100,12 @@ const sendVerificationEmail = async (to: string, otp: string) => {
             "
           >
             <a
-              href="http://facebook.com"
+              href="http://instagram.com"
               target="_blank"
               rel="noopener noreferrer"
             >
               <img
-                src="https://github.com/rakibislam2233/Image-Server/blob/main/twitter.logo.jpg?raw=true"
-                alt="facebook"
-                width="20px"
-              />
-            </a>
-          </td>
-          <td
-            style="
-              padding: 10px;
-              border: 1px solid gray;
-              border-radius: 5px;
-              background: #ffffff;
-            "
-          >
-            <a
-              href="http://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                src="https://github.com/rakibislam2233/Image-Server/blob/main/instagram.logo.png?raw=true"
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
                 alt="instagram"
                 width="20px"
               />
@@ -140,12 +120,32 @@ const sendVerificationEmail = async (to: string, otp: string) => {
             "
           >
             <a
-              href="http://facebook.com"
+              href="http://twitter.com"
               target="_blank"
               rel="noopener noreferrer"
             >
               <img
-                src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/youtube%20logo.webp"
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/twitter.logo.jpg"
+                alt="twitter"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/youtube+logo.webp"
                 alt="youtube"
                 width="20px"
               />
@@ -164,7 +164,7 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
   const html = `
   <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center;  padding: 50px 0px;">
    <img
-    src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+    src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
     alt="Logo"
     style="width: 80px; margin-bottom: 20px"
   />
@@ -186,7 +186,7 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
   </table>
   <div style="text-align: center; margin-top: 20px;">
     <h1 style="font-size: 14px; font-weight: 300">Follow Us:</h1>
-    <table style="margin-top: 20px; display: inline-block; text-align: center;">
+        <table style="margin-top: 20px; display: inline-block; text-align: center;">
       <tr>
         <td
             style="
@@ -202,7 +202,7 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
               rel="noopener noreferrer"
             >
               <img
-                src="https://github.com/rakibislam2233/Image-Server/blob/main/facebook.logo.png?raw=true"
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
                 alt="facebook"
                 width="20px"
               />
@@ -217,32 +217,12 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
             "
           >
             <a
-              href="http://facebook.com"
+              href="http://instagram.com"
               target="_blank"
               rel="noopener noreferrer"
             >
               <img
-                src="https://github.com/rakibislam2233/Image-Server/blob/main/twitter.logo.jpg?raw=true"
-                alt="facebook"
-                width="20px"
-              />
-            </a>
-          </td>
-          <td
-            style="
-              padding: 10px;
-              border: 1px solid gray;
-              border-radius: 5px;
-              background: #ffffff;
-            "
-          >
-            <a
-              href="http://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                src="https://github.com/rakibislam2233/Image-Server/blob/main/instagram.logo.png?raw=true"
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
                 alt="instagram"
                 width="20px"
               />
@@ -257,12 +237,32 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
             "
           >
             <a
-              href="http://facebook.com"
+              href="http://twitter.com"
               target="_blank"
               rel="noopener noreferrer"
             >
               <img
-                src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/youtube%20logo.webp"
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/twitter.logo.jpg"
+                alt="twitter"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/youtube+logo.webp"
                 alt="youtube"
                 width="20px"
               />
@@ -279,7 +279,43 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
 const sendWelcomeEmail = async (to: string, password: string) => {
   const subject = 'Iter Bene - Welcome to the Platform!';
   const html = `
-  
+     <div
+      style="
+        width: 100%;
+        background: #f4f4f4;
+        margin: 0 auto;
+        font-family: Inter, sans-serif;
+        text-align: center;
+        padding: 50px 0px;
+      "
+    >
+      <img
+        src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
+        alt="Logo"
+        style="width: 80px; margin-bottom: 20px"
+      />
+      <table
+        style="
+          width: 100%;
+          background: #ffffff;
+          max-width: 600px;
+          margin: 0 auto;
+          border: 1px solid rgb(216, 212, 212);
+          box-shadow: 5px #ffffff;
+          border-radius: 10px;
+          padding: 20px;
+        "
+      >
+        <tr>
+          <td>
+            <h1 style="color: rgb(37, 36, 36);">Welcome to Iter Bene!</h1>
+            <p style="font-size: 16px;">
+              Your password is: <strong>${password}</strong>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </div>
   `;
   await sendEmail({ to, subject, html });
 };
@@ -304,7 +340,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+        src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -359,7 +395,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
                 rel="noopener noreferrer"
               >
                 <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/facebook.logo.png?raw=true"
+                  src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
                   alt="facebook"
                   width="20px"
                 />
@@ -379,7 +415,7 @@ const sendAdminOrSuperAdminCreationEmail = async (
                 rel="noopener noreferrer"
               >
                 <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/twitter.logo.jpg?raw=true"
+                  src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
                   alt="facebook"
                   width="20px"
                 />
@@ -443,7 +479,7 @@ const sendSupportMessageEmail = async (
   const html = `
    <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center;  padding: 50px 0px;">
       <img
-       src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+       src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
        alt="Logo"
        style="width: 80px; margin-bottom: 20px"
      />
@@ -484,7 +520,7 @@ const sendWarningEmail = async (
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+        src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -516,92 +552,90 @@ const sendWarningEmail = async (
       </table>
       <div style="text-align: center; margin-top: 20px">
         <h1 style="font-size: 14px; font-weight: 300">Follow Us:</h1>
-        <table
-          style="margin-top: 20px; display: inline-block; text-align: center"
-        >
-          <tr style="display: inline-flex; gap: 10px">
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+            <table style="margin-top: 20px; display: inline-block; text-align: center;">
+      <tr>
+        <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/facebook.logo.png?raw=true"
-                  alt="facebook"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
+                alt="facebook"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/twitter.logo.jpg?raw=true"
-                  alt="facebook"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
+                alt="instagram"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/instagram.logo.png?raw=true"
-                  alt="instagram"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/twitter.logo.jpg"
+                alt="twitter"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/youtube%20logo.webp"
-                  alt="youtube"
-                  width="20px"
-                />
-              </a>
-            </td>
-          </tr>
-        </table>
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/youtube+logo.webp"
+                alt="youtube"
+                width="20px"
+              />
+            </a>
+          </td>
+      </tr>
+    </table>
       </div>
     </div>   
   `;
@@ -630,7 +664,7 @@ const sendBanNotificationEmail = async (
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+        src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -659,99 +693,97 @@ const sendBanNotificationEmail = async (
       </table>
       <div style="text-align: center; margin-top: 20px">
         <h1 style="font-size: 14px; font-weight: 300">Follow Us:</h1>
-        <table
-          style="margin-top: 20px; display: inline-block; text-align: center"
-        >
-          <tr style="display: inline-flex; gap: 10px">
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+           <table style="margin-top: 20px; display: inline-block; text-align: center;">
+      <tr>
+        <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/facebook.logo.png?raw=true"
-                  alt="facebook"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
+                alt="facebook"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/twitter.logo.jpg?raw=true"
-                  alt="facebook"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
+                alt="instagram"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/instagram.logo.png?raw=true"
-                  alt="instagram"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/twitter.logo.jpg"
+                alt="twitter"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/youtube%20logo.webp"
-                  alt="youtube"
-                  width="20px"
-                />
-              </a>
-            </td>
-          </tr>
-        </table>
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/youtube+logo.webp"
+                alt="youtube"
+                width="20px"
+              />
+            </a>
+          </td>
+      </tr>
+    </table>
       </div>
     </div>
   `;
 
   await sendEmail({ to, subject, html });
 };
-const sendReportConfirmation = async (to: string,userName:string) => {
+const sendReportConfirmation = async (to: string, userName: string) => {
   const subject = 'Thank You for Your Report!';
   const html = `
     <div
@@ -765,7 +797,7 @@ const sendReportConfirmation = async (to: string,userName:string) => {
       "
     >
       <img
-        src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/inter-bene.png"
+        src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
         alt="Logo"
         style="width: 80px; margin-bottom: 20px"
       />
@@ -795,98 +827,95 @@ const sendReportConfirmation = async (to: string,userName:string) => {
       </table>
       <div style="text-align: center; margin-top: 20px">
         <h1 style="font-size: 14px; font-weight: 300">Follow Us:</h1>
-        <table
-          style="margin-top: 20px; display: inline-block; text-align: center"
-        >
-          <tr style="display: inline-flex; gap: 10px">
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+           <table style="margin-top: 20px; display: inline-block; text-align: center;">
+      <tr>
+        <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/facebook.logo.png?raw=true"
-                  alt="facebook"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
+                alt="facebook"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/twitter.logo.jpg?raw=true"
-                  alt="facebook"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
+                alt="instagram"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://github.com/rakibislam2233/Image-Server/blob/main/instagram.logo.png?raw=true"
-                  alt="instagram"
-                  width="20px"
-                />
-              </a>
-            </td>
-            <td
-              style="
-                padding: 10px;
-                border: 1px solid gray;
-                border-radius: 5px;
-                background: #ffffff;
-              "
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/twitter.logo.jpg"
+                alt="twitter"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <a
-                href="http://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  src="https://raw.githubusercontent.com/rakibislam2233/Image-Server/refs/heads/main/youtube%20logo.webp"
-                  alt="youtube"
-                  width="20px"
-                />
-              </a>
-            </td>
-          </tr>
-        </table>
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/youtube+logo.webp"
+                alt="youtube"
+                width="20px"
+              />
+            </a>
+          </td>
+      </tr>
+    </table>
       </div>
     </div>
   `;
   await sendEmail({ to, subject, html });
 };
-
 
 export {
   sendEmail,

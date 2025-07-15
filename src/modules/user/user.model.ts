@@ -33,13 +33,13 @@ const userSchema = new Schema<TUser, UserModal>(
       type: String,
       required: false,
       default:
-        'https://iter-bene.s3.eu-north-1.amazonaws.com/uploads/users/2c7bcbec-1c9f-476e-9daa-f4c8f947f520.jpg',
+        'https://iter-bene.s3.eu-north-1.amazonaws.com/basic/user.jpg',
     },
     coverImage: {
       type: String,
       required: false,
       default:
-        'https://iter-bene.s3.eu-north-1.amazonaws.com/uploads/users/9793d60c-1261-4faf-889a-335a6c532584.png',
+        'https://iter-bene.s3.eu-north-1.amazonaws.com/basic/interbenecover.webp',
     },
     email: {
       type: String,

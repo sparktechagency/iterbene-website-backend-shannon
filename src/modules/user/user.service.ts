@@ -19,7 +19,7 @@ interface IAdminOrSuperAdminPayload {
 // Helper function to filter user fields based on privacy settings
 const filterUserFields = async (
   user: TUser,
-  requesterId: string | null // null if fetching own profile
+  requesterId: string | null 
 ): Promise<Partial<TUser>> => {
   const isSelf = requesterId === user._id.toString();
   let isFriend = false;
