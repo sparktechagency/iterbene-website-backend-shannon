@@ -16,10 +16,6 @@ const createGroupValidationSchema = z.object({
       invalid_type_error: 'Name must be a string',
     }),
     description: z.string().optional(),
-    privacy: z.enum(['public', 'private'], {
-      required_error: 'Privacy is required',
-      invalid_type_error: 'Privacy must be either public or private',
-    }).default('public'),
     location: z
       .object({
         latitude: z.number({

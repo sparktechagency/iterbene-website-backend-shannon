@@ -19,12 +19,6 @@ const createEventValidationSchema = z.object({
     startDate: z.string(),
     endDate: z.string(),
     locationName: z.string().optional(),
-    privacy: z
-      .enum(['public', 'private'], {
-        required_error: 'Privacy is required',
-        invalid_type_error: 'Privacy must be either public or private',
-      })
-      .default('public'),
     coHosts: z.array(objectIdSchema).optional(),
     eventCost: z.string().optional(),
     interests: z.array(objectIdSchema).optional(),

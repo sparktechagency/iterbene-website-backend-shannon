@@ -511,11 +511,6 @@ const getMyJoinGroups = async (
     $or: [{ members: { $in: [userId] } }, { coLeaders: { $in: [userId] } }],
   };
 
-  // Apply privacy filter if provided
-  if (filters.privacy) {
-    query.privacy = filters.privacy;
-  }
-
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
   options.select =
@@ -536,16 +531,6 @@ const getGroupSuggestions = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
-  const connections = await Connections.find({
-    $or: [{ sentBy: userId }, { receivedBy: userId }],
-    status: ConnectionStatus.ACCEPTED,
-  }).select('sentBy receivedBy');
-
-  const friends = connections.map(conn =>
-    conn.sentBy.toString() === userId
-      ? conn.receivedBy.toString()
-      : conn.sentBy.toString()
-  );
 
   const blockedUsers = await BlockedUser.find({
     $or: [{ blockerId: userId }, { blockedId: userId }],
@@ -568,19 +553,8 @@ const getGroupSuggestions = async (
   const query: Record<string, any> = {
     _id: { $nin: excludeGroups.map(g => g._id) },
     isDeleted: false,
-    $or: [{ privacy: GroupPrivacy.PUBLIC }],
+    privacy: GroupPrivacy.PUBLIC,
   };
-
-  if (user.city && user.privacySettings.city === 'Public') {
-    query.$or.push({ locationName: user.city });
-  }
-  if (user.locationName && user.privacySettings.locationName === 'Public') {
-    query.$or.push({ locationName: user.locationName });
-  }
-
-  if (friends.length > 0) {
-    query.$or.push({ members: { $in: friends } });
-  }
 
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;

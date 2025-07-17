@@ -21,8 +21,13 @@ const getALLNotification = async (
   filters.receiverId = userId;
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
+  // const get unviewed notifications count
+  const count = await Notification.countDocuments({
+    receiverId: userId,
+    viewStatus: false,
+  });
   const result = await Notification.paginate(filters, options);
-  return result;
+  return { ...result, count };
 };
 
 const getAdminNotifications = async (

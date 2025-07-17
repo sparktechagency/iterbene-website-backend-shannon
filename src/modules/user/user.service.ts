@@ -197,7 +197,7 @@ const setUserLatestLocation = async (
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
   }
-  return;
+  return filterUserFields(user, userId);
 };
 
 const updateMyProfile = async (userId: string, payload: Partial<TUser>) => {
