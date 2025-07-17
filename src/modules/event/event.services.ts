@@ -452,6 +452,7 @@ const getEventSuggestions = async (
       ],
     },
     isDeleted: false,
+    privacy: EventPrivacy.PUBLIC,
     endDate: { $gte: newDate },
   };
   options.populate = [
