@@ -29,7 +29,7 @@ router.post(
 );
 
 //get feed posts
-router.get('/feed', PostController.feedPosts);
+router.get('/feed',PostController.feedPosts);
 
 //incrementItineraryViewCount
 router.post(

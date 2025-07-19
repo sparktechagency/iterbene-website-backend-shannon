@@ -840,7 +840,7 @@ const feedPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> => {
-  const { userId } = filters;
+  const { userId, mediaType } = filters;
 
   let currentUserId: Types.ObjectId | null = null;
   let connectedUserIds: Types.ObjectId[] = [];
@@ -848,7 +848,6 @@ const feedPosts = async (
 
   if (userId) {
     currentUserId = new Types.ObjectId(userId);
-    // Parallelize queries
     const [connections, blockedUsers] = await Promise.all([
       Connections.find({
         status: ConnectionStatus.ACCEPTED,
@@ -879,6 +878,14 @@ const feedPosts = async (
     userId: { $nin: blockedUserIds },
   };
 
+  // Add media filtering to main query if mediaType is specified
+  if (
+    mediaType &&
+    (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO)
+  ) {
+    query.media = { $exists: true, $ne: [] }; // Only posts with media
+  }
+
   if (userId) {
     query.$or = [
       { postType: PostType.USER, privacy: PostPrivacy.PUBLIC },
@@ -898,12 +905,23 @@ const feedPosts = async (
     query.privacy = PostPrivacy.PUBLIC;
   }
 
+  // Dynamic populate based on mediaType filter
+  const mediaPopulate =
+    mediaType &&
+    (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO)
+      ? {
+          path: 'media',
+          match: { mediaType: mediaType }, // Only populate matching media types
+          select: 'mediaType mediaUrl',
+        }
+      : {
+          path: 'media',
+          select: 'mediaType mediaUrl',
+        };
+
   // Set population
   options.populate = [
-    {
-      path: 'media',
-      select: 'mediaType mediaUrl',
-    },
+    mediaPopulate,
     { path: 'itinerary' },
     {
       path: 'userId',
@@ -940,20 +958,17 @@ const feedPosts = async (
 
   options.sortBy = 'createdAt';
   options.sortOrder = -1;
-  const posts = await Post.paginate(query, options);
 
+  let posts = await Post.paginate(query, options);
+
+  // Filter posts that have the requested media type after population
   if (
-    filters.mediaType === MediaType.IMAGE ||
-    filters.mediaType === MediaType.VIDEO
+    mediaType &&
+    (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO)
   ) {
     posts.results = posts.results.filter(
-      post =>
-        post.media.length > 0 &&
-        //@ts-ignore
-        post.media.every(media => media.mediaType === filters.mediaType)
+      post => post.media && post.media.length > 0
     );
-    posts.totalResults = posts.results.length;
-    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
   }
 
   return posts;
