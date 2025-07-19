@@ -91,7 +91,6 @@ const createGroup = async (
     name: payload.name.trim(),
     description: payload.description?.trim() || '',
     groupImage: payload.groupImage || null,
-    privacy: payload.privacy,
     location: payload.location,
     locationName: payload.locationName.trim(),
     admins: [creatorObjectId], // Creator is admin
