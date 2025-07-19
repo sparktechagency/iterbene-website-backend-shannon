@@ -42,8 +42,6 @@ const createItineraryFromPDF = async (
     // Extract data using regex and text processing
     const extractedData = extractItineraryData(text);
 
-    console.log('Extracted Data:', extractedData?.days[0]?.activities);
-
     // Validate extracted data
     if (
       !extractedData.tripName ||

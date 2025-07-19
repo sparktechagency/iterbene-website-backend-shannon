@@ -152,9 +152,6 @@ const checkIsSentConnectionExists = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
     const { friendId } = req.params;
-
-    console.log("User ID:", userId);
-    console.log("Friend ID:", friendId);
     const result = await ConnectionsService.checkIsSentConnectionExists(
       userId,
       friendId

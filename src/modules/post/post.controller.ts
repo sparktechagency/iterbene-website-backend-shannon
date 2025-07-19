@@ -225,7 +225,6 @@ const feedPosts = catchAsync(async (req: Request, res: Response) => {
   ]);
   const options = pick(req.query, ['page', 'limit']);
 
-  console.log("Options:", options);
 
   const result = await PostServices.feedPosts(
     {

@@ -34,6 +34,7 @@ const allowedOrigins = [
   'http://10.10.7.66:4173',
   'http://localhost:7003',
   'https://rakib7002.sobhoy.com',
+  'https://inter-bene-website-client.vercel.app'
 ];
 app.use(
   cors({

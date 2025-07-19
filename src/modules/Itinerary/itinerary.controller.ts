@@ -12,8 +12,6 @@ const createItineraryFromPDF = catchAsync(
     if (!req.file) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'PDF file is required');
     }
-
-    console.log("PDF Buffer:", req.file);
     const filePath = req.file.path;
     const result = await ItineraryService.createItineraryFromPDF(
       userId,

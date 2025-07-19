@@ -4,9 +4,9 @@ import { HashtagController } from './hashtag.controller';
 
 const router = Router();
 
-router.route('/').get(auth('User'), HashtagController.getHashtags);
+router.route('/').get(HashtagController.getHashtags);
 
 // get hashtags posts
-router.route('/posts').get(auth('User'), HashtagController.getHashtagPosts);
+router.route('/posts').get(HashtagController.getHashtagPosts);
 
 export const HashtagRoutes = router;
