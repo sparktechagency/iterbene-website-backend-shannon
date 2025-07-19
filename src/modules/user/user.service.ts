@@ -19,26 +19,28 @@ interface IAdminOrSuperAdminPayload {
 // Helper function to filter user fields based on privacy settings
 const filterUserFields = async (
   user: TUser,
-  requesterId: string | null 
+  requesterId?: string | null
 ): Promise<Partial<TUser>> => {
   const isSelf = requesterId === user._id.toString();
   let isFriend = false;
-  const existingConnection = await Connections.exists({
-    $or: [
-      {
-        sentBy: requesterId,
-        receivedBy: user._id,
-        status: ConnectionStatus.ACCEPTED,
-      },
-      {
-        sentBy: user._id,
-        receivedBy: requesterId,
-        status: ConnectionStatus.ACCEPTED,
-      },
-    ],
-  });
-  if (existingConnection) {
-    isFriend = true;
+  if (requesterId) {
+    const existingConnection = await Connections.exists({
+      $or: [
+        {
+          sentBy: requesterId,
+          receivedBy: user._id,
+          status: ConnectionStatus.ACCEPTED,
+        },
+        {
+          sentBy: user._id,
+          receivedBy: requesterId,
+          status: ConnectionStatus.ACCEPTED,
+        },
+      ],
+    });
+    if (existingConnection) {
+      isFriend = true;
+    }
   }
 
   const filteredUser: Record<string, any> = {
@@ -67,7 +69,7 @@ const filterUserFields = async (
     'profession',
     'description',
     'phoneNumber',
-    "privacySettings",
+    'privacySettings',
     'maritalStatus',
   ];
 

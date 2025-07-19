@@ -27,9 +27,9 @@ const createAdminOrSuperAdmin = catchAsync(async (req, res) => {
 });
 
 const getSingleUser = catchAsync(async (req, res) => {
-  const { userId } = req.user;
   const { userName } = req.params;
-  const result = await UserService.getSingleUser(userName, userId);
+  const { userId } = req.query;
+  const result = await UserService.getSingleUser(userName, userId as string);
   sendResponse(res, {
     code: StatusCodes.OK,
     data: result,

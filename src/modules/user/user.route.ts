@@ -25,7 +25,7 @@ router.patch(
 );
 
 //get single user by username
-router.get('/username/:userName', auth('Common'), UserController.getSingleUser);
+router.get('/username/:userName', UserController.getSingleUser);
 
 //update profile image
 router.post(
