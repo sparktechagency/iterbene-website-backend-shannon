@@ -13,7 +13,7 @@ import paginate from '../../common/plugins/paginate';
 const storyMediaSchema = new Schema<IStoryMedia>(
   {
     mediaUrl: {
-      type: String
+      type: String,
     },
     textContent: {
       type: String,
@@ -48,6 +48,8 @@ const storyMediaSchema = new Schema<IStoryMedia>(
   },
   { timestamps: true }
 );
+
+storyMediaSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); //auto delete after 24 hours
 
 const storySchema = new Schema<IStory, IStoryModel>(
   {

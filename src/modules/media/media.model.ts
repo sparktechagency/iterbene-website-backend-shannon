@@ -32,6 +32,6 @@ const mediaSchema = new Schema<IMedia>(
 );
 
 mediaSchema.index({ sourceId: 1, sourceType: 1 });
-mediaSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index to auto-delete expired media
+mediaSchema.index({ mediaType: 1, isDeleted: 1 });
 
 export const Media = model<IMedia>('Media', mediaSchema);

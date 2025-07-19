@@ -86,4 +86,6 @@ const eventSchema = new Schema<IEvent, IEventModel>(
 
 //add paginate plugin
 eventSchema.plugin(paginate);
+// create indexes
+eventSchema.index({ _id: 1, participants: 1 });
 export const Event = model<IEvent, IEventModel>('Event', eventSchema);

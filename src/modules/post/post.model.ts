@@ -114,7 +114,13 @@ const postSchema = new Schema<IPost, IPostModel>({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
-
+// add paginate plugin
 postSchema.plugin(paginate);
+
+// create indexes
+postSchema.index({ userId: 1, postType: 1, privacy: 1, isDeleted: 1 });
+postSchema.index({ sourceId: 1, postType: 1, isDeleted: 1 });
+postSchema.index({ createdAt: -1 });
+postSchema.index({ media: 1 }); 
 
 export const Post = model<IPost, IPostModel>('Post', postSchema);

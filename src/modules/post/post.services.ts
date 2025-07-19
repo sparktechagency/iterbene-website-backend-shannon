@@ -1,4 +1,4 @@
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { MediaType } from '../media/media.interface';
 import { IPost, PostPrivacy, PostType, ReactionType } from './post.interface';
 import ApiError from '../../errors/ApiError';
@@ -840,24 +840,34 @@ const feedPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> => {
-  const { userId } = filters;
+  const { userId, mediaType } = filters;
+
+  // Validate inputs
+  if (userId && !Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, 'Invalid user ID');
+  }
+  if (mediaType && ![MediaType.IMAGE, MediaType.VIDEO].includes(mediaType)) {
+    throw new ApiError(400, 'Invalid media type');
+  }
 
   let currentUserId: Types.ObjectId | null = null;
   let connectedUserIds: Types.ObjectId[] = [];
-  let followedUserIds: Types.ObjectId[] = [];
-  let eligibleUserIds: Types.ObjectId[] = [];
   let blockedUserIds: Types.ObjectId[] = [];
 
   if (userId) {
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new ApiError(400, 'Invalid user ID');
-    }
     currentUserId = new Types.ObjectId(userId);
 
-    const connections = await Connections.find({
-      status: ConnectionStatus.ACCEPTED,
-      $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
-    });
+    // Parallelize queries
+    const [connections, blockedUsers] = await Promise.all([
+      Connections.find({
+        status: ConnectionStatus.ACCEPTED,
+        $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
+      }),
+      BlockedUser.find({
+        $or: [{ blockerId: currentUserId }, { blockedId: currentUserId }],
+      }),
+    ]);
+
     connectedUserIds = connections.map(
       c =>
         new Types.ObjectId(
@@ -867,160 +877,67 @@ const feedPosts = async (
         )
     );
 
-    const followers = await Follower.find({ followerId: currentUserId });
-    followedUserIds = followers.map(f => f.followedId);
-
-    eligibleUserIds = [
-      ...new Set([
-        ...connectedUserIds.map(id => id.toString()),
-        ...followedUserIds.map(id => id.toString()),
-        userId,
-      ]),
-    ].map(id => new Types.ObjectId(id));
-
-    const blockedUsers = await BlockedUser.find({ blockerId: currentUserId });
-    blockedUserIds = blockedUsers.map(b => b.blockedId);
+    blockedUserIds = blockedUsers.map(b =>
+      b.blockerId.equals(currentUserId) ? b.blockedId : b.blockerId
+    );
   }
 
+  // Build query
   const query: Record<string, any> = {
     isDeleted: false,
-    $or: userId
-      ? [
-          {
-            userId: { $in: eligibleUserIds },
-            postType: PostType.USER,
-          },
-        ]
-      : [
-          {
-            postType: PostType.USER,
-            privacy: PostPrivacy.PUBLIC,
-          },
-        ],
     userId: { $nin: blockedUserIds },
   };
 
+  // Apply mediaType filter
+  if (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO) {
+    const mediaIds = await Media.find({ mediaType, isDeleted: false })
+      .distinct('_id')
+      .exec();
+    query.media = { $in: mediaIds, $ne: [] };
+  }
+
   if (userId) {
-    query.$or.push({
-      privacy: PostPrivacy.FRIENDS,
-      userId: { $in: connectedUserIds },
-    });
-    query.$or.push({
-      privacy: PostPrivacy.PRIVATE,
-      userId: currentUserId,
-    });
-  }
-
-  options.populate = [
-    {
-      path: 'media',
-      select: 'mediaType mediaUrl',
-    },
-    { path: 'itinerary' },
-    {
-      path: 'userId',
-      select: 'fullName username profileImage',
-    },
-    {
-      path: 'reactions',
-      populate: {
-        path: 'userId',
-        select: 'fullName username profileImage',
+    query.$or = [
+      { postType: PostType.USER, privacy: PostPrivacy.PUBLIC },
+      {
+        postType: PostType.USER,
+        privacy: PostPrivacy.FRIENDS,
+        userId: { $in: connectedUserIds },
       },
-    },
-    {
-      path: 'comments',
-      populate: [
-        {
-          path: 'userId',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'mentions',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'reactions',
-          populate: {
-            path: 'userId',
-            select: 'fullName username profileImage',
-          },
-        },
-      ],
-    },
-  ];
-
-  options.sortBy = 'createdAt';
-  options.sortOrder = -1;
-  const posts = await Post.paginate(query, options);
-
-  if (
-    filters.mediaType === MediaType.IMAGE ||
-    filters.mediaType === MediaType.VIDEO
-  ) {
-    posts.results = posts.results.filter(
-      post =>
-        post.media.length > 0 &&
-        //@ts-ignore
-        post.media.every(media => media.mediaType === filters.mediaType)
-    );
-    posts.totalResults = posts.results.length;
-    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
-  }
-
-  return posts;
-};
-
-//
-const getUserTimelinePosts = async (
-  filters: Record<string, any>,
-  options: PaginateOptions
-): Promise<PaginateResult<IPost>> => {
-  const query: Record<string, any> = {
-    postType: PostType.USER,
-    privacy: PostPrivacy.PUBLIC,
-    isDeleted: false,
-  };
-  const requestedUser = await User.findOne({ username: filters.username });
-
-  if (requestedUser) {
-    query.$and = [
-      { userId: requestedUser._id },
-      { sourceId: requestedUser._id },
+      {
+        postType: PostType.USER,
+        privacy: PostPrivacy.PRIVATE,
+        userId: currentUserId,
+      },
     ];
+  } else {
+    query.postType = PostType.USER;
+    query.privacy = PostPrivacy.PUBLIC;
   }
 
+  // Set population
   options.populate = [
     {
       path: 'media',
       select: 'mediaType mediaUrl',
       match: { isDeleted: false },
     },
-    { path: 'itinerary' },
-    {
-      path: 'userId',
-      select: 'fullName username profileImage',
-    },
+    { path: 'itinerary', select: 'name description' },
+    { path: 'userId', select: 'fullName username profileImage' },
     {
       path: 'reactions',
-      populate: {
-        path: 'userId',
-        select: 'fullName username profileImage',
-      },
+      select: 'userId reactionType createdAt',
+      populate: { path: 'userId', select: 'fullName username profileImage' },
     },
     {
       path: 'comments',
+      select: 'userId comment reactions createdAt',
       populate: [
-        {
-          path: 'userId',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'mentions',
-          select: 'fullName username profileImage',
-        },
+        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'fullName username profileImage' },
         {
           path: 'reactions',
+          select: 'userId reactionType createdAt',
           populate: {
             path: 'userId',
             select: 'fullName username profileImage',
@@ -1031,72 +948,222 @@ const getUserTimelinePosts = async (
   ];
 
   options.sortBy = options.sortBy || 'createdAt';
-  options.sortOrder = -1;
+  options.sortOrder = options.sortOrder !== undefined ? options.sortOrder : -1;
 
-  let posts = await Post.paginate(query, options);
-
-  if (
-    filters.mediaType === MediaType.IMAGE ||
-    filters.mediaType === MediaType.VIDEO
-  ) {
-    posts.results = posts.results.filter(
-      post =>
-        post.media.length > 0 &&
-        //@ts-ignore
-        post.media.every(media => media.mediaType === filters.mediaType)
-    );
-    posts.totalResults = posts.results.length;
-    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
-  }
-  if (filters?.mediaType === 'itinerary') {
-    posts.results = posts.results.filter(post => post?.itinerary);
-    posts.totalResults = posts.results.length;
-    posts.totalPages = Math.ceil(posts.totalResults / (options.limit || 10));
-  }
-
-  return posts;
+  return await Post.paginate(query, options);
 };
+
+//get user timeline
+const getUserTimelinePosts = async (
+  filters: Record<string, any>,
+  options: PaginateOptions
+): Promise<PaginateResult<IPost>> => {
+  const { username, userId } = filters;
+
+  // Validate inputs
+  if (!username) {
+    throw new ApiError(400, 'Username is required');
+  }
+  if (userId && !Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, 'Invalid user ID');
+  }
+
+  // Fetch requested user
+  const requestedUser = await User.findOne({ username });
+  if (!requestedUser) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  let currentUserId: Types.ObjectId | null = userId ? new Types.ObjectId(userId) : null;
+  let connectedUserIds: Types.ObjectId[] = [];
+  let blockedUserIds: Types.ObjectId[] = [];
+
+  if (currentUserId) {
+    // Parallelize queries
+    const [connections, blockedUsers] = await Promise.all([
+      Connections.find({
+        status: ConnectionStatus.ACCEPTED,
+        $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
+      }),
+      BlockedUser.find({
+        $or: [{ blockerId: currentUserId }, { blockedId: currentUserId }],
+      }),
+    ]);
+
+    connectedUserIds = connections.map(c =>
+      new Types.ObjectId(
+        c.sentBy.toString() === userId ? c.receivedBy.toString() : c.sentBy.toString()
+      )
+    );
+
+    blockedUserIds = blockedUsers.map(b =>
+      b.blockerId.equals(currentUserId) ? b.blockedId : b.blockerId
+    );
+
+    // Check if requested user is blocked
+    if (blockedUserIds.some(id => id.equals(requestedUser._id))) {
+      return {
+        results: [],
+        page: 1,
+        limit: options.limit || 10,
+        totalPages: 0,
+        totalResults: 0,
+      };
+    }
+  }
+
+  // Build query
+  const query: Record<string, any> = {
+    postType: PostType.USER,
+    userId: requestedUser._id,
+    sourceId: requestedUser._id,
+    isDeleted: false,
+  };
+
+  if (currentUserId) {
+    query.$or = [
+      { privacy: PostPrivacy.PUBLIC },
+      { privacy: PostPrivacy.FRIENDS, userId: { $in: connectedUserIds } },
+      { privacy: PostPrivacy.PRIVATE, userId: currentUserId },
+    ];
+  } else {
+    query.privacy = PostPrivacy.PUBLIC;
+  }
+
+  // Handle itinerary filter
+  if (filters.itinerary) {
+    query.itinerary = { $exists: true, $ne: null };
+  }
+
+  // Set population
+  options.populate = [
+    { path: 'media', select: 'mediaType mediaUrl', match: { isDeleted: false } },
+    { path: 'itinerary', select: 'name description' },
+    { path: 'userId', select: 'fullName username profileImage' },
+    {
+      path: 'reactions',
+      select: 'userId reactionType createdAt',
+      populate: { path: 'userId', select: 'fullName username profileImage' },
+    },
+    {
+      path: 'comments',
+      select: 'userId comment reactions createdAt',
+      populate: [
+        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'fullName username profileImage' },
+        {
+          path: 'reactions',
+          select: 'userId reactionType createdAt',
+          populate: { path: 'userId', select: 'fullName username profileImage' },
+        },
+      ],
+    },
+  ];
+
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = options.sortOrder !== undefined ? options.sortOrder : -1;
+
+  return await Post.paginate(query, options);
+};
+
 
 // get group posts
 const getGroupPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> => {
+  const { groupId, userId } = filters;
+
+  // Validate inputs
+  if (!groupId || !Types.ObjectId.isValid(groupId)) {
+    throw new ApiError(400, 'Invalid group ID');
+  }
+  if (userId && !Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, 'Invalid user ID');
+  }
+
+  // Check group membership
+  const group = await Group.findById(groupId);
+  if (!group) {
+    throw new ApiError(404, 'Group not found');
+  }
+  if (userId && !group.members.some(memberId => memberId.equals(userId))) {
+    throw new ApiError(403, 'User is not a member of this group');
+  }
+
+  let currentUserId: Types.ObjectId | null = userId
+    ? new Types.ObjectId(userId)
+    : null;
+  let connectedUserIds: Types.ObjectId[] = [];
+  let blockedUserIds: Types.ObjectId[] = [];
+
+  if (currentUserId) {
+    // Parallelize queries
+    const [connections, blockedUsers] = await Promise.all([
+      Connections.find({
+        status: ConnectionStatus.ACCEPTED,
+        $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
+      }),
+      BlockedUser.find({
+        $or: [{ blockerId: currentUserId }, { blockedId: currentUserId }],
+      }),
+    ]);
+
+    connectedUserIds = connections.map(
+      c =>
+        new Types.ObjectId(
+          c.sentBy.toString() === userId
+            ? c.receivedBy.toString()
+            : c.sentBy.toString()
+        )
+    );
+
+    blockedUserIds = blockedUsers.map(b =>
+      b.blockerId.equals(currentUserId) ? b.blockedId : b.blockerId
+    );
+  }
+
+  // Build query
   const query: Record<string, any> = {
-    isDeleted: false,
     postType: PostType.GROUP,
-    sourceId: filters.groupId,
+    sourceId: new Types.ObjectId(groupId),
+    isDeleted: false,
+    userId: { $nin: blockedUserIds },
   };
+
+  if (currentUserId) {
+    query.$or = [
+      { privacy: PostPrivacy.PUBLIC },
+      { privacy: PostPrivacy.FRIENDS, userId: { $in: connectedUserIds } },
+      { privacy: PostPrivacy.PRIVATE, userId: currentUserId },
+    ];
+  } else {
+    query.privacy = PostPrivacy.PUBLIC;
+  }
+
+  // Set population
   options.populate = [
     {
       path: 'media',
       select: 'mediaType mediaUrl',
+      match: { isDeleted: false },
     },
-    { path: 'itinerary' },
-    {
-      path: 'userId',
-      select: 'fullName username profileImage',
-    },
+    { path: 'itinerary', select: 'name description' },
+    { path: 'userId', select: 'fullName username profileImage' },
     {
       path: 'reactions',
-      populate: {
-        path: 'userId',
-        select: 'fullName username profileImage',
-      },
+      select: 'userId reactionType createdAt',
+      populate: { path: 'userId', select: 'fullName username profileImage' },
     },
     {
       path: 'comments',
+      select: 'userId comment reactions createdAt',
       populate: [
-        {
-          path: 'userId',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'mentions',
-          select: 'fullName username profileImage',
-        },
+        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'fullName username profileImage' },
         {
           path: 'reactions',
+          select: 'userId reactionType createdAt',
           populate: {
             path: 'userId',
             select: 'fullName username profileImage',
@@ -1105,10 +1172,11 @@ const getGroupPosts = async (
       ],
     },
   ];
-  options.sortBy = options.sortBy || 'createdAt';
-  options.sortOrder = -1;
 
-  return Post.paginate(query, options);
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = options.sortOrder !== undefined ? options.sortOrder : -1;
+
+  return await Post.paginate(query, options);
 };
 
 // Get event posts
@@ -1116,41 +1184,100 @@ const getEventPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
 ): Promise<PaginateResult<IPost>> => {
+  const { eventId, userId } = filters;
+
+  // Validate inputs
+  if (!eventId || !Types.ObjectId.isValid(eventId)) {
+    throw new ApiError(400, 'Invalid event ID');
+  }
+  if (userId && !Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, 'Invalid user ID');
+  }
+
+  // Check event participation
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new ApiError(404, 'Event not found');
+  }
+  if (
+    userId &&
+    !event.interestedUsers.some(interestedId => interestedId.equals(userId))
+  ) {
+    throw new ApiError(403, 'User is not a participant of this event');
+  }
+
+  let currentUserId: Types.ObjectId | null = userId
+    ? new Types.ObjectId(userId)
+    : null;
+  let connectedUserIds: Types.ObjectId[] = [];
+  let blockedUserIds: Types.ObjectId[] = [];
+
+  if (currentUserId) {
+    // Parallelize queries
+    const [connections, blockedUsers] = await Promise.all([
+      Connections.find({
+        status: ConnectionStatus.ACCEPTED,
+        $or: [{ sentBy: currentUserId }, { receivedBy: currentUserId }],
+      }),
+      BlockedUser.find({
+        $or: [{ blockerId: currentUserId }, { blockedId: currentUserId }],
+      }),
+    ]);
+
+    connectedUserIds = connections.map(
+      c =>
+        new Types.ObjectId(
+          c.sentBy.toString() === userId
+            ? c.receivedBy.toString()
+            : c.sentBy.toString()
+        )
+    );
+    blockedUserIds = blockedUsers.map(b =>
+      b.blockerId.equals(currentUserId) ? b.blockedId : b.blockerId
+    );
+  }
+
+  // Build query
   const query: Record<string, any> = {
-    isDeleted: false,
     postType: PostType.EVENT,
-    sourceId: filters.eventId,
+    sourceId: new Types.ObjectId(eventId),
+    isDeleted: false,
+    userId: { $nin: blockedUserIds },
   };
+
+  if (currentUserId) {
+    query.$or = [
+      { privacy: PostPrivacy.PUBLIC },
+      { privacy: PostPrivacy.FRIENDS, userId: { $in: connectedUserIds } },
+      { privacy: PostPrivacy.PRIVATE, userId: currentUserId },
+    ];
+  } else {
+    query.privacy = PostPrivacy.PUBLIC;
+  }
+
+  // Set population
   options.populate = [
     {
       path: 'media',
       select: 'mediaType mediaUrl',
+      match: { isDeleted: false },
     },
-    { path: 'itinerary' },
-    {
-      path: 'userId',
-      select: 'fullName username profileImage',
-    },
+    { path: 'itinerary', select: 'name description' },
+    { path: 'userId', select: 'fullName username profileImage' },
     {
       path: 'reactions',
-      populate: {
-        path: 'userId',
-        select: 'fullName username profileImage',
-      },
+      select: 'userId reactionType createdAt',
+      populate: { path: 'userId', select: 'fullName username profileImage' },
     },
     {
       path: 'comments',
+      select: 'userId comment reactions createdAt',
       populate: [
-        {
-          path: 'userId',
-          select: 'fullName username profileImage',
-        },
-        {
-          path: 'mentions',
-          select: 'fullName username profileImage',
-        },
+        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'fullName username profileImage' },
         {
           path: 'reactions',
+          select: 'userId reactionType createdAt',
           populate: {
             path: 'userId',
             select: 'fullName username profileImage',
@@ -1159,9 +1286,11 @@ const getEventPosts = async (
       ],
     },
   ];
+
   options.sortBy = options.sortBy || 'createdAt';
-  options.sortOrder = -1;
-  return Post.paginate(query, options);
+  options.sortOrder = options.sortOrder !== undefined ? options.sortOrder : -1;
+
+  return await Post.paginate(query, options);
 };
 
 function extractHashtags(content: string): string[] {

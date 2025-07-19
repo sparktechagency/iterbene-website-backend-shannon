@@ -6,8 +6,6 @@ import { validateUsers } from '../../utils/validateUsers';
 import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 import {
   ConnectionPrivacy,
-  PrivacyVisibility,
-  TUser,
 } from '../user/user.interface';
 import { User } from '../user/user.model';
 import { ConnectionStatus, IConnections } from './connections.interface';

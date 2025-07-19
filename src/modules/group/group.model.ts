@@ -76,6 +76,8 @@ const GroupSchema = new Schema<IGroup, IGroupModel>(
 
 //add paginate plugin
 GroupSchema.plugin(paginate);
+// create indexes
+GroupSchema.index({ _id: 1, members: 1 });
 
 const Group = mongoose.model<IGroup, IGroupModel>('Group', GroupSchema);
 

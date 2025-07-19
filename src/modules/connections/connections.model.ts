@@ -30,8 +30,13 @@ const connectionsSchema = new Schema<IConnections, IConnectionsModel>(
   }
 );
 
+// add paginate plugin
 connectionsSchema.plugin(paginate);
 connectionsSchema.plugin(aggregatePaginate)
+
+// create indexes
+connectionsSchema.index({ sentBy: 1, status: 1 });
+connectionsSchema.index({ receivedBy: 1, status: 1 });
 
 export const Connections = mongoose.model<IConnections, IConnectionsModel>(
   'Connections',

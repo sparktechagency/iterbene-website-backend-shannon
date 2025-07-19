@@ -224,8 +224,6 @@ const feedPosts = catchAsync(async (req: Request, res: Response) => {
     'userId',
   ]);
   const options = pick(req.query, ['page', 'limit']);
-
-
   const result = await PostServices.feedPosts(
     {
       mediaType: filter.mediaType as MediaType,
@@ -258,9 +256,11 @@ const getPostById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
   const { username } = req.params;
   const filter = pick(req.query, ['mediaType']);
   const options = pick(req.query, ['page', 'limit', 'populate', 'sortBy']);
+  filter.userId = userId;
   filter.username = username;
   const result = await PostServices.getUserTimelinePosts(filter, options);
 
@@ -272,17 +272,13 @@ const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getGroupPosts = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
   const { groupId } = req.params;
+  const filters = pick(req.query, ['mediaType']);
   const options = pick(req.query, ['page', 'limit']);
-
-  const result = await PostServices.getGroupPosts(
-    { groupId },
-    {
-      page: parseInt(options.page as string) || 1,
-      limit: parseInt(options.limit as string) || 10,
-    }
-  );
-
+  filters.userId = userId;
+  filters.groupId = groupId;
+  const result = await PostServices.getGroupPosts(filters, options);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Group posts retrieved successfully',
@@ -291,16 +287,14 @@ const getGroupPosts = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getEventPosts = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
   const { eventId } = req.params;
+  const filters = pick(req.query, ['mediaType']);
   const options = pick(req.query, ['page', 'limit']);
 
-  const result = await PostServices.getEventPosts(
-    { eventId },
-    {
-      page: parseInt(options.page as string) || 1,
-      limit: parseInt(options.limit as string) || 10,
-    }
-  );
+  filters.userId = userId;
+  filters.eventId = eventId;
+  const result = await PostServices.getEventPosts(filters, options);
 
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -368,5 +362,5 @@ export const PostController = {
   deletePost,
   deleteComment,
   getVisitedPostsWithDistance,
-  incrementItineraryViewCount
+  incrementItineraryViewCount,
 };
