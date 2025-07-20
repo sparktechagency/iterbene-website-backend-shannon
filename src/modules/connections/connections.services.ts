@@ -4,13 +4,13 @@ import ApiError from '../../errors/ApiError';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import { validateUsers } from '../../utils/validateUsers';
 import { BlockedUser } from '../blockedUsers/blockedUsers.model';
-import {
-  ConnectionPrivacy,
-} from '../user/user.interface';
+import { ConnectionPrivacy } from '../user/user.interface';
 import { User } from '../user/user.model';
 import { ConnectionStatus, IConnections } from './connections.interface';
 import { Connections } from './connections.model';
 import { RemovedConnection } from '../removeConnections/removedConnections.model';
+import { NotificationService } from '../notification/notification.services';
+import { INotification } from '../notification/notification.interface';
 
 const addConnection = async (
   sentByUserId: string,
@@ -60,6 +60,27 @@ const addConnection = async (
     receivedBy: receivedByUserId,
   });
   await newConnection.save();
+  // Add notification
+  const notification: INotification = {
+    senderId: sentByUserId,
+    receiverId: receivedByUserId,
+    title: `${sentByUser?.fullName ?? 'Someone'} sent you a connection request`,
+    message: `${
+      sentByUser?.fullName ?? 'A user'
+    } wants to connect with you. Check it out!`,
+    type: 'connection',
+    linkId: newConnection?._id?.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: sentByUser?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService.addCustomNotification?.(
+    'notification',
+    notification,
+    receivedByUserId
+  );
   return newConnection;
 };
 
@@ -85,6 +106,30 @@ const acceptConnection = async (connectionId: string, userId: string) => {
   connection.status = ConnectionStatus.ACCEPTED;
   await connection.save();
 
+  const sentByUser = await User.findById(connection.sentBy);
+  const receivedByUser = await User.findById(userId);
+
+  // Notify the sender
+  const notification: INotification = {
+    senderId: userId,
+    receiverId: connection.sentBy.toString(),
+    title: `${
+      receivedByUser?.fullName ?? 'Someone'
+    } accepted your connection request`,
+    message: `${receivedByUser?.fullName ?? 'A user'} is now your connection!`,
+    type: 'connection',
+    linkId: connection._id?.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: receivedByUser?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'connection-accepted',
+    notification,
+    connection.sentBy.toString()
+  );
   return connection;
 };
 

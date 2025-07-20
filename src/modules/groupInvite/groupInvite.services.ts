@@ -7,6 +7,8 @@ import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import mongoose from 'mongoose';
 import Group from '../group/group.model';
 import { validateUsers } from '../../utils/validateUsers';
+import { NotificationService } from '../notification/notification.services';
+import { INotification } from '../notification/notification.interface';
 
 interface InvitePayload {
   groupId: string;
@@ -18,8 +20,6 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
   if (!group || group.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
-
-  // Validate sender is a member or admin
   if (
     !group.members.includes(new mongoose.Types.ObjectId(fromId)) &&
     !group.admins.includes(new mongoose.Types.ObjectId(fromId))
@@ -31,8 +31,6 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
   }
 
   const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-
-  // Validate recipients
   for (const toId of recipients) {
     await validateUsers(fromId, toId, 'Invite to group');
     const user = await User.findById(toId);
@@ -72,6 +70,35 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
     ...recipients.map(toId => new mongoose.Types.ObjectId(toId))
   );
   const createdInvites = await GroupInvite.insertMany(invites);
+
+  // Send notification to each recipient
+  const sender = await User.findById(fromId);
+  const notifications: INotification[] = recipients.map(toId => ({
+    senderId: fromId,
+    receiverId: toId,
+    title: `${sender?.fullName ?? 'Someone'} invited you to a group`,
+    message: `${sender?.fullName ?? 'A user'} invited you to join "${
+      group.name ?? 'a group'
+    }". Check it out!`,
+    type: 'group',
+    linkId: payload.groupId,
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage ?? sender?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
+
+  await Promise.all(
+    notifications.map((notification, index) =>
+      NotificationService?.addCustomNotification?.(
+        'notification',
+        notification,
+        recipients[index]
+      )
+    )
+  );
+
   await group.save();
   return createdInvites;
 };
@@ -96,19 +123,67 @@ const acceptInvite = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
 
-  // Check if sender is admin for auto-join
+  const sender = await User.findById(invite.from);
+  const recipient = await User.findById(userId);
   const isSenderAdmin = group.admins.includes(
     new mongoose.Types.ObjectId(invite.from.toString())
   );
+
   if (group.privacy === 'public' || isSenderAdmin) {
-    // Auto-join for public groups or admin invites
     group.members.push(new mongoose.Types.ObjectId(userId));
     group.participantCount += 1;
+
+    // Notify the sender
+    const senderNotification: INotification = {
+      senderId: userId,
+      receiverId: invite.from.toString(),
+      title: `${recipient?.fullName ?? 'Someone'} joined your group`,
+      message: `${recipient?.fullName ?? 'A user'} accepted your invite to "${
+        group.name ?? 'a group'
+      }".`,
+      type: 'group',
+      linkId: invite.groupId.toString(),
+      role: 'user',
+      viewStatus: false,
+      image: group.groupImage ?? recipient?.profileImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService?.addCustomNotification?.(
+      'notification',
+      senderNotification,
+      invite.from.toString()
+    );
   } else {
-    // Private group, non-admin invite: add to pendingMembers
     if (!group.pendingMembers.includes(new mongoose.Types.ObjectId(userId))) {
       group.pendingMembers.push(new mongoose.Types.ObjectId(userId));
     }
+    // Notify group admins
+    const adminNotifications: INotification[] = group.admins.map(adminId => ({
+      senderId: userId,
+      receiverId: adminId.toString(),
+      title: `${recipient?.fullName ?? 'Someone'} requested to join your group`,
+      message: `${recipient?.fullName ?? 'A user'} accepted an invite to "${
+        group.name ?? 'a group'
+      }" and is awaiting approval.`,
+      type: 'group',
+      linkId: invite?.groupId?.toString(),
+      role: 'admin',
+      viewStatus: false,
+      image: group?.groupImage ?? recipient?.profileImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await Promise.all(
+      adminNotifications.map(notification =>
+        NotificationService?.addCustomNotification?.(
+          'notification',
+          notification,
+          notification.receiverId?.toString()
+        )
+      )
+    );
   }
 
   await group.save();
@@ -132,6 +207,33 @@ const declineInvite = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
 
+  const group = await Group.findById(invite.groupId);
+  if (!group || group.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  const recipient = await User.findById(userId);
+  const senderNotification: INotification = {
+    senderId: userId,
+    receiverId: invite.from.toString(),
+    title: `${recipient?.fullName ?? 'Someone'} declined your group invite`,
+    message: `${recipient?.fullName ?? 'A user'} won't be joining "${
+      group.name ?? 'your group'
+    }".`,
+    type: 'group',
+    linkId: invite.groupId.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage ?? recipient?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    senderNotification,
+    invite.from.toString()
+  );
+
   invite.status = 'declined';
   await invite.save();
   return invite;
@@ -145,12 +247,10 @@ const cancelInvite = async (
   if (!invite) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Invite not found');
   }
-
   const group = await Group.findById(invite.groupId);
   if (!group || group.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
-
   const isAdmin = group.admins.includes(new mongoose.Types.ObjectId(userId));
   if (invite.from.toString() !== userId && !isAdmin) {
     throw new ApiError(
@@ -158,10 +258,31 @@ const cancelInvite = async (
       'Only the sender or group admin can cancel this invite'
     );
   }
-
   if (invite.status !== 'pending') {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
+
+  const sender = await User.findById(userId);
+  const recipientNotification: INotification = {
+    senderId: userId,
+    receiverId: invite.to.toString(),
+    title: `Invite to ${group.name ?? 'a group'} canceled`,
+    message: `${sender?.fullName ?? 'A group admin'} canceled your invite to "${
+      group.name ?? 'a group'
+    }".`,
+    type: 'group',
+    linkId: invite.groupId.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage ?? sender?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    recipientNotification,
+    invite.to.toString()
+  );
 
   await invite.deleteOne();
   return invite;

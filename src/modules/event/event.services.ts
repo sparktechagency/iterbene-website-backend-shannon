@@ -5,6 +5,9 @@ import { IEvent, EventPrivacy } from './event.interface';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import ApiError from '../../errors/ApiError';
 import { Maps } from '../maps/maps.model';
+import { User } from '../user/user.model';
+import { INotification } from '../notification/notification.interface';
+import { NotificationService } from '../notification/notification.services';
 
 const createEvent = async (
   userId: string,
@@ -42,8 +45,56 @@ const interestEvent = async (
     await event.save();
     return event;
   }
-  event.interestedUsers.push(userObjectId);
-  event.interestCount = event.interestedUsers.length;
+  const user = await User.findById(userId);
+  // Create notification
+  let notification: INotification;
+  if ((event.privacy as EventPrivacy) === EventPrivacy.PRIVATE) {
+    event.pendingInterestedUsers.push(userObjectId);
+    notification = {
+      senderId: userId,
+      receiverId: event.creatorId.toString(),
+      title: `${user?.fullName ?? 'Someone'} requested to join your event`,
+      message: `${user?.fullName ?? 'A user'} wants to join "${
+        event.eventName ?? 'your event'
+      }". Review their request!`,
+      type: 'event',
+      linkId: event._id,
+      role: 'user',
+      viewStatus: false,
+      image: user?.profileImage ?? event.eventImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService?.addCustomNotification?.(
+      'notification',
+      notification,
+      event.creatorId.toString()
+    );
+  } else {
+    event.interestedUsers.push(userObjectId);
+    event.interestCount = event.interestedUsers.length;
+    notification = {
+      senderId: userId,
+      receiverId: event.creatorId.toString(),
+      title: `${user?.fullName ?? 'Someone'} is interested in your event`,
+      message: `${user?.fullName ?? 'A user'} is interested in "${
+        event.eventName ?? 'your event'
+      }".`,
+      type: 'event',
+      linkId: event._id,
+      role: 'user',
+      viewStatus: false,
+      image: user?.profileImage ?? event.eventImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService?.addCustomNotification?.(
+      'notification',
+      notification,
+      event.creatorId.toString()
+    );
+  }
+
   await event.save();
   // Update or add maps user interested locations
   const maps = await Maps.findOne({ userId });

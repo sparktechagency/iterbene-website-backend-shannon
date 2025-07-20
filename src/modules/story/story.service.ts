@@ -18,6 +18,8 @@ import { ConnectionStatus } from '../connections/connections.interface';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
 import { MessageService } from '../message/message.service';
 import { IContent, IMessage, MessageType } from '../message/message.interface';
+import { NotificationService } from '../notification/notification.services';
+import { INotification } from '../notification/notification.interface';
 
 const UPLOADS_FOLDER = 'uploads/stories';
 
@@ -337,7 +339,6 @@ const viewStoryMedia = async (
   const result = await getStoryMedia(mediaId, userId);
   const { media, story } = result;
 
-  // Increment view count if not already viewed by this user
   const alreadyViewed = media.viewedBy.some(viewerId =>
     viewerId._id ? viewerId._id.equals(userId) : viewerId.equals(userId)
   );
@@ -350,9 +351,31 @@ const viewStoryMedia = async (
         $inc: { viewCount: 1 },
       }
     );
+
+    const viewer = await User.findById(userId);
+    const notification: INotification = {
+      senderId: userId,
+      receiverId: story.userId.toString(),
+      title: `${viewer?.fullName ?? 'Someone'} viewed your story`,
+      message: `${viewer?.fullName ?? 'A user'} checked out your story.`,
+      type: 'story',
+      linkId: mediaId,
+      role: 'user',
+      viewStatus: false,
+      image:
+        media.mediaUrl && media.mediaType === StoryMediaType.IMAGE
+          ? media.mediaUrl
+          : viewer?.profileImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService?.addCustomNotification?.(
+      'notification',
+      notification,
+      story.userId.toString()
+    );
   }
 
-  // Get navigation info for next/previous media
   const sortedMediaIds = story.mediaIds
     .sort(
       (a, b) =>
@@ -440,7 +463,6 @@ const reactToStoryMedia = async (
   if (!Types.ObjectId.isValid(mediaId) || !Types.ObjectId.isValid(userId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid media ID or user ID');
   }
-
   if (!Object.values(ReactionType).includes(reactionType as ReactionType)) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
@@ -451,27 +473,48 @@ const reactToStoryMedia = async (
   }
 
   const result = await getStoryMedia(mediaId, userId);
+  const { media, story } = result;
 
-  // Check if user already reacted
-  const existingReactionIndex = result.media.reactions.findIndex(
+  const existingReactionIndex = media.reactions.findIndex(
     reaction => reaction.userId.toString() === userId
   );
-
   if (existingReactionIndex !== -1) {
-    // Update existing reaction
     await StoryMedia.updateOne(
       { _id: mediaId, 'reactions.userId': userId },
       { $set: { 'reactions.$.reactionType': reactionType } }
     );
   } else {
-    // Add new reaction
     await StoryMedia.updateOne(
       { _id: mediaId },
       { $push: { reactions: { userId, reactionType } } }
     );
   }
 
-  // Return updated media
+  const reactor = await User.findById(userId);
+  const notification: INotification = {
+    senderId: userId,
+    receiverId: story.userId.toString(),
+    title: `${reactor?.fullName ?? 'Someone'} reacted to your story`,
+    message: `${
+      reactor?.fullName ?? 'A user'
+    } reacted with a ${reactionType.toLowerCase()} to your story.`,
+    type: 'story',
+    linkId: mediaId,
+    role: 'user',
+    viewStatus: false,
+    image:
+      media.mediaUrl && media.mediaType === StoryMediaType.IMAGE
+        ? media.mediaUrl
+        : reactor?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    notification,
+    story.userId.toString()
+  );
+
   const updatedMedia = await StoryMedia.findById(mediaId).populate([
     {
       path: 'viewedBy',
@@ -506,10 +549,15 @@ const replyToStoryMedia = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Story not found');
   }
 
+  const media = await StoryMedia.findById(mediaId);
+  if (!media) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Media not found');
+  }
+
   const content: IContent = {
     messageType: MessageType.STORYMESSAGE,
-    text: message || '', // Ensure message is set or empty string
-    fileUrls: [], // Initialize fileUrls as an empty array
+    text: message || '',
+    fileUrls: [],
   };
   const messagePayload: IMessage = {
     senderId: new Types.ObjectId(userId),
@@ -518,6 +566,34 @@ const replyToStoryMedia = async (
     content,
   };
   const result = await MessageService.sendMessage(messagePayload);
+
+  const replier = await User.findById(userId);
+  const notification: INotification = {
+    senderId: userId,
+    receiverId: story.userId.toString(),
+    title: `${replier?.fullName ?? 'Someone'} replied to your story`,
+    message: `${
+      replier?.fullName ?? 'A user'
+    } sent a reply to your story: "${message.substring(0, 50)}${
+      message.length > 50 ? '...' : ''
+    }"`,
+    type: 'story',
+    linkId: mediaId,
+    role: 'user',
+    viewStatus: false,
+    image:
+      media.mediaUrl && media.mediaType === StoryMediaType.IMAGE
+        ? media.mediaUrl
+        : replier?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    notification,
+    story.userId.toString()
+  );
+
   return result;
 };
 

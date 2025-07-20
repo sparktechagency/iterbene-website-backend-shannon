@@ -20,8 +20,6 @@ const sendInvite = async (
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
-
-  // Validate sender is a member or admin
   if (
     !event.interestedUsers.includes(new mongoose.Types.ObjectId(fromId)) &&
     !event.coHosts.includes(new mongoose.Types.ObjectId(fromId)) &&
@@ -34,8 +32,6 @@ const sendInvite = async (
   }
 
   const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-
-  // Validate recipients
   for (const toId of recipients) {
     await validateUsers(fromId, toId, 'Invite to event');
     const user = await User.findById(toId);
@@ -78,25 +74,31 @@ const sendInvite = async (
 
   // Send notification to each recipient
   const sender = await User.findById(fromId);
-  for (const toId of recipients) {
-    const eventInvitedNotification: INotification = {
-      receiverId: toId,
-      title: `New Event Invite from ${sender?.fullName || 'Someone'}`,
-      message: `You've been invited to "${event.eventName}" by ${
-        sender?.fullName || 'a user'
-      }. Check it out!`,
-      type: 'event',
-      image: event.eventImage,
-      linkId: payload.eventId,
-      role: 'user',
-      viewStatus: false,
-    };
-    await NotificationService.addCustomNotification(
-      'notification',
-      eventInvitedNotification,
-      toId
-    );
-  }
+  const notifications: INotification[] = recipients.map(toId => ({
+    senderId: fromId,
+    receiverId: toId,
+    title: `${sender?.fullName ?? 'Someone'} invited you to an event`,
+    message: `${sender?.fullName ?? 'A user'} invited you to "${
+      event.eventName ?? 'an event'
+    }". Join the fun!`,
+    type: 'event',
+    linkId: payload.eventId,
+    role: 'user',
+    viewStatus: false,
+    image: event.eventImage ?? sender?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
+
+  await Promise.all(
+    notifications.map((notification, index) =>
+      NotificationService?.addCustomNotification?.(
+        'notification',
+        notification,
+        recipients[index]
+      )
+    )
+  );
 
   await event.save();
   return createdInvites;
@@ -106,7 +108,6 @@ const acceptInvite = async (
   userId: string,
   inviteId: string
 ): Promise<IEventInvite> => {
-  // Find invite
   const invite = await EventInvite.findById(inviteId);
   if (!invite) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Invite not found');
@@ -121,47 +122,46 @@ const acceptInvite = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
 
-  // Find event
   const event = await Event.findById(invite.eventId);
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
 
-  // Update invite status
   invite.status = EventInviteStatus.ACCEPTED;
   if (!event.interestedUsers.includes(invite.to)) {
     event.interestedUsers.push(invite.to);
     event.interestCount += 1;
   }
-  // Update event: remove from pendingInterestedUsers
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     user => !user.equals(invite.to)
   );
   await Promise.all([invite.save(), event.save()]);
 
-  // Send notification to sender
   const recipient = await User.findById(userId);
   const senderNotification: INotification = {
+    senderId: userId,
     receiverId: invite.from.toString(),
-    title: `${recipient?.fullName || 'Someone'} Accepted Your Invite`,
-    message: `${recipient?.fullName || 'A user'} has accepted your invite to "${
-      event.eventName
+    title: `${recipient?.fullName ?? 'Someone'} joined your event`,
+    message: `${recipient?.fullName ?? 'A user'} accepted your invite to "${
+      event.eventName ?? 'an event'
     }".`,
     type: 'event',
     linkId: invite.eventId.toString(),
     role: 'user',
     viewStatus: false,
+    image: event.eventImage ?? recipient?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
-  await NotificationService.addCustomNotification(
+  await NotificationService?.addCustomNotification?.(
     'notification',
     senderNotification,
     invite.from.toString()
   );
 
-  // Update or add maps user interested locations
+  // Update maps (existing logic)
   const maps = await Maps.findOne({ userId });
   if (maps) {
-    // Check for duplicate interestedLocation
     const isDuplicate = maps.interestedLocation.find(
       location =>
         location.latitude == event.location.latitude &&
@@ -205,7 +205,6 @@ const declineInvite = async (
       'Only invite recipient can decline'
     );
   }
-  // Find event
   const event = await Event.findById(invite.eventId);
   if (!event || event.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
@@ -213,27 +212,30 @@ const declineInvite = async (
   if (invite.status !== EventInviteStatus.PENDING) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
+
   invite.status = EventInviteStatus.DECLINED;
-  // Update event: remove from pendingInterestedUsers
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     user => !user.equals(invite.to)
   );
   await Promise.all([invite.save(), event.save()]);
 
-  // Send notification to sender
   const recipient = await User.findById(userId);
   const senderNotification: INotification = {
+    senderId: userId,
     receiverId: invite.from.toString(),
-    title: `${recipient?.fullName || 'Someone'} Declined Your Invite`,
-    message: `${recipient?.fullName || 'A user'} has declined your invite to "${
-      event.eventName
+    title: `${recipient?.fullName ?? 'Someone'} declined your event invite`,
+    message: `${recipient?.fullName ?? 'A user'} won't be joining "${
+      event.eventName ?? 'your event'
     }".`,
     type: 'event',
     linkId: invite.eventId.toString(),
     role: 'user',
     viewStatus: false,
+    image: event.eventImage ?? recipient?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
-  await NotificationService.addCustomNotification(
+  await NotificationService?.addCustomNotification?.(
     'notification',
     senderNotification,
     invite.from.toString()
@@ -267,32 +269,35 @@ const cancelInvite = async (
   if (invite.status !== EventInviteStatus.PENDING) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
-  invite.status = EventInviteStatus.DECLINED;
 
+  invite.status = EventInviteStatus.DECLINED;
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     user => !user.equals(invite.to)
   );
-  await Promise.all([invite.save(), event.save()]);
 
-  // Send notification to recipient
   const sender = await User.findById(userId);
   const recipientNotification: INotification = {
+    senderId: userId,
     receiverId: invite.to.toString(),
-    title: `Invite to ${event.eventName} Cancelled`,
-    message: `${
-      sender?.fullName || 'The sender'
-    } has cancelled your invite to "${event.eventName}".`,
+    title: `Invite to ${event.eventName ?? 'an event'} canceled`,
+    message: `${sender?.fullName ?? 'A host'} canceled your invite to "${
+      event.eventName ?? 'an event'
+    }".`,
     type: 'event',
     linkId: invite.eventId.toString(),
     role: 'user',
     viewStatus: false,
+    image: event.eventImage ?? sender?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
-  await NotificationService.addCustomNotification(
+  await NotificationService?.addCustomNotification?.(
     'notification',
     recipientNotification,
     invite.to.toString()
   );
 
+  await Promise.all([invite.save(), event.save()]);
   return invite;
 };
 

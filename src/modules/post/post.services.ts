@@ -18,6 +18,8 @@ import { Maps } from '../maps/maps.model';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
 import { StatusCodes } from 'http-status-codes';
 import calculateDistance from '../../utils/calculateDistance';
+import { NotificationService } from '../notification/notification.services';
+import { INotification } from '../notification/notification.interface';
 
 const UPLOADS_FOLDER = 'uploads/posts';
 
@@ -619,6 +621,31 @@ const addOrRemoveReaction = async (
         },
       }
     );
+    // Send notification
+    const user = await User.findById(payload.userId);
+    const addOrRemoveReactionNotification: INotification = {
+      senderId: payload.userId,
+      receiverId: post.userId,
+      title: `${user?.fullName} reacted to your post`,
+      message: `${
+        user?.fullName
+      } ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
+        0,
+        50
+      )}..."`,
+      type: 'post',
+      linkId: postId,
+      role: 'user',
+      viewStatus: false,
+      image: user?.profileImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService.addCustomNotification(
+      'notification',
+      addOrRemoveReactionNotification,
+      post.userId.toString()
+    );
   }
 
   // Recalculate the sorted reactions
@@ -754,6 +781,29 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
 
   await Post.updateOne({ _id: postId }, { $push: { comments: newComment } });
 
+  // Send notification
+  const user = await User.findById(payload.userId);
+  const notification: INotification = {
+    senderId: payload.userId,
+    receiverId: post.userId,
+    title: `${user?.fullName} commented on your post`,
+    message: `${user?.fullName} commented: "${payload.comment.substring(
+      0,
+      50
+    )}..."`,
+    type: 'comment',
+    linkId: postId,
+    role: 'user',
+    viewStatus: false,
+    image: user?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService.addCustomNotification(
+    'notification',
+    notification,
+    post.userId.toString()
+  );
   return Post.findById(postId).populate(
     'media itinerary userId sourceId comments.mentions'
   ) as Promise<IPost>;
@@ -1429,6 +1479,29 @@ const incrementItineraryViewCount = async (
   }
   post.itineraryViewCount += 1;
   await post.save();
+  
+  // Send notification
+  const notification: INotification = {
+    senderId: undefined, // No specific sender for view count
+    receiverId: post.userId,
+    title: `Someone viewed your itinerary`,
+    message: `Your itinerary in post "${post.content?.substring(
+      0,
+      50
+    )}..." was viewed!`,
+    type: 'post',
+    linkId: postId,
+    role: 'user',
+    viewStatus: false,
+    image: undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService.addCustomNotification(
+    'notification',
+    notification,
+    post.userId.toString()
+  );
   return post;
 };
 
