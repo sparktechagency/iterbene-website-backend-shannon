@@ -10,10 +10,26 @@ router.get(
   NotificationController.getUnViewNotificationCount
 );
 
+router.get(
+  '/unview-message-notification-count',
+  auth('Common'),
+  NotificationController.getUnViewMessageNotificationCount
+);
+
 /** ========================View all notifications route here==================== */
 router
   .route('/view-all-notifications')
   .post(auth('Common'), NotificationController.viewAllNotifications);
+
+/** ========================Get all message notifications route here==================== */
+router
+  .route('/get-all-message-notifications')
+  .get(auth('Common'), NotificationController.getALLMessageNotification);
+
+/** ========================View single notifications route here==================== */
+router
+  .route('/view-single-notification')
+  .post(auth('Common'), NotificationController.viewSingleNotification);
 
 /** ========================Clear all notifications route here==================== */
 router

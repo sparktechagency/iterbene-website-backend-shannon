@@ -20,6 +20,21 @@ const getALLNotification = catchAsync(async (req, res) => {
     message: 'Notifications fetched successfully',
   });
 });
+const getALLMessageNotification = catchAsync(async (req, res) => {
+  const filters = pick(req.query, notificationFilters);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
+  const { userId } = req.user;
+  const result = await NotificationService.getALLMessageNotification(
+    filters,
+    options,
+    userId
+  );
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: result,
+    message: 'Notifications fetched successfully',
+  });
+});
 
 const getAdminNotifications = catchAsync(async (req, res) => {
   const filters = pick(req.query, notificationFilters);
@@ -45,6 +60,17 @@ const getUnViewNotificationCount = catchAsync(async (req, res) => {
   });
 });
 
+const getUnViewMessageNotificationCount = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const result = await NotificationService.getUnViewMessageNotificationCount(
+    userId
+  );
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    data: result,
+    message: 'Notifications count fetched successfully',
+  });
+});
 const getSingleNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   const result = await NotificationService.getSingleNotification(id);
@@ -57,7 +83,8 @@ const getSingleNotification = catchAsync(async (req, res) => {
 
 const viewAllNotifications = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  await NotificationService.viewAllNotifications(userId);
+  const { type } = req.query;
+  await NotificationService.viewAllNotifications(userId, type as string);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'All notifications viewed successfully',
@@ -73,7 +100,7 @@ const viewSingleNotification = catchAsync(async (req, res) => {
     message: 'Notification viewed successfully',
     data: {},
   });
-})
+});
 const deleteNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   await NotificationService.deleteNotification(id);
@@ -96,6 +123,7 @@ const clearAllNotification = catchAsync(async (req, res) => {
 
 export const NotificationController = {
   getALLNotification,
+  getALLMessageNotification,
   getAdminNotifications,
   getSingleNotification,
   getUnViewNotificationCount,
@@ -103,4 +131,5 @@ export const NotificationController = {
   viewSingleNotification,
   deleteNotification,
   clearAllNotification,
+  getUnViewMessageNotificationCount,
 };

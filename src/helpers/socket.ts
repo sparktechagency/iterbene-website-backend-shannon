@@ -12,8 +12,6 @@ declare module 'socket.io' {
 
 const socket = (io: Server) => {
   io.on('connection', (socket: Socket) => {
-    logger.info(colors.blue('🔌🟢 A user connected'));
-
     socket.on('user-connected', (userId: string) => {
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         logger.error(colors.red(`Invalid user ID: ${userId}`));
@@ -22,9 +20,6 @@ const socket = (io: Server) => {
 
       socket.userId = userId;
       socket.join(userId); // Join the room for the specific user
-      logger.info(
-        colors.green(`User ${userId} joined their notification room`)
-      );
     });
 
     socket.on('user/connect', async ({ userId }) => {
@@ -32,18 +27,15 @@ const socket = (io: Server) => {
         logger.error(colors.red(`Invalid user ID: ${userId}`));
         return;
       }
-
       try {
         socket.userId = userId;
         socket.join(userId);
         await User.updateOne({ _id: userId }, { $set: { isOnline: true } });
         socket.broadcast.emit('user/connect', userId);
-        logger.info(colors.green(`User ${userId} is now online.`));
       } catch (error) {
         logger.error(colors.red(`Error in user/connect: ${error}`));
       }
     });
-
     socket.on('user/connectInMessageBox', async ({ userId }) => {
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         logger.error(colors.red(`Invalid user ID: ${userId}`));
@@ -56,7 +48,6 @@ const socket = (io: Server) => {
           { _id: userId },
           { $set: { isInMessageBox: true } }
         );
-        logger.info(colors.green(`User ${userId} entered message box.`));
       } catch (error) {
         logger.error(colors.red(`Error in user/connectInMessageBox: ${error}`));
       }
@@ -74,7 +65,6 @@ const socket = (io: Server) => {
           { _id: userId },
           { $set: { isInMessageBox: false } }
         );
-        logger.info(colors.green(`User ${userId} left message box.`));
       } catch (error) {
         logger.error(
           colors.red(`Error in user/disconnectInMessageBox: ${error}`)
@@ -92,7 +82,6 @@ const socket = (io: Server) => {
           { $set: { isOnline: false, isInMessageBox: false } }
         );
         socket.broadcast.emit('user/disconnect', socket.userId);
-        logger.info(colors.yellow(`User ${socket.userId} is now offline.`));
       } catch (error) {
         logger.error(colors.red(`Error in handleDisconnect: ${error}`));
       }

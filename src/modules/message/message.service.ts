@@ -136,6 +136,7 @@ const sendMessage = async (payload: IMessage) => {
     const notification: INotification = {
       title: `${sender?.fullName} sent you a message`,
       message: `You have a new message from ${sender?.fullName}`,
+      senderId: new Types.ObjectId(payload.senderId),
       receiverId: new Types.ObjectId(payload.receiverId),
       linkId: sender?._id,
       image: sender?.profileImage,
@@ -146,13 +147,14 @@ const sendMessage = async (payload: IMessage) => {
 
     // check if receiverId already has a notification message
     const existingNotification = await Notification.findOne({
+      senderId: new Types.ObjectId(payload.senderId),
       receiverId: new Types.ObjectId(payload.receiverId),
       type: 'message',
       viewStatus: false,
     });
     if (!existingNotification) {
       await NotificationService.addCustomNotification(
-        'notification',
+        'message-notification',
         notification,
         new Types.ObjectId(payload.receiverId).toString()
       );

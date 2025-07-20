@@ -18,13 +18,35 @@ const getALLNotification = async (
   options: PaginateOptions,
   userId: string
 ) => {
-  filters.receiverId = userId;
+  const query: Record<string, any> = {
+    receiverId: userId,
+    type: { $ne: 'message' },
+  };
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
   // const get unviewed notifications count
   const count = await Notification.countDocuments({
     receiverId: userId,
     viewStatus: false,
+  });
+  const result = await Notification.paginate(query, options);
+  return { ...result, count };
+};
+
+const getALLMessageNotification = async (
+  filters: Partial<INotification>,
+  options: PaginateOptions,
+  userId: string
+) => {
+  filters.receiverId = userId;
+  filters.type = 'message';
+  options.sortBy = options.sortBy || 'createdAt';
+  options.sortOrder = -1;
+  // const get unviewed notifications count
+  const count = await Notification.countDocuments({
+    receiverId: userId,
+    viewStatus: false,
+    type: 'message',
   });
   const result = await Notification.paginate(filters, options);
   return { ...result, count };
@@ -78,13 +100,24 @@ const getUnViewNotificationCount = async (userId: string) => {
   const result = await Notification.countDocuments({
     receiverId: userId,
     viewStatus: false,
+    // type $ne admin-notification and message-notification
+    type: { $ne: 'message' },
   });
   return { count: result };
 };
 
-const viewAllNotifications = async (userId: string) => {
+const getUnViewMessageNotificationCount = async (userId: string) => {
+  const result = await Notification.countDocuments({
+    receiverId: userId,
+    viewStatus: false,
+    type: 'message',
+  });
+  return { count: result };
+};
+
+const viewAllNotifications = async (userId: string, type?: string) => {
   const result = await Notification.updateMany(
-    { receiverId: userId },
+    { receiverId: userId, ...(type && { type: type }) },
     { viewStatus: true }
   );
   return result;
@@ -121,6 +154,7 @@ const clearAllNotification = async (userId: string) => {
 export const NotificationService = {
   addNotification,
   getALLNotification,
+  getALLMessageNotification,
   getAdminNotifications,
   getSingleNotification,
   addCustomNotification,
@@ -129,4 +163,5 @@ export const NotificationService = {
   viewSingleNotification,
   getUnViewNotificationCount,
   clearAllNotification,
+  getUnViewMessageNotificationCount,
 };
