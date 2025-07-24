@@ -34,9 +34,7 @@ const register = catchAsync(async (req, res) => {
     );
   }
 
-  const result = await AuthService.createUser(
-    req.body
-  );
+  const result = await AuthService.createUser(req.body);
   sendResponse(res, {
     code: StatusCodes.CREATED,
     message: 'User created successfully. Please verify your email.',
@@ -46,18 +44,23 @@ const register = catchAsync(async (req, res) => {
 
 const login = catchAsync(async (req, res) => {
   const { email, password, mfaToken } = req.body;
-  const user = await User.findOne({ email }).select(
-    '+password +mfaSecret +mfaEnabled'
-  );
+  const user = await User.findOne({ email }).select('+password');
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid credentials.');
   }
   validateUserStatus(user);
   if (user.lockUntil && user.lockUntil > new Date()) {
-    throw new ApiError(
-      StatusCodes.TOO_MANY_REQUESTS,
-      `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`
-    );
+    const tokens = await TokenService.accessAndRefreshToken(user);
+    const responseData = {
+      lockTime: config.auth.lockTime,
+      lockUntil: user.lockUntil,
+      tokens,
+    };
+    sendResponse(res, {
+      code: StatusCodes.OK,
+      message: `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`,
+      data: responseData,
+    });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -66,10 +69,17 @@ const login = catchAsync(async (req, res) => {
     if (user.failedLoginAttempts >= config.auth.maxLoginAttempts) {
       user.lockUntil = moment().add(config.auth.lockTime, 'minutes').toDate();
       await user.save();
-      throw new ApiError(
-        StatusCodes.TOO_MANY_REQUESTS,
-        `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`
-      );
+      const tokens = await TokenService.accessAndRefreshToken(user);
+      const responseData = {
+        lockTime: config.auth.lockTime,
+        lockUntil: user.lockUntil,
+        tokens,
+      };
+      sendResponse(res, {
+        code: StatusCodes.OK,
+        message: `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`,
+        data: responseData,
+      });
     }
     await user.save();
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid credentials.');
@@ -81,12 +91,9 @@ const login = catchAsync(async (req, res) => {
     await user.save();
   }
 
-
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
-    const tokens = await TokenService.accessAndRefreshToken(
-      user
-    );
+    const tokens = await TokenService.accessAndRefreshToken(user);
 
     sendResponse(res, {
       code: StatusCodes.OK,
@@ -96,9 +103,7 @@ const login = catchAsync(async (req, res) => {
     return;
   }
 
-  const tokens = await TokenService.accessAndRefreshToken(
-    user,
-  );
+  const tokens = await TokenService.accessAndRefreshToken(user);
   // Set cookies for access and refresh tokens
   res.cookie('accessToken', tokens.accessToken, {
     httpOnly: true,
@@ -116,17 +121,14 @@ const login = catchAsync(async (req, res) => {
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'User logged in successfully.',
-    data: {tokens },
+    data: { tokens },
   });
 });
 
 const verifyEmail = catchAsync(async (req, res) => {
   const { email } = req.user;
   const { otp } = req.body;
-  const result = await AuthService.verifyEmail(
-    email,
-    otp
-  );
+  const result = await AuthService.verifyEmail(email, otp);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Email verified successfully.',
@@ -136,9 +138,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 
 const resendOtp = catchAsync(async (req, res) => {
   const { email } = req.body;
-  const result = await AuthService.resendOtp(
-    email
-  );
+  const result = await AuthService.resendOtp(email);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'OTP sent successfully.',
@@ -147,9 +147,7 @@ const resendOtp = catchAsync(async (req, res) => {
 });
 
 const forgotPassword = catchAsync(async (req, res) => {
-  const result = await AuthService.forgotPassword(
-    req.body.email
-  );
+  const result = await AuthService.forgotPassword(req.body.email);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Password reset email sent successfully.',
@@ -162,7 +160,6 @@ const changePassword = catchAsync(async (req, res) => {
   const { currentPassword, newPassword, mfaToken } = req.body;
 
   const user = await User.findById(userId).select('+mfaSecret');
-
 
   const result = await AuthService.changePassword(
     userId,
@@ -207,9 +204,7 @@ const refreshToken = catchAsync(async (req, res) => {
   if (!refreshToken) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Refresh token is required.');
   }
-  const tokens = await AuthService.refreshAuth(
-    refreshToken
-  );
+  const tokens = await AuthService.refreshAuth(refreshToken);
   res.cookie('accessToken', tokens.tokens.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -230,7 +225,6 @@ const refreshToken = catchAsync(async (req, res) => {
   });
 });
 
-
 export const AuthController = {
   register,
   login,
@@ -240,5 +234,5 @@ export const AuthController = {
   changePassword,
   refreshToken,
   forgotPassword,
-  resetPassword
+  resetPassword,
 };

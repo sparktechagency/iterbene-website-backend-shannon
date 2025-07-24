@@ -430,6 +430,7 @@ const getConnectionSuggestions = async (
 
   const query: Record<string, any> = {
     _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
+    isEmailVerified: true,
     isDeleted: false,
     isBanned: false,
     isBlocked: false,

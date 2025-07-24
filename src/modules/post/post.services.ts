@@ -234,6 +234,7 @@ const updatePost = async (
   postId: string,
   payload: Partial<CreatePostPayload>
 ): Promise<IPost | null> => {
+  console.log('Update post payload', payload);
   const {
     userId,
     content,
@@ -946,7 +947,9 @@ const feedPosts = async (
       },
       {
         postType: PostType.USER,
-        privacy: PostPrivacy.PRIVATE,
+        privacy: {
+          $in: [PostPrivacy.PUBLIC, PostPrivacy.FRIENDS, PostPrivacy.PRIVATE],
+        },
         userId: currentUserId,
       },
     ];
@@ -1100,7 +1103,12 @@ const getUserTimelinePosts = async (
     query.$or = [
       { privacy: PostPrivacy.PUBLIC },
       { privacy: PostPrivacy.FRIENDS, userId: { $in: connectedUserIds } },
-      { privacy: PostPrivacy.PRIVATE, userId: currentUserId },
+      {
+        privacy: {
+          $in: [PostPrivacy.PUBLIC, PostPrivacy.FRIENDS, PostPrivacy.PRIVATE],
+        },
+        userId: currentUserId,
+      },
     ];
   } else {
     query.privacy = PostPrivacy.PUBLIC;
@@ -1224,7 +1232,12 @@ const getGroupPosts = async (
     query.$or = [
       { privacy: PostPrivacy.PUBLIC },
       { privacy: PostPrivacy.FRIENDS, userId: { $in: connectedUserIds } },
-      { privacy: PostPrivacy.PRIVATE, userId: currentUserId },
+      {
+        privacy: {
+          $in: [PostPrivacy.PUBLIC, PostPrivacy.FRIENDS, PostPrivacy.PRIVATE],
+        },
+        userId: currentUserId,
+      },
     ];
   } else {
     query.privacy = PostPrivacy.PUBLIC;
@@ -1343,7 +1356,12 @@ const getEventPosts = async (
     query.$or = [
       { privacy: PostPrivacy.PUBLIC },
       { privacy: PostPrivacy.FRIENDS, userId: { $in: connectedUserIds } },
-      { privacy: PostPrivacy.PRIVATE, userId: currentUserId },
+      {
+        privacy: {
+          $in: [PostPrivacy.PUBLIC, PostPrivacy.FRIENDS, PostPrivacy.PRIVATE],
+        },
+        userId: currentUserId,
+      },
     ];
   } else {
     query.privacy = PostPrivacy.PUBLIC;
@@ -1479,7 +1497,7 @@ const incrementItineraryViewCount = async (
   }
   post.itineraryViewCount += 1;
   await post.save();
-  
+
   // Send notification
   const notification: INotification = {
     senderId: undefined, // No specific sender for view count

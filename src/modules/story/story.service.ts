@@ -339,42 +339,39 @@ const viewStoryMedia = async (
   const result = await getStoryMedia(mediaId, userId);
   const { media, story } = result;
 
-  const alreadyViewed = media.viewedBy.some(viewerId =>
-    viewerId._id ? viewerId._id.equals(userId) : viewerId.equals(userId)
+  const alreadyViewed = media?.viewedBy?.find(v => String(v?.id) === userId);
+
+  if (alreadyViewed || story?.userId?.id?.toString() === userId) {
+    return result;
+  }
+  await StoryMedia.updateOne(
+    { _id: mediaId },
+    {
+      $push: { viewedBy: userId },
+      $inc: { viewCount: 1 },
+    }
   );
 
-  if (!alreadyViewed) {
-    await StoryMedia.updateOne(
-      { _id: mediaId },
-      {
-        $push: { viewedBy: userId },
-        $inc: { viewCount: 1 },
-      }
-    );
-
-    const viewer = await User.findById(userId);
-    const notification: INotification = {
-      senderId: userId,
-      receiverId: story.userId.toString(),
-      title: `${viewer?.fullName ?? 'Someone'} viewed your story`,
-      message: `${viewer?.fullName ?? 'A user'} checked out your story.`,
-      type: 'story',
-      linkId: mediaId,
-      role: 'user',
-      viewStatus: false,
-      image:
-        media.mediaUrl && media.mediaType === StoryMediaType.IMAGE
-          ? media.mediaUrl
-          : viewer?.profileImage,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    await NotificationService?.addCustomNotification?.(
-      'notification',
-      notification,
-      story.userId.toString()
-    );
-  }
+  const viewer = await User.findById(userId);
+  const notification: INotification = {
+    senderId: userId,
+    receiverId: story.userId?._id?.toString(),
+    title: `${viewer?.fullName ?? 'Someone'} viewed your story`,
+    message: `${viewer?.fullName ?? 'A user'} checked out your story.`,
+    type: 'story',
+    linkId: story?._id,
+    role: 'user',
+    viewStatus: false,
+    image:
+     viewer?.profileImage,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    notification,
+    story.userId.toString()
+  );
 
   const sortedMediaIds = story.mediaIds
     .sort(
@@ -471,41 +468,34 @@ const reactToStoryMedia = async (
       ).join(', ')}`
     );
   }
-
   const result = await getStoryMedia(mediaId, userId);
   const { media, story } = result;
 
-  const existingReactionIndex = media.reactions.findIndex(
-    reaction => reaction.userId.toString() === userId
+  const existingReaction = media.reactions.find(
+    reaction => reaction?.userId?.id?.toString() === userId
   );
-  if (existingReactionIndex !== -1) {
-    await StoryMedia.updateOne(
-      { _id: mediaId, 'reactions.userId': userId },
-      { $set: { 'reactions.$.reactionType': reactionType } }
-    );
-  } else {
-    await StoryMedia.updateOne(
-      { _id: mediaId },
-      { $push: { reactions: { userId, reactionType } } }
-    );
-  }
 
+  if (existingReaction) {
+    return media;
+  }
+  await StoryMedia.updateOne(
+    { _id: mediaId },
+    { $push: { reactions: { userId, reactionType } } }
+  );
   const reactor = await User.findById(userId);
   const notification: INotification = {
     senderId: userId,
-    receiverId: story.userId.toString(),
+    receiverId: story.userId._id?.toString(),
     title: `${reactor?.fullName ?? 'Someone'} reacted to your story`,
     message: `${
       reactor?.fullName ?? 'A user'
-    } reacted with a ${reactionType.toLowerCase()} to your story.`,
+    } reacted with a ${reactionType?.toLowerCase()} to your story.`,
     type: 'story',
-    linkId: mediaId,
+    linkId: story?._id || mediaId?.toString(),
     role: 'user',
     viewStatus: false,
     image:
-      media.mediaUrl && media.mediaType === StoryMediaType.IMAGE
-        ? media.mediaUrl
-        : reactor?.profileImage,
+     reactor?.profileImage,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -566,33 +556,6 @@ const replyToStoryMedia = async (
     content,
   };
   const result = await MessageService.sendMessage(messagePayload);
-
-  const replier = await User.findById(userId);
-  const notification: INotification = {
-    senderId: userId,
-    receiverId: story.userId.toString(),
-    title: `${replier?.fullName ?? 'Someone'} replied to your story`,
-    message: `${
-      replier?.fullName ?? 'A user'
-    } sent a reply to your story: "${message.substring(0, 50)}${
-      message.length > 50 ? '...' : ''
-    }"`,
-    type: 'story',
-    linkId: mediaId,
-    role: 'user',
-    viewStatus: false,
-    image:
-      media.mediaUrl && media.mediaType === StoryMediaType.IMAGE
-        ? media.mediaUrl
-        : replier?.profileImage,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-  await NotificationService?.addCustomNotification?.(
-    'notification',
-    notification,
-    story.userId.toString()
-  );
 
   return result;
 };
