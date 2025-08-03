@@ -12,7 +12,6 @@ import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 import { ConnectionStatus } from '../connections/connections.interface';
 import { Connections } from '../connections/connections.model';
-import { Follower } from '../followers/followers.model';
 import { User } from '../user/user.model';
 import { Maps } from '../maps/maps.model';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
@@ -20,63 +19,17 @@ import { StatusCodes } from 'http-status-codes';
 import calculateDistance from '../../utils/calculateDistance';
 import { NotificationService } from '../notification/notification.services';
 import { INotification } from '../notification/notification.interface';
+import {
+  AddOrRemoveCommentReactionPayload,
+  AddOrRemoveReactionPayload,
+  CreateCommentPayload,
+  CreatePostPayload,
+  DeleteCommentPayload,
+  SharePostPayload,
+  UpdateCommentPayload,
+} from '../../types/post';
 
 const UPLOADS_FOLDER = 'uploads/posts';
-
-interface CreatePostPayload {
-  userId: Types.ObjectId;
-  content?: string;
-  files?: Express.Multer.File[];
-  itineraryId?: string;
-  postType: PostType;
-  privacy: PostPrivacy;
-  sourceId?: string;
-  visitedLocation?: { latitude: number; longitude: number };
-  visitedLocationName?: string;
-}
-
-interface SharePostPayload {
-  userId: Types.ObjectId;
-  originalPostId: string;
-  content?: string;
-  privacy: PostPrivacy;
-}
-
-interface AddOrRemoveReactionPayload {
-  userId: Types.ObjectId;
-  postId: string;
-  reactionType: ReactionType;
-}
-
-interface AddOrRemoveCommentReactionPayload {
-  userId: Types.ObjectId;
-  postId: string;
-  commentId: string;
-  reactionType: ReactionType;
-}
-
-interface CreateCommentPayload {
-  userId: Types.ObjectId;
-  postId: string;
-  comment: string;
-  replyTo?: string;
-  parentCommentId?: string;
-  mentions?: string[]; // Array of usernames to mention
-}
-
-interface UpdateCommentPayload {
-  userId: Types.ObjectId;
-  postId: string;
-  commentId: string;
-  comment: string;
-  mentions?: string[]; // Array of usernames to mention
-}
-
-interface DeleteCommentPayload {
-  userId: Types.ObjectId;
-  postId: string;
-  commentId: string;
-}
 
 // Create a new post
 const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
@@ -458,6 +411,26 @@ const getPostById = async (postId: string): Promise<IPost> => {
             select: 'fullName username profileImage',
           },
         },
+        {
+          path: 'replies',
+          populate: [
+            {
+              path: 'userId',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'mentions',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'reactions',
+              populate: {
+                path: 'userId',
+                select: 'fullName username profileImage',
+              },
+            },
+          ],
+        },
       ],
     },
   ]);
@@ -516,7 +489,28 @@ const deletePost = async (userId: string, postId: string): Promise<IPost> => {
 
     // Populate the post
     const populatedPost = await Post.findById(postId)
-      .populate('media itinerary userId sourceId comments.mentions')
+      .populate([
+        { path: 'media' },
+        { path: 'itinerary' },
+        { path: 'userId' },
+        { path: 'sourceId' },
+        {
+          path: 'comments',
+          populate: [
+            { path: 'mentions' },
+            { path: 'userId' },
+            { path: 'reactions', populate: { path: 'userId' } },
+            {
+              path: 'replies',
+              populate: [
+                { path: 'userId' },
+                { path: 'mentions' },
+                { path: 'reactions', populate: { path: 'userId' } },
+              ],
+            },
+          ],
+        },
+      ])
       .lean();
 
     if (!populatedPost) {
@@ -557,16 +551,31 @@ const sharePost = async (payload: SharePostPayload): Promise<IPost> => {
 
   await Post.updateOne({ _id: originalPostId }, { $inc: { shareCount: 1 } });
 
-  return sharedPost.populate(
-    'media itinerary userId originalPostId comments.mentions'
-  );
+  return sharedPost.populate([
+    { path: 'media' },
+    { path: 'itinerary' },
+    { path: 'userId' },
+    { path: 'originalPostId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions' },
+        { path: 'userId' },
+        { path: 'reactions', populate: { path: 'userId' } },
+        {
+          path: 'replies',
+          populate: [
+            { path: 'userId' },
+            { path: 'mentions' },
+            { path: 'reactions', populate: { path: 'userId' } },
+          ],
+        },
+      ],
+    },
+  ]);
 };
 
-/**
- * Add or remove a reaction to/from a post
- * @param {AddOrRemoveReactionPayload} payload
- * @returns {Promise<IPost>}
- */
+// Add or remove reaction
 const addOrRemoveReaction = async (
   payload: AddOrRemoveReactionPayload
 ): Promise<IPost> => {
@@ -661,11 +670,31 @@ const addOrRemoveReaction = async (
   );
 
   // Return the updated post
-  return Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  ) as Promise<IPost>;
+  return Post.findById(postId).populate([
+    { path: 'media' },
+    { path: 'itinerary' },
+    { path: 'userId' },
+    { path: 'sourceId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions' },
+        { path: 'userId' },
+        { path: 'reactions', populate: { path: 'userId' } },
+        {
+          path: 'replies',
+          populate: [
+            { path: 'userId' },
+            { path: 'mentions' },
+            { path: 'reactions', populate: { path: 'userId' } },
+          ],
+        },
+      ],
+    },
+  ]) as Promise<IPost>;
 };
 
+// Add or remove reaction on comment
 const addOrRemoveCommentReaction = async (
   payload: AddOrRemoveCommentReactionPayload
 ): Promise<IPost> => {
@@ -728,42 +757,55 @@ const addOrRemoveCommentReaction = async (
     );
   }
 
-  return Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  ) as Promise<IPost>;
+  return Post.findById(postId).populate([
+    { path: 'media' },
+    { path: 'itinerary' },
+    { path: 'userId' },
+    { path: 'sourceId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions' },
+        { path: 'userId' },
+        { path: 'reactions', populate: { path: 'userId' } },
+        {
+          path: 'replies',
+          populate: [
+            { path: 'userId' },
+            { path: 'mentions' },
+            { path: 'reactions', populate: { path: 'userId' } },
+          ],
+        },
+      ],
+    },
+  ]) as Promise<IPost>;
 };
 
+//create comment
 const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   const { userId, postId, comment, replyTo, parentCommentId, mentions } =
     payload;
-
   const post = await Post.findById(postId);
-  if (!post) {
-    throw new ApiError(404, 'Post not found');
-  }
-
-  if (parentCommentId) {
-    const commentExists = post.comments.some(
-      c => c._id.toString() == parentCommentId
-    );
-    if (!commentExists) {
-      throw new ApiError(404, 'Parent comment not found');
-    }
+  if (!post || post.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
   // Process mentions
   let mentionUserIds: Types.ObjectId[] = [];
-  if (mentions && mentions.length) {
-    const users = await User.find({ username: { $in: mentions } });
+  if (mentions && mentions?.length) {
+    const users = await User.find({
+      username: { $in: mentions },
+      isDeleted: false,
+    });
     mentionUserIds = users.map(user => user._id);
     // Validate that all mentioned usernames exist
     if (mentionUserIds.length !== mentions.length) {
-      const foundUsernames = users.map(user => user.username);
-      const invalidMentions = mentions.filter(
+      const foundUsernames = users.map(user => user?.username);
+      const invalidMentions = mentions?.filter(
         username => !foundUsernames.includes(username)
       );
       throw new ApiError(
-        400,
+        StatusCodes.BAD_REQUEST,
         `Invalid usernames: ${invalidMentions.join(', ')}`
       );
     }
@@ -780,9 +822,47 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
     mentions: mentionUserIds,
   };
 
-  await Post.updateOne({ _id: postId }, { $push: { comments: newComment } });
+  // If this is a reply, add it to the parent comment's replies array
+  if (parentCommentId) {
+    const parentComment = post?.comments?.find(
+      c => c?._id?.toString() === parentCommentId
+    );
+    if (!parentComment) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Parent comment not found');
+    }
+    await Post.updateOne(
+      { _id: postId, 'comments?._id': new Types.ObjectId(parentCommentId) },
+      {
+        $push: {
+          'comments.$.replies': new Types.ObjectId(),
+        },
+      }
+    );
+  }
+
+  // Add the new comment to the post
+  const updatedPost = await Post.findOneAndUpdate(
+    { _id: postId },
+    { $push: { comments: newComment } },
+    { new: true }
+  );
+
+  // Update the parent comment's replies array with the new comment's ID
+  if (parentCommentId && updatedPost) {
+    const newCommentId =
+      updatedPost.comments[updatedPost.comments.length - 1]._id;
+    await Post.updateOne(
+      { _id: postId, 'comments._id': new Types.ObjectId(parentCommentId) },
+      {
+        $addToSet: {
+          'comments.$.replies': newCommentId,
+        },
+      }
+    );
+  }
 
   // Send notification
+
   const user = await User.findById(payload.userId);
   const notification: INotification = {
     senderId: payload.userId,
@@ -805,11 +885,68 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
     notification,
     post.userId.toString()
   );
-  return Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  ) as Promise<IPost>;
+
+  // If this is a reply, also notify the user being replied to
+  if (replyTo) {
+    const replyToUser = await User.findById(replyTo);
+    if (replyToUser) {
+      const replyNotification: INotification = {
+        senderId: payload.userId,
+        receiverId: new Types.ObjectId(replyTo),
+        title: `${user?.fullName} replied to your comment`,
+        message: `${user?.fullName} replied: "${payload.comment.substring(
+          0,
+          50
+        )}..."`,
+        type: 'comment',
+        linkId: postId,
+        role: 'user',
+        viewStatus: false,
+        image: user?.profileImage,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await NotificationService.addCustomNotification(
+        'notification',
+        replyNotification,
+        replyTo
+      );
+    }
+  }
+
+  return Post.findById(postId).populate([
+    { path: 'media' },
+    { path: 'itinerary' },
+    { path: 'userId' },
+    { path: 'sourceId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions' },
+        { path: 'userId' },
+        { path: 'reactions', populate: { path: 'userId' } },
+        {
+          path: 'replies',
+          populate: [
+            { path: 'userId' },
+            { path: 'mentions' },
+            { path: 'reactions', populate: { path: 'userId' } },
+            {
+              path: 'replies',
+              populate: [
+                { path: 'userId' },
+                { path: 'mentions' },
+                { path: 'reactions', populate: { path: 'userId' } },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ]) as Promise<IPost>;
 };
 
+// Update comment
 const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
   const { userId, postId, commentId, comment, mentions } = payload;
 
@@ -856,11 +993,23 @@ const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
     }
   );
 
-  return Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  ) as Promise<IPost>;
+  return Post.findById(postId).populate([
+    { path: 'media' },
+    { path: 'itinerary' },
+    { path: 'userId' },
+    { path: 'sourceId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions' },
+        { path: 'userId' },
+        { path: 'reactions', populate: { path: 'userId' } },
+      ],
+    },
+  ]) as Promise<IPost>;
 };
 
+// Delete comment
 const deleteComment = async (payload: DeleteCommentPayload): Promise<IPost> => {
   const { userId, postId, commentId } = payload;
 
@@ -882,11 +1031,45 @@ const deleteComment = async (payload: DeleteCommentPayload): Promise<IPost> => {
     { $pull: { comments: { _id: new Types.ObjectId(commentId) } } }
   );
 
-  return Post.findById(postId).populate(
-    'media itinerary userId sourceId comments.mentions'
-  ) as Promise<IPost>;
+  // Remove the comment from any parent comment's replies array
+  await Post.updateOne(
+    { _id: postId, 'comments.replies': new Types.ObjectId(commentId) },
+    { $pull: { 'comments.$.replies': new Types.ObjectId(commentId) } }
+  );
+
+  return Post.findById(postId).populate([
+    { path: 'media' },
+    { path: 'itinerary' },
+    { path: 'userId' },
+    { path: 'sourceId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions' },
+        { path: 'userId' },
+        { path: 'reactions', populate: { path: 'userId' } },
+        {
+          path: 'replies',
+          populate: [
+            { path: 'userId' },
+            { path: 'mentions' },
+            { path: 'reactions', populate: { path: 'userId' } },
+            {
+              path: 'replies',
+              populate: [
+                { path: 'userId' },
+                { path: 'mentions' },
+                { path: 'reactions', populate: { path: 'userId' } },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ]) as Promise<IPost>;
 };
 
+// Feed posts with filters and pagination
 const feedPosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -1027,7 +1210,7 @@ const feedPosts = async (
   return posts;
 };
 
-//
+// Get user timeline posts
 const getUserTimelinePosts = async (
   filters: Record<string, any>,
   options: PaginateOptions
@@ -1149,6 +1332,46 @@ const getUserTimelinePosts = async (
             path: 'userId',
             select: 'fullName username profileImage',
           },
+        },
+        {
+          path: 'replies',
+          populate: [
+            {
+              path: 'userId',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'mentions',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'reactions',
+              populate: {
+                path: 'userId',
+                select: 'fullName username profileImage',
+              },
+            },
+            {
+              path: 'replies',
+              populate: [
+                {
+                  path: 'userId',
+                  select: 'fullName username profileImage',
+                },
+                {
+                  path: 'mentions',
+                  select: 'fullName username profileImage',
+                },
+                {
+                  path: 'reactions',
+                  populate: {
+                    path: 'userId',
+                    select: 'fullName username profileImage',
+                  },
+                },
+              ],
+            },
+          ],
         },
       ],
     },
@@ -1277,6 +1500,46 @@ const getGroupPosts = async (
             select: 'fullName username profileImage',
           },
         },
+        {
+          path: 'replies',
+          populate: [
+            {
+              path: 'userId',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'mentions',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'reactions',
+              populate: {
+                path: 'userId',
+                select: 'fullName username profileImage',
+              },
+            },
+            {
+              path: 'replies',
+              populate: [
+                {
+                  path: 'userId',
+                  select: 'fullName username profileImage',
+                },
+                {
+                  path: 'mentions',
+                  select: 'fullName username profileImage',
+                },
+                {
+                  path: 'reactions',
+                  populate: {
+                    path: 'userId',
+                    select: 'fullName username profileImage',
+                  },
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
   ];
@@ -1403,6 +1666,46 @@ const getEventPosts = async (
             select: 'fullName username profileImage',
           },
         },
+        {
+          path: 'replies',
+          populate: [
+            {
+              path: 'userId',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'mentions',
+              select: 'fullName username profileImage',
+            },
+            {
+              path: 'reactions',
+              populate: {
+                path: 'userId',
+                select: 'fullName username profileImage',
+              },
+            },
+            {
+              path: 'replies',
+              populate: [
+                {
+                  path: 'userId',
+                  select: 'fullName username profileImage',
+                },
+                {
+                  path: 'mentions',
+                  select: 'fullName username profileImage',
+                },
+                {
+                  path: 'reactions',
+                  populate: {
+                    path: 'userId',
+                    select: 'fullName username profileImage',
+                  },
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
   ];
@@ -1411,12 +1714,14 @@ const getEventPosts = async (
   return Post.paginate(query, options);
 };
 
+// Get post by id
 function extractHashtags(content: string): string[] {
   const regex = /#(\w+)/g;
   const matches = content.match(regex) || [];
   return matches;
 }
 
+// Get post by id
 const getVisitedPostsWithDistance = async (
   userId: string,
   options: PaginateOptions
@@ -1448,6 +1753,48 @@ const getVisitedPostsWithDistance = async (
     {
       path: 'itinerary',
       select: 'days overAllRating',
+    },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'fullName username profileImage' },
+        {
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
+        },
+        {
+          path: 'replies',
+          populate: [
+            { path: 'userId', select: 'fullName username profileImage' },
+            { path: 'mentions', select: 'fullName username profileImage' },
+            {
+              path: 'reactions',
+              populate: {
+                path: 'userId',
+                select: 'fullName username profileImage',
+              },
+            },
+            {
+              path: 'replies',
+              populate: [
+                { path: 'userId', select: 'fullName username profileImage' },
+                { path: 'mentions', select: 'fullName username profileImage' },
+                {
+                  path: 'reactions',
+                  populate: {
+                    path: 'userId',
+                    select: 'fullName username profileImage',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
     },
   ];
 
@@ -1484,6 +1831,7 @@ const getVisitedPostsWithDistance = async (
   };
 };
 
+// Increment itinerary view count
 const incrementItineraryViewCount = async (
   postId: string,
   itineraryId: string
@@ -1522,6 +1870,8 @@ const incrementItineraryViewCount = async (
   );
   return post;
 };
+
+
 
 export const PostServices = {
   createPost,

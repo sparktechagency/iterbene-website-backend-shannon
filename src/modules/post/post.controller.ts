@@ -7,7 +7,9 @@ import { Types } from 'mongoose';
 import { MediaType } from '../media/media.interface';
 import { PostServices } from './post.services';
 import { PostType } from './post.interface';
+import ApiError from '../../errors/ApiError';
 
+// Create a new post
 const createPost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const filesObject = req.files as {
@@ -55,6 +57,7 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Update an existing post
 const updatePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId } = req.params;
@@ -103,6 +106,8 @@ const updatePost = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+// Share an existing post
 const sharePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { originalPostId, content, privacy } = req.body;
@@ -121,6 +126,7 @@ const sharePost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Add or remove a reaction on a post
 const addOrRemoveReaction = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId, reactionType } = req.body;
@@ -137,6 +143,7 @@ const addOrRemoveReaction = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Add or remove a reaction on a comment
 const addOrRemoveCommentReaction = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
@@ -157,18 +164,26 @@ const addOrRemoveCommentReaction = catchAsync(
   }
 );
 
+//create a comment on a post
 const createComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId, comment, replyTo, parentCommentId, mentions } = req.body;
 
-  const result = await PostServices.createComment({
+  if (!postId || !comment) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Post ID and comment are required'
+    );
+  }
+  const payload = {
     userId: new Types.ObjectId(userId),
     postId,
     comment,
     replyTo,
     parentCommentId,
-    mentions: mentions ? (Array.isArray(mentions) ? mentions : [mentions]) : [],
-  });
+    mentions,
+  };
+  const result = await PostServices.createComment(payload);
 
   sendResponse(res, {
     code: StatusCodes.CREATED,
@@ -177,18 +192,28 @@ const createComment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Update an existing comment
 const updateComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { commentId } = req.params;
   const { postId, comment, mentions } = req.body;
 
-  const result = await PostServices.updateComment({
+  if (!postId || !commentId || !comment) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Post ID, comment ID, and comment are required'
+    );
+  }
+
+  const payload = {
     userId: new Types.ObjectId(userId),
     postId,
     commentId,
     comment,
-    mentions: mentions ? (Array.isArray(mentions) ? mentions : [mentions]) : [],
-  });
+    mentions,
+  };
+
+  const result = await PostServices.updateComment(payload);
 
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -197,6 +222,7 @@ const updateComment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Delete a comment
 const deleteComment = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { commentId } = req.params;
@@ -215,6 +241,7 @@ const deleteComment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get feed posts with filters and pagination
 const feedPosts = catchAsync(async (req: Request, res: Response) => {
   const filter = pick(req.query, [
     'mediaType',
@@ -245,6 +272,7 @@ const feedPosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get a post by ID
 const getPostById = catchAsync(async (req: Request, res: Response) => {
   const { postId } = req.params;
   const result = await PostServices.getPostById(postId);
@@ -255,6 +283,7 @@ const getPostById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get user timeline posts
 const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { username } = req.params;
@@ -271,6 +300,7 @@ const getUserTimelinePosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get group posts
 const getGroupPosts = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { groupId } = req.params;
@@ -286,6 +316,7 @@ const getGroupPosts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get event posts
 const getEventPosts = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { eventId } = req.params;
@@ -302,6 +333,8 @@ const getEventPosts = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+// Delete a post
 const deletePost = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { postId } = req.params;
@@ -315,6 +348,7 @@ const deletePost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get visited posts with distance
 const getVisitedPostsWithDistance = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
@@ -332,6 +366,7 @@ const getVisitedPostsWithDistance = catchAsync(
   }
 );
 
+// Increment itinerary view count
 const incrementItineraryViewCount = catchAsync(
   async (req: Request, res: Response) => {
     const { postId, itineraryId } = req.body;
