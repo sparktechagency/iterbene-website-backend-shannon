@@ -409,11 +409,8 @@ const getConnectionSuggestions = async (
       : block.blockerId.toString()
   );
 
-  // Get recently removed connections (exclude for 24 hours)
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const removedConnections = await RemovedConnection.find({
     userId,
-    createdAt: { $gte: oneDayAgo }, // Only recent removals
   }).select('removedUserId');
 
   const removedUserIds = removedConnections.map(conn =>
@@ -432,9 +429,6 @@ const getConnectionSuggestions = async (
     _id: { $nin: excludeUsers.map(id => new mongoose.Types.ObjectId(id)) },
     isEmailVerified: true,
     isDeleted: false,
-    isBanned: false,
-    isBlocked: false,
-    $or: [],
   };
 
   // // Build suggestions based on matching attributes
@@ -483,7 +477,7 @@ const getConnectionSuggestions = async (
 
   options.select = '_id fullName profileImage username';
   options.sortBy = options.sortBy || 'createdAt';
-  options.sortOrder = 1;
+  options.sortOrder = -1;
 
   const paginatedResult = await User.paginate(query, options);
 

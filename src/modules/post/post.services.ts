@@ -187,7 +187,6 @@ const updatePost = async (
   postId: string,
   payload: Partial<CreatePostPayload>
 ): Promise<IPost | null> => {
-  console.log('Update post payload', payload);
   const {
     userId,
     content,
@@ -209,7 +208,26 @@ const updatePost = async (
     _id: postId,
     userId: new Types.ObjectId(userId),
     isDeleted: false,
-  });
+  }).populate([
+    { path: 'media', select: 'mediaType mediaUrl' },
+    { path: 'itinerary' },
+    { path: 'userId', select: 'fullName username profileImage' },
+    { path: 'sourceId' },
+    {
+      path: 'comments',
+      populate: [
+        { path: 'mentions', select: 'fullName username profileImage' },
+        { path: 'userId', select: 'fullName username profileImage' },
+        {
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
+        },
+      ],
+    },
+  ]);
   if (!post) throw new ApiError(404, 'Post not found');
 
   // Validate sourceId if postType is being updated
@@ -319,18 +337,16 @@ const updatePost = async (
     updatedAt: new Date(),
   };
 
-  if (content !== undefined) updateData.content = content;
+  updateData.content = content;
   if (newMediaIds?.length > 0)
     updateData.media = [...post.media, ...newMediaIds];
-  if (itineraryId !== undefined) updateData.itinerary = itinerary;
+  updateData.itinerary = itinerary;
   if (postType !== undefined) updateData.postType = postType;
   if (privacy !== undefined) updateData.privacy = privacy;
   if (sourceId !== undefined)
     updateData.sourceId = sourceId ? new Types.ObjectId(sourceId) : undefined;
-  if (visitedLocation !== undefined)
-    updateData.visitedLocation = visitedLocation;
-  if (visitedLocationName !== undefined)
-    updateData.visitedLocationName = visitedLocationName;
+  updateData.visitedLocation = visitedLocation;
+  updateData.visitedLocationName = visitedLocationName;
   if (uniqueHashtags.length > 0 || content !== undefined)
     updateData.hashtags = uniqueHashtags;
 
@@ -366,11 +382,8 @@ const updatePost = async (
       });
     }
   }
-  // Update the post
-  const response = await Post.findOneAndUpdate({ _id: postId }, updateData, {
-    new: true,
-  });
-
+  Object.assign(post, updateData);
+  const response = await post.save();
   return response;
 };
 
@@ -633,29 +646,31 @@ const addOrRemoveReaction = async (
     );
     // Send notification
     const user = await User.findById(payload.userId);
-    const addOrRemoveReactionNotification: INotification = {
-      senderId: payload.userId,
-      receiverId: post.userId,
-      title: `${user?.fullName} reacted to your post`,
-      message: `${
-        user?.fullName
-      } ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
-        0,
-        50
-      )}..."`,
-      type: 'post',
-      linkId: postId,
-      role: 'user',
-      viewStatus: false,
-      image: user?.profileImage,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    await NotificationService.addCustomNotification(
-      'notification',
-      addOrRemoveReactionNotification,
-      post.userId.toString()
-    );
+    if (user?.id?.toString() !== post.userId?.toString()) {
+      const addOrRemoveReactionNotification: INotification = {
+        senderId: payload.userId,
+        receiverId: post.userId,
+        title: `${user?.fullName} reacted to your post`,
+        message: `${
+          user?.fullName
+        } ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
+          0,
+          50
+        )}..."`,
+        type: 'post',
+        linkId: postId,
+        role: 'user',
+        viewStatus: false,
+        image: user?.profileImage,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await NotificationService.addCustomNotification(
+        'notification',
+        addOrRemoveReactionNotification,
+        post.userId.toString()
+      );
+    }
   }
 
   // Recalculate the sorted reactions
@@ -671,23 +686,21 @@ const addOrRemoveReaction = async (
 
   // Return the updated post
   return Post.findById(postId).populate([
-    { path: 'media' },
+    { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId' },
+    { path: 'userId', select: 'fullName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions' },
-        { path: 'userId' },
-        { path: 'reactions', populate: { path: 'userId' } },
+        { path: 'mentions', select: 'fullName username profileImage' },
+        { path: 'userId', select: 'fullName username profileImage' },
         {
-          path: 'replies',
-          populate: [
-            { path: 'userId' },
-            { path: 'mentions' },
-            { path: 'reactions', populate: { path: 'userId' } },
-          ],
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
         },
       ],
     },
@@ -757,24 +770,50 @@ const addOrRemoveCommentReaction = async (
     );
   }
 
+  // send notification
+  const user = await User.findById(userId);
+  if (user?.id?.toString() !== post.userId?.toString()) {
+    const addOrRemoveReactionNotification: INotification = {
+      senderId: userId,
+      receiverId: post.userId,
+      title: `${user?.fullName} reacted to your comment`,
+      message: `${
+        user?.fullName
+      } ${reactionType.toLowerCase()}d your comment: "${comment.comment?.substring(
+        0,
+        50
+      )}..."`,
+      type: 'comment',
+      linkId: commentId,
+      role: 'user',
+      viewStatus: false,
+      image: user?.profileImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService.addCustomNotification(
+      'notification',
+      addOrRemoveReactionNotification,
+      post.userId.toString()
+    );
+  }
+
   return Post.findById(postId).populate([
-    { path: 'media' },
+    { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId' },
+    { path: 'userId', select: 'fullName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions' },
-        { path: 'userId' },
-        { path: 'reactions', populate: { path: 'userId' } },
+        { path: 'mentions', select: 'fullName username profileImage' },
+        { path: 'userId', select: 'fullName username profileImage' },
         {
-          path: 'replies',
-          populate: [
-            { path: 'userId' },
-            { path: 'mentions' },
-            { path: 'reactions', populate: { path: 'userId' } },
-          ],
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
         },
       ],
     },
@@ -862,34 +901,35 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   }
 
   // Send notification
-
-  const user = await User.findById(payload.userId);
-  const notification: INotification = {
-    senderId: payload.userId,
-    receiverId: post.userId,
-    title: `${user?.fullName} commented on your post`,
-    message: `${user?.fullName} commented: "${payload.comment.substring(
-      0,
-      50
-    )}..."`,
-    type: 'comment',
-    linkId: postId,
-    role: 'user',
-    viewStatus: false,
-    image: user?.profileImage,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-  await NotificationService.addCustomNotification(
-    'notification',
-    notification,
-    post.userId.toString()
-  );
+  const user = await User.findById(payload?.userId);
+  if (user?.id?.toString() !== post.userId?.toString()) {
+    const notification: INotification = {
+      senderId: payload.userId,
+      receiverId: post.userId,
+      title: `${user?.fullName} commented on your post`,
+      message: `${user?.fullName} commented: "${payload.comment.substring(
+        0,
+        50
+      )}..."`,
+      type: 'comment',
+      linkId: postId,
+      role: 'user',
+      viewStatus: false,
+      image: user?.profileImage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService.addCustomNotification(
+      'notification',
+      notification,
+      post.userId.toString()
+    );
+  }
 
   // If this is a reply, also notify the user being replied to
   if (replyTo) {
     const replyToUser = await User.findById(replyTo);
-    if (replyToUser) {
+    if (replyToUser && replyToUser?.id !== user?.id) {
       const replyNotification: INotification = {
         senderId: payload.userId,
         receiverId: new Types.ObjectId(replyTo),
@@ -915,31 +955,21 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   }
 
   return Post.findById(postId).populate([
-    { path: 'media' },
+    { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId' },
+    { path: 'userId', select: 'fullName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions' },
-        { path: 'userId' },
-        { path: 'reactions', populate: { path: 'userId' } },
+        { path: 'mentions', select: 'fullName username profileImage' },
+        { path: 'userId', select: 'fullName username profileImage' },
         {
-          path: 'replies',
-          populate: [
-            { path: 'userId' },
-            { path: 'mentions' },
-            { path: 'reactions', populate: { path: 'userId' } },
-            {
-              path: 'replies',
-              populate: [
-                { path: 'userId' },
-                { path: 'mentions' },
-                { path: 'reactions', populate: { path: 'userId' } },
-              ],
-            },
-          ],
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
         },
       ],
     },
@@ -994,16 +1024,22 @@ const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
   );
 
   return Post.findById(postId).populate([
-    { path: 'media' },
+    { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId' },
+    { path: 'userId', select: 'fullName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions' },
-        { path: 'userId' },
-        { path: 'reactions', populate: { path: 'userId' } },
+        { path: 'mentions', select: 'fullName username profileImage' },
+        { path: 'userId', select: 'fullName username profileImage' },
+        {
+          path: 'reactions',
+          populate: {
+            path: 'userId',
+            select: 'fullName username profileImage',
+          },
+        },
       ],
     },
   ]) as Promise<IPost>;
@@ -1333,46 +1369,6 @@ const getUserTimelinePosts = async (
             select: 'fullName username profileImage',
           },
         },
-        {
-          path: 'replies',
-          populate: [
-            {
-              path: 'userId',
-              select: 'fullName username profileImage',
-            },
-            {
-              path: 'mentions',
-              select: 'fullName username profileImage',
-            },
-            {
-              path: 'reactions',
-              populate: {
-                path: 'userId',
-                select: 'fullName username profileImage',
-              },
-            },
-            {
-              path: 'replies',
-              populate: [
-                {
-                  path: 'userId',
-                  select: 'fullName username profileImage',
-                },
-                {
-                  path: 'mentions',
-                  select: 'fullName username profileImage',
-                },
-                {
-                  path: 'reactions',
-                  populate: {
-                    path: 'userId',
-                    select: 'fullName username profileImage',
-                  },
-                },
-              ],
-            },
-          ],
-        },
       ],
     },
   ];
@@ -1500,46 +1496,6 @@ const getGroupPosts = async (
             select: 'fullName username profileImage',
           },
         },
-        {
-          path: 'replies',
-          populate: [
-            {
-              path: 'userId',
-              select: 'fullName username profileImage',
-            },
-            {
-              path: 'mentions',
-              select: 'fullName username profileImage',
-            },
-            {
-              path: 'reactions',
-              populate: {
-                path: 'userId',
-                select: 'fullName username profileImage',
-              },
-            },
-            {
-              path: 'replies',
-              populate: [
-                {
-                  path: 'userId',
-                  select: 'fullName username profileImage',
-                },
-                {
-                  path: 'mentions',
-                  select: 'fullName username profileImage',
-                },
-                {
-                  path: 'reactions',
-                  populate: {
-                    path: 'userId',
-                    select: 'fullName username profileImage',
-                  },
-                },
-              ],
-            },
-          ],
-        },
       ],
     },
   ];
@@ -1665,46 +1621,6 @@ const getEventPosts = async (
             path: 'userId',
             select: 'fullName username profileImage',
           },
-        },
-        {
-          path: 'replies',
-          populate: [
-            {
-              path: 'userId',
-              select: 'fullName username profileImage',
-            },
-            {
-              path: 'mentions',
-              select: 'fullName username profileImage',
-            },
-            {
-              path: 'reactions',
-              populate: {
-                path: 'userId',
-                select: 'fullName username profileImage',
-              },
-            },
-            {
-              path: 'replies',
-              populate: [
-                {
-                  path: 'userId',
-                  select: 'fullName username profileImage',
-                },
-                {
-                  path: 'mentions',
-                  select: 'fullName username profileImage',
-                },
-                {
-                  path: 'reactions',
-                  populate: {
-                    path: 'userId',
-                    select: 'fullName username profileImage',
-                  },
-                },
-              ],
-            },
-          ],
         },
       ],
     },
@@ -1870,8 +1786,6 @@ const incrementItineraryViewCount = async (
   );
   return post;
 };
-
-
 
 export const PostServices = {
   createPost,

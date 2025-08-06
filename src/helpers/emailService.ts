@@ -4,14 +4,72 @@ import { errorLogger, logger } from '../shared/logger';
 import { ISendEmail } from '../types/email';
 import { config } from '../config';
 
+// // Create Nodemailer transporter with better configuration
+// const transporter = nodemailer.createTransport({
+//   host: config.smtp.host,
+//   port: Number(config.smtp.port),
+//   secure: false,
+//   auth: {
+//     user: config.smtp.username,
+//     pass: config.smtp.password,
+//   },
+//   // Add these for better deliverability
+//   tls: {
+//     rejectUnauthorized: false,
+//   },
+//   debug: true,
+//   logger: true,
+// });
+
+// // Verify transporter connection
+// if (config.environment !== 'test') {
+//   transporter
+//     .verify()
+//     .then(() => logger.info(colors.cyan('📧  Connected to email server')))
+//     .catch(err => {
+//       logger.error('Unable to connect to email server:', err);
+//       logger.warn(
+//         'Unable to connect to email server. Make sure you have configured the SMTP options in .env'
+//       );
+//     });
+// }
+
+// // Function to send email with better error handling
+// const sendEmail = async (values: ISendEmail) => {
+//   try {
+//     const info = await transporter.sendMail({
+//       from: `"Iter Bene" <${config.smtp.emailFrom}>`, // Better sender format
+//       to: values.to,
+//       subject: values.subject,
+//       html: values.html,
+//       // Add these headers for better deliverability
+//       headers: {
+//         'X-Priority': '1',
+//         'X-MSMail-Priority': 'High',
+//         Importance: 'high',
+//       },
+//     });
+//     logger.info('Mail sent successfully', info.accepted);
+//     return info;
+//   } catch (error) {
+//     console.error('Email sending failed:', error);
+//     errorLogger.error('Email sending error:', error);
+//     throw error; // Re-throw to handle in calling function
+//   }
+// };
+
 // Create Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
   port: Number(config.smtp.port),
-  secure: false, // true for 465, false for other ports
+  secure: false,
+
   auth: {
     user: config.smtp.username,
     pass: config.smtp.password,
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
@@ -35,6 +93,11 @@ const sendEmail = async (values: ISendEmail) => {
       to: values.to, // list of receivers
       subject: values.subject, // subject line
       html: values.html, // html body
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        Importance: 'high',
+      },
     });
     logger.info('Mail sent successfully', info.accepted);
   } catch (error) {

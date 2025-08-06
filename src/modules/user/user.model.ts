@@ -215,6 +215,7 @@ const userSchema = new Schema<TUser, UserModal>(
 
 // Apply the paginate plugin
 userSchema.plugin(paginate);
+
 // Static methods
 userSchema.statics.isExistUserById = async function (id: string) {
   return await this.findById(id);
