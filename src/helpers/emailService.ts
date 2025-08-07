@@ -62,14 +62,10 @@ import { config } from '../config';
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
   port: Number(config.smtp.port),
-  secure: false,
-
+  secure: true,
   auth: {
     user: config.smtp.username,
     pass: config.smtp.password,
-  },
-  tls: {
-    rejectUnauthorized: false,
   },
 });
 
@@ -89,10 +85,10 @@ if (config.environment !== 'test') {
 const sendEmail = async (values: ISendEmail) => {
   try {
     const info = await transporter.sendMail({
-      from: `${config.smtp.emailFrom}`, // sender address
-      to: values.to, // list of receivers
-      subject: values.subject, // subject line
-      html: values.html, // html body
+      from: `Shannon Lawrence-Montes <${config.smtp.emailFrom}>`, 
+      to: values.to,
+      subject: values.subject, 
+      html: values.html, 
       headers: {
         'X-Priority': '1',
         'X-MSMail-Priority': 'High',

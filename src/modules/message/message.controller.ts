@@ -5,8 +5,6 @@ import { MessageService } from './message.service';
 import pick from '../../shared/pick';
 import { Request, Response } from 'express';
 import { IContent, IMessage, MessageType } from './message.interface';
-import { ChatService } from '../chat/chat.service';
-import ApiError from '../../errors/ApiError';
 import { uploadFilesToS3 } from '../../helpers/s3Service';
 import { MESSAGE_UPLOADS_FOLDER } from './message.constant';
 
