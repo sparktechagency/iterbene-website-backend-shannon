@@ -137,7 +137,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 });
 
 const resendOtp = catchAsync(async (req, res) => {
-  const { email } = req.body;
+  const { email } = req.user;
   const result = await AuthService.resendOtp(email);
   sendResponse(res, {
     code: StatusCodes.OK,

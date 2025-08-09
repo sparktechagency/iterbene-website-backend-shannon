@@ -1,12 +1,12 @@
 import { Schema, model, Types } from 'mongoose';
 import {
   IStory,
-  IStoryMedia,
   IStoryModel,
   StoryPrivacy,
   StoryStatus,
   ReactionType,
   StoryMediaType,
+  IStoryMedia,
 } from './story.interface';
 import paginate from '../../common/plugins/paginate';
 
@@ -14,18 +14,36 @@ const storyMediaSchema = new Schema<IStoryMedia>(
   {
     mediaUrl: {
       type: String,
+      // Now optional for both text and image stories
     },
     textContent: {
       type: String,
-      required: function () {
-        return (
-          this.mediaType === StoryMediaType.TEXT ||
-          this.mediaType === StoryMediaType.MIXED
-        );
-      },
+      // Text content for both text-only and image+text stories
     },
-    textFontFamily: { type: String },
-    backgroundColor: { type: String },
+    textFontFamily: {
+      type: String,
+      enum: ['Arial', 'Arial Black', 'Courier New', 'Helvetica'],
+      default: 'Arial',
+    },
+    backgroundColor: {
+      type: String,
+      // For text-only stories
+    },
+    textPosition: {
+      x: { type: Number, default: 0 },
+      y: { type: Number, default: 0 },
+      // For image+text stories, position of text overlay
+    },
+    textColor: {
+      type: String,
+      default: '#FFFFFF',
+      // Text color for overlays
+    },
+    textSize: {
+      type: Number,
+      default: 24,
+      // Text size for overlays
+    },
     expiresAt: { type: Date, required: true },
     mediaType: {
       type: String,
@@ -49,7 +67,7 @@ const storyMediaSchema = new Schema<IStoryMedia>(
   { timestamps: true }
 );
 
-storyMediaSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); //auto delete after 24 hours
+storyMediaSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const storySchema = new Schema<IStory, IStoryModel>(
   {

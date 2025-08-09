@@ -15,6 +15,7 @@ export type TOtp = {
 export const OtpType = {
   VERIFY: 'verify',
   RESET_PASSWORD: 'resetPassword',
+  LOGIN_MFA: 'loginMfa',
 } as const;
 
 export interface OtpModel extends Model<TOtp> {

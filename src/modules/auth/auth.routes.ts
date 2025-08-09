@@ -52,7 +52,12 @@ router.post(
   AuthController.verifyEmail
 );
 
-router.post('/resend-otp', resendOtpLimiter, AuthController.resendOtp);
+router.post(
+  '/resend-otp',
+  auth('Common'),
+  resendOtpLimiter,
+  AuthController.resendOtp
+);
 
 router.post(
   '/forgot-password',
@@ -63,7 +68,7 @@ router.post(
 
 router.post(
   '/reset-password',
-   auth('Common'),
+  auth('Common'),
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword
 );
@@ -77,6 +82,6 @@ router.post(
 
 router.post('/logout', AuthController.logout);
 
-router.post('/refresh-token',AuthController.refreshToken);
+router.post('/refresh-token', AuthController.refreshToken);
 
 export const AuthRoutes = router;

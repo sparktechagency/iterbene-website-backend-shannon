@@ -55,8 +55,7 @@ const getAllMessagesByReceiverId = async (
       select: 'content senderId',
     },
     {
-      path: 'storyMedia',
-      select: 'mediaUrl',
+      path: 'storyMedia'
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';

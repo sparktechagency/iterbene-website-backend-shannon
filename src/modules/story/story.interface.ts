@@ -7,6 +7,9 @@ export interface IStoryMedia {
   textContent?: string;
   textFontFamily?: string;
   backgroundColor?: string;
+  textPosition?: { x: number; y: number };
+  textColor?: string;
+  textSize?: number;
   expiresAt?: Date;
   mediaType: StoryMediaType;
   viewedBy: Types.ObjectId[];

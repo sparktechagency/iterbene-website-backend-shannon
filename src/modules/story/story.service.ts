@@ -67,10 +67,13 @@ const createStory = async (
   userId: string,
   payload: {
     textContent?: string;
-    textFontFamily?: string;
     backgroundColor?: string;
+    textFontFamily: 'Arial';
+    textColor: '#FFFFFF';
+    textSize: '24';
+    textPosition?: { x: number; y: number };
+    privacy: StoryPrivacy;
     duration?: number;
-    privacy?: string;
   },
   files?: Express.Multer.File[]
 ) => {
@@ -128,6 +131,9 @@ const createStory = async (
           textContent: payload.textContent || null,
           textFontFamily: payload.textFontFamily || null,
           backgroundColor: payload.backgroundColor || null,
+          textColor: payload.textColor || null,
+          textSize: payload.textSize || null,
+          textPosition: payload.textPosition || null,
           expiresAt,
           viewedBy: [],
           viewCount: 0,
@@ -143,6 +149,9 @@ const createStory = async (
         {
           mediaType: StoryMediaType.TEXT,
           mediaUrl: null,
+          textPosition: payload.textPosition || null,
+          textColor: payload.textColor || null,
+          textSize: payload.textSize || null,
           textContent: payload.textContent,
           textFontFamily: payload.textFontFamily || null,
           backgroundColor: payload.backgroundColor || null,
@@ -351,28 +360,6 @@ const viewStoryMedia = async (
       $inc: { viewCount: 1 },
     }
   );
-
-  const viewer = await User.findById(userId);
-  const notification: INotification = {
-    senderId: userId,
-    receiverId: story.userId?._id?.toString(),
-    title: `${viewer?.fullName ?? 'Someone'} viewed your story`,
-    message: `${viewer?.fullName ?? 'A user'} checked out your story.`,
-    type: 'story',
-    linkId: story?._id,
-    role: 'user',
-    viewStatus: false,
-    image:
-     viewer?.profileImage,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-  await NotificationService?.addCustomNotification?.(
-    'notification',
-    notification,
-    story.userId.toString()
-  );
-
   const sortedMediaIds = story.mediaIds
     .sort(
       (a, b) =>
@@ -494,8 +481,7 @@ const reactToStoryMedia = async (
     linkId: story?._id || mediaId?.toString(),
     role: 'user',
     viewStatus: false,
-    image:
-     reactor?.profileImage,
+    image: reactor?.profileImage,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
