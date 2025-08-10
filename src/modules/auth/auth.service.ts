@@ -23,17 +23,12 @@ const createUser = async (userData: TUser) => {
   const user = await User.create(userData);
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
-    const tokens = await TokenService.accessAndRefreshToken(
-      user
-    );
+    const tokens = await TokenService.accessAndRefreshToken(user);
     return tokens;
   }
 };
 
-const verifyEmail = async (
-  email: string,
-  otp: string
-) => {
+const verifyEmail = async (email: string, otp: string) => {
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
@@ -41,10 +36,15 @@ const verifyEmail = async (
   await OtpService.verifyOTP(
     user.email,
     otp,
-    user.isResetPassword ? OtpType.RESET_PASSWORD : OtpType.VERIFY
+    user.isResetPassword
+      ? OtpType.RESET_PASSWORD
+      : user.isLoginMfa
+      ? OtpType.LOGIN_MFA
+      : OtpType.VERIFY
   );
   user.isEmailVerified = true;
   user.isResetPassword = false;
+  user.isLoginMfa = false;
   await user.save();
 
   const tokens = await TokenService.accessAndRefreshToken(user);
@@ -74,8 +74,11 @@ const resendOtp = async (email: string) => {
     );
     await OtpService.createResetPasswordOtp(user.email);
     return { resetPasswordToken };
+  } else if (user.isLoginMfa) {
+    const loginMfaToken = await TokenService.accessAndRefreshToken(user);
+    await OtpService.createLoginMfaOtp(user.email);
+    return { loginMfaToken };
   }
-
   await OtpService.createVerificationEmailOtp(user.email);
   const tokens = await TokenService.accessAndRefreshToken(user);
   return tokens;
@@ -95,7 +98,7 @@ const resetPassword = async (email: string, password: string) => {
 const changePassword = async (
   userId: string,
   currentPassword: string,
-  newPassword: string,
+  newPassword: string
 ) => {
   const user = await User.findById(userId).select(
     '+password +passwordHistory +mfaSecret'
@@ -119,7 +122,6 @@ const changePassword = async (
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid password.');
   }
 
-
   user.password = newPassword;
   user.lastPasswordChange = new Date();
   await user.save();
@@ -136,9 +138,7 @@ const logout = async (refreshToken: string) => {
   }
 };
 
-const refreshAuth = async (
-  refreshToken: string,
-) => {
+const refreshAuth = async (refreshToken: string) => {
   const payload = await TokenService.verifyToken(
     refreshToken,
     config.jwt.refreshSecret,
@@ -163,5 +163,5 @@ export const AuthService = {
   resendOtp,
   logout,
   changePassword,
-  refreshAuth
+  refreshAuth,
 };

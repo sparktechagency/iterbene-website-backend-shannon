@@ -85,10 +85,10 @@ if (config.environment !== 'test') {
 const sendEmail = async (values: ISendEmail) => {
   try {
     const info = await transporter.sendMail({
-      from: `Shannon Lawrence-Montes <${config.smtp.emailFrom}>`, 
+      from: `Shannon Lawrence-Montes <${config.smtp.emailFrom}>`,
       to: values.to,
-      subject: values.subject, 
-      html: values.html, 
+      subject: values.subject,
+      html: values.html,
       headers: {
         'X-Priority': '1',
         'X-MSMail-Priority': 'High',
@@ -246,6 +246,124 @@ const sendResetPasswordEmail = async (to: string, otp: string) => {
   <div style="text-align: center; margin-top: 20px;">
     <h1 style="font-size: 14px; font-weight: 300">Follow Us:</h1>
         <table style="margin-top: 20px; display: inline-block; text-align: center;">
+      <tr>
+        <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/facebook.logo.png"
+                alt="facebook"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/instagram.logo.png"
+                alt="instagram"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/twitter.logo.jpg"
+                alt="twitter"
+                width="20px"
+              />
+            </a>
+          </td>
+          <td
+            style="
+              padding: 10px;
+              border: 1px solid gray;
+              border-radius: 5px;
+              background: #ffffff;
+            "
+          >
+            <a
+              href="http://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/youtube+logo.webp"
+                alt="youtube"
+                width="20px"
+              />
+            </a>
+          </td>
+      </tr>
+    </table>
+  </div>
+</div>
+  `;
+  await sendEmail({ to, subject, html });
+};
+
+// send login verification email
+const sendLoginVerificationEmail = async (to: string, otp: string) => {
+  const subject = 'Iter Bene - Verify Your Login';
+  const html = `
+  <div style="width: 100%; background: #f4f4f4; margin: 0 auto; font-family: Inter, sans-serif; text-align: center; padding: 50px 0px;">
+   <img
+    src="https://iter-bene.s3.eu-north-1.amazonaws.com/basic/iterbenelogo.png"
+    alt="Logo"
+    style="width: 80px; margin-bottom: 20px"
+  />
+  <table style="width: 100%; background: #ffffff; max-width: 600px; margin: 0 auto; border: 1px solid rgb(216, 212, 212); box-shadow: 5px #ffffff; border-radius: 10px; padding: 20px;">
+    <tr>
+      <td>
+        <h1 style="font-size: 22px; color: black; font-weight: 400">Your login verification code</h1>
+        <h1 style="font-size: 30px; color: rgb(46, 44, 44); font-weight: 400; letter-spacing: 5px; margin: 30px 0px;">
+          ${otp}
+        </h1>
+        <h1 style="font-size: 16px; color: rgb(46, 44, 44); font-weight: 400; margin: 20px 0px;">
+          To complete your login, please enter this code in the app. The code expires in 30 minutes and can only be used once.
+        </h1>
+        <h1 style="font-size: 14px; color: rgb(46, 44, 44); font-weight: 400; margin: 20px 0px;">
+          This code is unique to you. Please don’t share it with anyone.
+        </h1>
+      </td>
+    </tr>
+  </table>
+  <div style="text-align: center; margin-top: 20px;">
+    <h1 style="font-size: 14px; font-weight: 300">Follow Us:</h1>
+    <table style="margin-top: 20px; display: inline-block; text-align: center;">
       <tr>
         <td
             style="
@@ -978,6 +1096,7 @@ const sendReportConfirmation = async (to: string, userName: string) => {
 
 export {
   sendEmail,
+  sendLoginVerificationEmail,
   sendVerificationEmail,
   sendResetPasswordEmail,
   sendAdminOrSuperAdminCreationEmail,

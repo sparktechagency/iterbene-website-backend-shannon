@@ -2,20 +2,31 @@ import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import moment from 'moment';
 import ApiError from '../../errors/ApiError';
-import { sendResetPasswordEmail, sendVerificationEmail } from '../../helpers/emailService';
+import {
+  sendLoginVerificationEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} from '../../helpers/emailService';
 import OTP from './otp.model';
 import { config } from '../../config';
-import { User } from '../user/user.model';
 
 const generateOTP = (): string => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-const createOTP = async (userEmail: string, expiresInMinutes: string, type: string) => {
-  const user = await User.findOne({ email: userEmail });
-  const lastOtp = await OTP.findOne({ userEmail, type }).sort({ createdAt: -1 });
+const createOTP = async (
+  userEmail: string,
+  expiresInMinutes: string,
+  type: string
+) => {
+  const lastOtp = await OTP.findOne({ userEmail, type }).sort({
+    createdAt: -1,
+  });
   if (lastOtp && moment().diff(lastOtp.createdAt, 'seconds') < 60) {
-    throw new ApiError(StatusCodes.TOO_MANY_REQUESTS, 'Please wait 1 minute before requesting a new OTP.');
+    throw new ApiError(
+      StatusCodes.TOO_MANY_REQUESTS,
+      'Please wait 1 minute before requesting a new OTP.'
+    );
   }
 
   const existingOTP = await OTP.findOne({
@@ -26,7 +37,9 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
   });
 
   if (existingOTP) {
-    const windowStart = moment().subtract(config.otp.attemptWindowMinutes, 'minutes').toDate();
+    const windowStart = moment()
+      .subtract(config.otp.attemptWindowMinutes, 'minutes')
+      .toDate();
     if (
       existingOTP.attempts >= config.otp.maxOtpAttempts &&
       existingOTP.lastAttemptAt &&
@@ -38,7 +51,6 @@ const createOTP = async (userEmail: string, expiresInMinutes: string, type: stri
       );
     }
   }
-
 
   const otp = generateOTP();
   const otpDoc = await OTP.create({
@@ -106,9 +118,20 @@ const createResetPasswordOtp = async (email: string) => {
   return otpDoc;
 };
 
+const createLoginMfaOtp = async (email: string) => {
+  const otpDoc = await createOTP(
+    email,
+    config.otp.resetPasswordOtpExpiration.toString(),
+    'loginMfa'
+  );
+  await sendLoginVerificationEmail(email, otpDoc?.otp);
+  return otpDoc;
+};
+
 export const OtpService = {
   createOTP,
   verifyOTP,
   createVerificationEmailOtp,
   createResetPasswordOtp,
+  createLoginMfaOtp,
 };

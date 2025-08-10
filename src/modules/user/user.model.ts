@@ -128,6 +128,10 @@ const userSchema = new Schema<TUser, UserModal>(
       type: Boolean,
       default: false,
     },
+    isLoginMfa: {
+      type: Boolean,
+      default: false,
+    },
     lastPasswordChange: { type: Date },
     isResetPassword: {
       type: Boolean,

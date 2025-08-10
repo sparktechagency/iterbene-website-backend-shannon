@@ -32,6 +32,7 @@ export type TUser = {
   isBanned: boolean;
   banUntil?: Date | null;
   isOnline: boolean;
+  isLoginMfa: boolean;
   isInMessageBox: boolean;
   isDeleted: boolean;
   isBlocked: boolean;
