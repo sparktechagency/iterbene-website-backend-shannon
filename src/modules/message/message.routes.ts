@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import auth from '../../middlewares/auth';
-import { MessageController } from './message.controller';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import { MESSAGE_UPLOADS_FOLDER } from './message.constant';
+import { MessageController } from './message.controller';
 const upload = fileUploadHandler(MESSAGE_UPLOADS_FOLDER);
 
 const router = Router();
@@ -11,7 +11,7 @@ const router = Router();
 // unviewed message count
 router.get(
   '/unviewed-count',
-  auth('User'),
+  auth('Common'),
   MessageController.unviewedMessagesCount
 );
 
@@ -23,7 +23,7 @@ router
   // get all messages by receiverId
 router.get(
   '/:receiverId',
-  auth('User'),
+  auth('Common'),
   MessageController.getAllMessagesByReceiverId
 );
 
@@ -38,49 +38,49 @@ router
 // Additional routes for new features
 router.patch(
   '/view-all-messages/:chatId',
-  auth('User'),
+  auth('Common'),
   MessageController.viewAllMessages
 );
 router.post(
   '/reaction/:messageId',
-  auth('User'),
+  auth('Common'),
   MessageController.addReaction
 );
 router.delete(
   '/reaction/:messageId',
-  auth('User'),
+  auth('Common'),
   MessageController.removeReaction
 );
-router.post('/reply', auth('User'), MessageController.replyToMessage);
+router.post('/reply', auth('Common'), MessageController.replyToMessage);
 
 
 router.post(
   '/:messageId/forward',
-  auth('User'),
+  auth('Common'),
   MessageController.forwardMessage
 );
 router.post(
   '/:messageId/pin/:chatId',
-  auth('User'),
+  auth('Common'),
   MessageController.pinMessage
 );
 router.post(
   '/:messageId/unpin/:chatId',
-  auth('User'),
+  auth('Common'),
   MessageController.unpinMessage
 );
 
-router.get('/:chatId/search', auth('User'), MessageController.searchMessages);
+router.get('/:chatId/search', auth('Common'), MessageController.searchMessages);
 
 
 router.post(
   '/:chatId/typing',
-  auth('User'),
+  auth('Common'),
   MessageController.sendTypingIndicator
 );
 router.post(
   '/:chatId/stop-typing',
-  auth('User'),
+  auth('Common'),
   MessageController.stopTypingIndicator
 );
 

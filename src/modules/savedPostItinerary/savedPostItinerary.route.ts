@@ -6,7 +6,7 @@ const router = Router();
 
 router.get(
   '/already-saved/:postId',
-  auth('User'),
+  auth('Common'),
   SavedPostItineraryController.isPostAlreadySaved
 );
 router

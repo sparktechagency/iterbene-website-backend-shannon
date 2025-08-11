@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import auth from '../../middlewares/auth';
-import { PostController } from './post.controller';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import validateRequest from '../../shared/validateRequest';
+import { PostController } from './post.controller';
 import { PostValidation } from './post.validation';
 
 const UPLOADS_FOLDER = 'uploads/posts';
@@ -14,7 +14,7 @@ const router = Router();
 router
   .route('/')
   .post(
-    auth('User'),
+    auth('Common'),
     upload.array('postFiles', 10),
     validateRequest(PostValidation.createPostValidationSchema),
     PostController.createPost
@@ -23,7 +23,7 @@ router
 // Share post
 router.post(
   '/share',
-  auth('User'),
+  auth('Common'),
   validateRequest(PostValidation.sharePostValidationSchema),
   PostController.sharePost
 );
@@ -34,7 +34,7 @@ router.get('/feed',PostController.feedPosts);
 //incrementItineraryViewCount
 router.post(
   '/increment-itinerary-view-count',
-  auth('User'),
+  auth('Common'),
   PostController.incrementItineraryViewCount
 );
 
@@ -55,7 +55,7 @@ router.get('/event/:eventId', auth('Common'), PostController.getEventPosts);
 //add or remove reaction
 router.post(
   '/reaction',
-  auth('User'),
+  auth('Common'),
   validateRequest(PostValidation.addOrRemoveReactionValidationSchema),
   PostController.addOrRemoveReaction
 );
@@ -63,7 +63,7 @@ router.post(
 //add or remove comment reaction
 router.post(
   '/comment-reaction',
-  auth('User'),
+  auth('Common'),
   validateRequest(PostValidation.addOrRemoveCommentReactionValidationSchema),
   PostController.addOrRemoveCommentReaction
 );
@@ -73,7 +73,7 @@ router.post(
 //create comment
 router.post(
   '/comment',
-  auth('User'),
+  auth('Common'),
   validateRequest(PostValidation.createCommentValidationSchema),
   PostController.createComment
 );
@@ -81,7 +81,7 @@ router.post(
 //update  comment
 router.patch(
   '/comment/:commentId',
-  auth('User'),
+  auth('Common'),
   validateRequest(PostValidation.updateCommentValidationSchema),
   PostController.updateComment
 );
@@ -89,7 +89,7 @@ router.patch(
 //delete comment
 router.delete(
   '/comment/:commentId',
-  auth('User'),
+  auth('Common'),
   validateRequest(PostValidation.deleteCommentValidationSchema),
   PostController.deleteComment
 );
@@ -97,7 +97,7 @@ router.delete(
 // get visited posts
 router.get(
   '/visited-posts',
-  auth('User'),
+  auth('Common'),
   PostController.getVisitedPostsWithDistance
 );
 
@@ -108,7 +108,7 @@ router
   .get(PostController.getPostById)
   // update post
   .patch(
-    auth('User'),
+    auth('Common'),
     upload.array('postFiles', 10),
     validateRequest(PostValidation.updatePostValidationSchema),
     PostController.updatePost

@@ -7,7 +7,7 @@ const router = Router();
 router.get('/my-maps', auth('Common'), MapsController.myMaps);
 router.post(
   '/add-interested-location',
-  auth('User'),
+  auth('Common'),
   MapsController.addInterestedLocation
 );
 

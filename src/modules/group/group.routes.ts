@@ -1,11 +1,11 @@
 import express from 'express';
-import { GroupValidation } from './group.validation';
 import auth from '../../middlewares/auth';
-import validateRequest from '../../shared/validateRequest';
-import { GroupController } from './group.controllers';
-import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
-import fileUploadHandler from '../../shared/fileUploadHandler';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
+import fileUploadHandler from '../../shared/fileUploadHandler';
+import validateRequest from '../../shared/validateRequest';
+import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
+import { GroupController } from './group.controllers';
+import { GroupValidation } from './group.validation';
 const UPLOADS_FOLDER = 'uploads/groups';
 const upload = fileUploadHandler(UPLOADS_FOLDER);
 
@@ -14,7 +14,7 @@ const router = express.Router();
 // Create a group (any authenticated user)
 router.post(
   '/',
-  auth('User'),
+  auth('Common'),
   upload.single('groupImage'),
   convertHeicToPngMiddleware(UPLOADS_FOLDER),
   // validateRequest(GroupValidation.createGroupValidationSchema),
@@ -24,7 +24,7 @@ router.post(
 // Join a group (members only)
 router.post(
   '/join',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.joinGroupValidationSchema),
   GroupController.joinGroup
 );
@@ -32,7 +32,7 @@ router.post(
 // Leave a group (members only)
 router.post(
   '/leave',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.leaveGroupValidationSchema),
   GroupController.leaveGroup
 );
@@ -40,7 +40,7 @@ router.post(
 // Approve join request (admin only)
 router.post(
   '/approve-join',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.approveJoinValidationSchema),
   GroupController.approveJoinRequest
 );
@@ -48,7 +48,7 @@ router.post(
 // Reject join request (admin only)
 router.post(
   '/reject-join',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.rejectJoinValidationSchema),
   GroupController.rejectJoinRequest
 );
@@ -56,7 +56,7 @@ router.post(
 // Remove a member (admin only)
 router.post(
   '/remove-member',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.removeMemberValidationSchema),
   GroupController.removeMember
 );
@@ -64,7 +64,7 @@ router.post(
 // Promote member to admin (admin only)
 router.post(
   '/promote-admin',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.promoteAdminValidationSchema),
   GroupController.promoteToAdmin
 );
@@ -72,7 +72,7 @@ router.post(
 // Demote admin (admin only, creator-specific in service)
 router.post(
   '/demote-admin',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.demoteAdminValidationSchema),
   GroupController.demoteAdmin
 );
@@ -80,7 +80,7 @@ router.post(
 // Promote member to co-leader (admin only)
 router.post(
   '/promote-co-leader',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.promoteCoLeaderValidationSchema),
   GroupController.promoteToCoLeader
 );
@@ -88,26 +88,26 @@ router.post(
 // Demote co-leader (admin only)
 router.post(
   '/demote-co-leader',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.demoteCoLeaderValidationSchema),
   GroupController.demoteCoLeader
 );
 
 // Get my groups (any authenticated user)
-router.get('/my-groups', auth('User'), GroupController.getMyGroups);
+router.get('/my-groups', auth('Common'), GroupController.getMyGroups);
 
 // Get my joined or pending groups (any authenticated user)
-router.get('/my-join-groups', auth('User'), GroupController.getMyJoinGroups);
+router.get('/my-join-groups', auth('Common'), GroupController.getMyJoinGroups);
 
 // Get group suggestions (any authenticated user)
-router.get('/suggestions', auth('User'), GroupController.getGroupSuggestions);
+router.get('/suggestions', auth('Common'), GroupController.getGroupSuggestions);
 
 // Group Invite Routes
 
 // Send group invite (any authenticated user, member/admin in service)
 router.post(
   '/invites/send',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.sendInviteValidationSchema),
   GroupInviteController.sendInvite
 );
@@ -115,7 +115,7 @@ router.post(
 // Accept group invite (any authenticated user)
 router.post(
   '/invites/accept',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.acceptInviteValidationSchema),
   GroupInviteController.acceptInvite
 );
@@ -123,7 +123,7 @@ router.post(
 // Decline group invite (any authenticated user)
 router.post(
   '/invites/decline',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.declineInviteValidationSchema),
   GroupInviteController.declineInvite
 );
@@ -131,7 +131,7 @@ router.post(
 // Cancel group invite (any authenticated user, sender/admin in service)
 router.post(
   '/invites/cancel',
-  auth('User'),
+  auth('Common'),
   validateRequest(GroupValidation.cancelInviteValidationSchema),
   GroupInviteController.cancelInvite
 );
@@ -139,24 +139,24 @@ router.post(
 // Get my group invites (any authenticated user)
 router.get(
   '/invites/my-invites',
-  auth('User'),
+  auth('Common'),
   GroupInviteController.getMyInvites
 );
 
 router
   .route('/:id')
   .get(
-    auth('User'),
+    auth('Common'),
     validateRequest(GroupValidation.getGroupValidationSchema),
     GroupController.getGroup
   )
   .patch(
-    auth('User'),
+    auth('Common'),
     validateRequest(GroupValidation.updateGroupValidationSchema),
     GroupController.updateGroup
   )
   .delete(
-    auth('User'),
+    auth('Common'),
     validateRequest(GroupValidation.deleteGroupValidationSchema),
     GroupController.deleteGroup
   );

@@ -21,17 +21,17 @@ router
 // Additional routes for group chat management
 router.post(
   '/:chatId/participants',
-  auth('User'),
+  auth('Common'),
   ChatController.addParticipantToGroup
 );
 router.delete(
   '/:chatId/participants',
-  auth('User'),
+  auth('Common'),
   ChatController.removeParticipantFromGroup
 );
 router.patch(
   '/:chatId/settings',
-  auth('User'),
+  auth('Common'),
   ChatController.updateGroupSettings
 );
 

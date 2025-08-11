@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import auth from '../../middlewares/auth';
-import { ItineraryController } from './itinerary.controller';
 import fileUploadHandler from '../../shared/fileUploadHandler';
+import { ItineraryController } from './itinerary.controller';
 
 const UPLOADS_FOLDER = 'uploads/itineraries';
 const upload = fileUploadHandler(UPLOADS_FOLDER);
@@ -13,7 +13,7 @@ router.route('/').post(auth('User'), ItineraryController.createItinerary);
 router
   .route('/pdf')
   .post(
-    auth('User'),
+    auth('Common'),
     upload.single('itineraryPDF'),
     ItineraryController.createItineraryFromPDF
   );

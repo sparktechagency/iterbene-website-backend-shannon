@@ -1,11 +1,11 @@
 import express from 'express';
 import auth from '../../middlewares/auth';
-import validateRequest from '../../shared/validateRequest';
-import { EventValidation } from './event.validations';
-import { EventInviteController } from '../eventInvite/eventInvite.controller';
-import { EventController } from './event.controllers';
 import fileUploadHandler from '../../shared/fileUploadHandler';
+import validateRequest from '../../shared/validateRequest';
+import { EventInviteController } from '../eventInvite/eventInvite.controller';
 import { EVENT_UPLOADS_FOLDER } from './event.constant';
+import { EventController } from './event.controllers';
+import { EventValidation } from './event.validations';
 const upload = fileUploadHandler(EVENT_UPLOADS_FOLDER);
 
 const router = express.Router();
@@ -13,18 +13,18 @@ const router = express.Router();
 // Create an event (any authenticated user)
 router.post(
   '/',
-  auth('User'),
+  auth('Common'),
   upload.single('eventImage'),
   validateRequest(EventValidation.createEventValidationSchema),
   EventController.createEvent
 );
 
 // interest an event (any authenticated user)
-router.post('/interest/:eventId', auth('User'), EventController.interestEvent);
+router.post('/interest/:eventId', auth('Common'), EventController.interestEvent);
 // Leave an event (any authenticated user)
 router.post(
   '/not-interest/:eventId',
-  auth('User'),
+  auth('Common'),
   EventController.notInterestEvent
 );
 

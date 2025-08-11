@@ -1,69 +1,69 @@
 import { Router } from 'express';
-import { ConnectionsController } from './connections.controller';
 import auth from '../../middlewares/auth';
+import { ConnectionsController } from './connections.controller';
 
 const router = Router();
 
-router.post('/add', auth('User'), ConnectionsController.addConnection);
+router.post('/add', auth('Common'), ConnectionsController.addConnection);
 
 router.get(
   '/check-sent-connection/:friendId',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.checkIsSentConnectionExists
 );
 router.patch(
   '/accept/:connectionId',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.acceptConnection
 );
 
 router.patch(
   '/decline/:connectionId',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.declineConnection
 );
 
 router.delete(
   '/remove/:removedByUserId',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.removeConnection
 );
 
 router.delete(
   '/cancel/:friendId',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.cancelRequest
 );
 
 router.delete(
   '/delete/:deleteByUserId',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.deleteConnection
 );
 
-router.get('/', auth('User'), ConnectionsController.getMyAllConnections);
+router.get('/', auth('Common'), ConnectionsController.getMyAllConnections);
 
 router.get(
   '/requests/received',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.getMyAllRequests
 );
 
 router.get(
   '/requests/sent',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.getSentMyRequests
 );
 
 router.get(
   '/mutual/:userId2',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.getMutualConnections
 );
 
 router.get(
   '/suggestions',
-  auth('User'),
+  auth('Common'),
   ConnectionsController.getConnectionSuggestions
 );
 
