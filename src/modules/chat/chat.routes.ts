@@ -6,17 +6,17 @@ const router = Router();
 
 router
   .route('/group-chat')
-  .post(auth('User'), ChatController.createGroupChat);
+  .post( auth('Common'), ChatController.createGroupChat);
 
 router
   .route('/')
-  .get(auth('User'), ChatController.getAllChatsByUserId)
-  .post(auth('User'), ChatController.createSingleChat);
+  .get( auth('Common'), ChatController.getAllChatsByUserId)
+  .post( auth('Common'), ChatController.createSingleChat);
 
 router
   .route('/:chatId')
-  .get(auth('User'), ChatController.getSingleChat)
-  .delete(auth('User'), ChatController.deleteChat);
+  .get( auth('Common'), ChatController.getSingleChat)
+  .delete( auth('Common'), ChatController.deleteChat);
 
 // Additional routes for group chat management
 router.post(

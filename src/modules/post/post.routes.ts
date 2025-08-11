@@ -114,6 +114,6 @@ router
     PostController.updatePost
   )
   // delete post
-  .delete(auth('User'), PostController.deletePost);
+  .delete( auth('Common'), PostController.deletePost);
 
 export const PostRoutes = router;

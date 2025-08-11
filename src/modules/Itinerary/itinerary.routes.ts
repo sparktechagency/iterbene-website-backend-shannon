@@ -7,7 +7,7 @@ const UPLOADS_FOLDER = 'uploads/itineraries';
 const upload = fileUploadHandler(UPLOADS_FOLDER);
 const router = Router();
 
-router.route('/').post(auth('User'), ItineraryController.createItinerary);
+router.route('/').post( auth('Common'), ItineraryController.createItinerary);
 
 // pdf itinerary
 router
@@ -20,7 +20,7 @@ router
 
 router
   .route('/:itineraryId')
-  .get(auth('User'), ItineraryController.getItinerary)
-  .patch(auth('User'), ItineraryController.updateItinerary);
+  .get( auth('Common'), ItineraryController.getItinerary)
+  .patch( auth('Common'), ItineraryController.updateItinerary);
 
 export const ItineraryRoutes = router;

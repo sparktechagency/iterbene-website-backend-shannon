@@ -11,11 +11,11 @@ router.get(
 );
 router
   .route('/')
-  .post(auth('User'), SavedPostItineraryController.addPostSaved)
-  .get(auth('User'), SavedPostItineraryController.getSavedPost);
+  .post( auth('Common'), SavedPostItineraryController.addPostSaved)
+  .get( auth('Common'), SavedPostItineraryController.getSavedPost);
 
 router
   .route('/:postId')
-  .delete(auth('User'), SavedPostItineraryController.removePostSaved);
+  .delete( auth('Common'), SavedPostItineraryController.removePostSaved);
 
 export const SavedPostItineraryRoutes = router;

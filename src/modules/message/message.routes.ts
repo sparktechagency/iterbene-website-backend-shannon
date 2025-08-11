@@ -18,7 +18,7 @@ router.get(
 // send message
 router
   .route('/')
-  .post(auth('User'), upload.array('files', 10), MessageController.sendMessage);
+  .post( auth('Common'), upload.array('files', 10), MessageController.sendMessage);
 
   // get all messages by receiverId
 router.get(
@@ -30,9 +30,9 @@ router.get(
 // get single message
 router
   .route('/:messageId')
-  .put(auth('User'), MessageController.updateMessage)
-  .patch(auth('User'), MessageController.markMessageSeen)
-  .delete(auth('User'), MessageController.deleteMessage);
+  .put( auth('Common'), MessageController.updateMessage)
+  .patch( auth('Common'), MessageController.markMessageSeen)
+  .delete( auth('Common'), MessageController.deleteMessage);
 
 
 // Additional routes for new features
