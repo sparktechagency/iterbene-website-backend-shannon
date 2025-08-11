@@ -4,103 +4,75 @@ import { errorLogger, logger } from '../shared/logger';
 import { ISendEmail } from '../types/email';
 import { config } from '../config';
 
-// // Create Nodemailer transporter with better configuration
-// const transporter = nodemailer.createTransport({
-//   host: config.smtp.host,
-//   port: Number(config.smtp.port),
-//   secure: false,
-//   auth: {
-//     user: config.smtp.username,
-//     pass: config.smtp.password,
-//   },
-//   // Add these for better deliverability
-//   tls: {
-//     rejectUnauthorized: false,
-//   },
-//   debug: true,
-//   logger: true,
-// });
-
-// // Verify transporter connection
-// if (config.environment !== 'test') {
-//   transporter
-//     .verify()
-//     .then(() => logger.info(colors.cyan('📧  Connected to email server')))
-//     .catch(err => {
-//       logger.error('Unable to connect to email server:', err);
-//       logger.warn(
-//         'Unable to connect to email server. Make sure you have configured the SMTP options in .env'
-//       );
-//     });
-// }
-
-// // Function to send email with better error handling
-// const sendEmail = async (values: ISendEmail) => {
-//   try {
-//     const info = await transporter.sendMail({
-//       from: `"Iter Bene" <${config.smtp.emailFrom}>`, // Better sender format
-//       to: values.to,
-//       subject: values.subject,
-//       html: values.html,
-//       // Add these headers for better deliverability
-//       headers: {
-//         'X-Priority': '1',
-//         'X-MSMail-Priority': 'High',
-//         Importance: 'high',
-//       },
-//     });
-//     logger.info('Mail sent successfully', info.accepted);
-//     return info;
-//   } catch (error) {
-//     console.error('Email sending failed:', error);
-//     errorLogger.error('Email sending error:', error);
-//     throw error; // Re-throw to handle in calling function
-//   }
-// };
-
-// Create Nodemailer transporter
+// Google Workspace SMTP Configuration
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
   port: Number(config.smtp.port),
-  secure: true,
+  secure: false,
   auth: {
     user: config.smtp.username,
     pass: config.smtp.password,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
-// Verify transporter connection
+// Verify connection
 if (config.environment !== 'test') {
   transporter
     .verify()
-    .then(() => logger.info(colors.cyan('📧  Connected to email server')))
-    .catch(err =>
-      logger.warn(
-        'Unable to connect to email server. Make sure you have configured the SMTP options in .env'
-      )
-    );
+    .then(() => {
+      logger.info(
+        colors.green('📧 ✅ Google Workspace email connected successfully!')
+      );
+    })
+    .catch(err => {
+      logger.error(colors.red('❌ Email connection failed:'), {
+        error: err.message,
+        code: err.code,
+        command: err.command,
+      });
+    });
 }
 
-// Function to send email
+// Send email function
 const sendEmail = async (values: ISendEmail) => {
   try {
-    const info = await transporter.sendMail({
-      from: `Shannon Lawrence-Montes <${config.smtp.emailFrom}>`,
+    const mailOptions = {
+      from: `"Iter Bene" <${config.smtp.emailFrom}>`,
       to: values.to,
       subject: values.subject,
       html: values.html,
       headers: {
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        Importance: 'high',
+        'X-Priority': '3',
+        'X-Mailer': 'Iter Bene System v1.0',
       },
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    logger.info(colors.green(`📨 ✅ Email sent successfully!`), {
+      to: values.to,
+      subject: values.subject,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
     });
-    logger.info('Mail sent successfully', info.accepted);
+    return {
+      success: true,
+      messageId: info.messageId,
+      accepted: info.accepted,
+    };
   } catch (error) {
-    errorLogger.error('Email', error);
+    console.error(colors.red('❌ Email sending failed:'), error);
+    errorLogger.error('Email sending error:', error);
+    return {
+      success: false,
+      error: error,
+    };
   }
 };
-
 const sendVerificationEmail = async (to: string, otp: string) => {
   const subject = 'Iter Bene - Verify Your Email Address';
   const html = `
