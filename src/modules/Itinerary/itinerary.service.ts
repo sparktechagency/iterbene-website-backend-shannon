@@ -37,8 +37,6 @@ const createItineraryFromPDF = async (
     const dataBuffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(dataBuffer);
     const text = pdfData.text;
-    console.log('Pdf text:', text);
-
     // Extract data using regex and text processing
     const extractedData = extractItineraryData(text);
 

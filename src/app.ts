@@ -11,61 +11,144 @@ import notFound from './middlewares/notFount';
 
 const app = express();
 
-// Security headers
+// Security headers with relaxed CSP for development
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https:', 'http:', 'ws:', 'wss:'],
+        fontSrc: ["'self'", 'https:', 'data:'],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'self'"],
       },
     },
+    crossOriginEmbedderPolicy: false,
   })
 );
 
-// CORS configuration
-const allowedOrigins = ['https://iterbene.com'];
+// Enhanced CORS configuration
+const allowedOrigins = [
+  'https://iterbene.com',
+  'https://www.iterbene.com',
+  'https://admin.iterbene.com',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:4173',
+  'http://localhost:7000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+];
+
+// Development origins
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push(
+    'http://localhost:8080',
+    'http://localhost:8081',
+    'http://192.168.1.100:3000', 
+    'http://10.0.0.100:3000' 
+  );
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) {
+        return callback(null, true);
       }
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow any localhost origin in development
+      if (
+        process.env.NODE_ENV === 'development' &&
+        (origin.includes('localhost') || origin.includes('127.0.0.1'))
+      ) {
+        return callback(null, true);
+      }
+
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Accept-Language',
+      'Accept-Encoding',
+      'Connection',
+      'User-Agent',
+    ],
+    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+    preflightContinue: false,
+    optionsSuccessStatus: 200,
   })
 );
 
-// Body parser
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// Handle preflight requests explicitly
+app.options('*', cors());
+
+// Body parser with increased limits
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Cookie parser
 app.use(cookieParser());
 
-// File serving
-app.use('/uploads', express.static(path.join(__dirname, '../Uploads/')));
+// File serving with CORS headers
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.join(__dirname, '../Uploads/'))
+);
 
 // i18next middleware
 app.use(i18nextMiddleware.handle(i18next));
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(
+    `${new Date().toISOString()} - ${req.method} ${req.url} - Origin: ${req.get(
+      'Origin'
+    )}`
+  );
+  next();
+});
+
 // Routes
 app.use('/api/v1', router);
 
-// Health check
+// Health check with more info
 app.get('/test', (req: Request, res: Response) => {
-  res
-    .status(200)
-    .json({ message: 'Welcome to the Inter Bene website backend' });
+  res.status(200).json({
+    message: 'Welcome to the Iter Bene website backend',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    origin: req.get('Origin'),
+    userAgent: req.get('User-Agent'),
+  });
 });
 
-// Error handling
-app.use(globalErrorHandler);
+// 404 handler should come before error handler
 app.use(notFound);
+
+// Global error handler should be last
+app.use(globalErrorHandler);
 
 export default app;
