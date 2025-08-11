@@ -26,6 +26,21 @@ const hashPassword = async (password: string) => {
 const seedUsers = async () => {
   try {
     const usersData = [
+      // admin and super_admin created by seeder
+      {
+        fullName: 'Md Rakib Islam',
+        email: 'rakib2020.tkg@gmail.com',
+        phoneNumber: '+8801319101179',
+        password: 'Rakib244348',
+        role: 'Super_Admin',
+      },
+      {
+        fullName: 'Shannon Lawrence',
+        email: 'iterbeneadmin@iterbene.com',
+        phoneNumber: '+12025550120',
+        password: '1qazxsw2',
+        role: 'Admin',
+      },
       {
         fullName: 'John Smith',
         username: 'johnsmith21',
@@ -50,7 +65,6 @@ const seedUsers = async () => {
         state: 'NY',
         referredAs: 'John',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Emma Johnson',
@@ -76,7 +90,6 @@ const seedUsers = async () => {
         state: 'CA',
         referredAs: 'Emma',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Michael Brown',
@@ -102,7 +115,6 @@ const seedUsers = async () => {
         state: 'IL',
         referredAs: 'Mike',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Sarah Davis',
@@ -128,7 +140,6 @@ const seedUsers = async () => {
         state: 'TX',
         referredAs: 'Sarah',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'David Wilson',
@@ -154,7 +165,6 @@ const seedUsers = async () => {
         state: 'PA',
         referredAs: 'Dave',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Laura Martinez',
@@ -180,7 +190,6 @@ const seedUsers = async () => {
         state: 'FL',
         referredAs: 'Laura',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'James Taylor',
@@ -206,7 +215,6 @@ const seedUsers = async () => {
         state: 'WA',
         referredAs: 'James',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Emily Clark',
@@ -232,7 +240,6 @@ const seedUsers = async () => {
         state: 'CA',
         referredAs: 'Emily',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Robert Lee',
@@ -258,7 +265,6 @@ const seedUsers = async () => {
         state: 'MA',
         referredAs: 'Rob',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Olivia Harris',
@@ -284,7 +290,6 @@ const seedUsers = async () => {
         state: 'GA',
         referredAs: 'Olivia',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'William Walker',
@@ -310,7 +315,6 @@ const seedUsers = async () => {
         state: 'CO',
         referredAs: 'Will',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Sophia Lewis',
@@ -335,7 +339,6 @@ const seedUsers = async () => {
         city: 'Tokyo',
         referredAs: 'Sophia',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Liam Young',
@@ -360,7 +363,6 @@ const seedUsers = async () => {
         city: 'London',
         referredAs: 'Liam',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Ava King',
@@ -386,7 +388,6 @@ const seedUsers = async () => {
         state: 'NSW',
         referredAs: 'Ava',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Noah Scott',
@@ -411,7 +412,6 @@ const seedUsers = async () => {
         city: 'Paris',
         referredAs: 'Noah',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Mia Turner',
@@ -437,7 +437,6 @@ const seedUsers = async () => {
         state: 'ON',
         referredAs: 'Mia',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Ethan Adams',
@@ -462,7 +461,6 @@ const seedUsers = async () => {
         city: 'Madrid',
         referredAs: 'Ethan',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Isabella Green',
@@ -487,7 +485,6 @@ const seedUsers = async () => {
         city: 'Berlin',
         referredAs: 'Isabella',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Lucas Baker',
@@ -512,7 +509,6 @@ const seedUsers = async () => {
         city: 'Hong Kong',
         referredAs: 'Lucas',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Charlotte Wright',
@@ -537,7 +533,6 @@ const seedUsers = async () => {
         city: 'São Paulo',
         referredAs: 'Charlotte',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Benjamin Hill',
@@ -562,7 +557,6 @@ const seedUsers = async () => {
         city: 'Moscow',
         referredAs: 'Ben',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Amelia Allen',
@@ -587,7 +581,6 @@ const seedUsers = async () => {
         city: 'Delhi',
         referredAs: 'Amelia',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Henry Nelson',
@@ -612,7 +605,6 @@ const seedUsers = async () => {
         city: 'Mexico City',
         referredAs: 'Henry',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Evelyn Carter',
@@ -637,7 +629,6 @@ const seedUsers = async () => {
         city: 'Singapore',
         referredAs: 'Evelyn',
         isEmailVerified: true,
-       
       },
       {
         fullName: 'Alexander Perez',
@@ -662,7 +653,6 @@ const seedUsers = async () => {
         city: 'Santiago',
         referredAs: 'Alex',
         isEmailVerified: true,
-       
       },
     ];
 
