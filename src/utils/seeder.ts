@@ -30,6 +30,7 @@ const seedUsers = async () => {
       {
         fullName: 'Md Rakib Islam',
         email: 'rakib2020.tkg@gmail.com',
+        username: 'rakib2020.tkg',
         phoneNumber: '+8801319101179',
         password: 'Rakib244348',
         role: 'Super_Admin',
@@ -37,6 +38,7 @@ const seedUsers = async () => {
       {
         fullName: 'Shannon Lawrence',
         email: 'iterbeneadmin@iterbene.com',
+        username: 'iterbeneadmin',
         phoneNumber: '+12025550120',
         password: '1qazxsw2',
         role: 'Admin',
