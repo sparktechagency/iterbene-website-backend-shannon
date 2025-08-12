@@ -11,10 +11,10 @@ import notFound from './middlewares/notFount';
 
 const app = express();
 
-// Security headers WITHOUT CSP (CSP handled by Nginx)
+// Security headers with relaxed CSP for development
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Disable CSP in backend
+    contentSecurityPolicy: false,
   })
 );
 
@@ -36,7 +36,7 @@ if (process.env.NODE_ENV === 'development') {
   allowedOrigins.push(
     'http://localhost:8080',
     'http://localhost:8081',
-    'http://10.10.7.66:3000'
+    'http://10.10.7.66:3000',
   );
 }
 
