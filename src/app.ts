@@ -11,20 +11,10 @@ import notFound from './middlewares/notFount';
 
 const app = express();
 
-// Security headers with relaxed CSP for development
+// Security headers WITHOUT CSP (CSP handled by Nginx)
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        connectSrc: [
-          "'self'",
-          'https://iterbene.com/',
-          'https://www.iterbene.com/',
-          'ws://iterbene.com/',
-        ],
-      },
-    },
+    contentSecurityPolicy: false, // Disable CSP in backend
   })
 );
 
