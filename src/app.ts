@@ -17,17 +17,14 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https:', 'http:', 'ws:', 'wss:'],
-        fontSrc: ["'self'", 'https:', 'data:'],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          'https://iterbene.com/',
+          'https://www.iterbene.com/',
+          'ws://iterbene.com/',
+        ],
       },
     },
-    crossOriginEmbedderPolicy: false,
   })
 );
 
@@ -40,8 +37,8 @@ const allowedOrigins = [
   'http://localhost:3001',
   'http://localhost:4173',
   'http://localhost:7000',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
+  'http://10.10.7.66:3000',
+  'http://10.10.7.66:5173',
 ];
 
 // Development origins
@@ -49,8 +46,7 @@ if (process.env.NODE_ENV === 'development') {
   allowedOrigins.push(
     'http://localhost:8080',
     'http://localhost:8081',
-    'http://192.168.1.100:3000', 
-    'http://10.0.0.100:3000' 
+    'http://10.10.7.66:3000'
   );
 }
 
