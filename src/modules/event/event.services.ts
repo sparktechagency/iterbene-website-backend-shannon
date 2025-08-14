@@ -13,6 +13,22 @@ const createEvent = async (
   userId: string,
   payload: Partial<IEvent>
 ): Promise<IEvent> => {
+  // Validate start date
+  if (!payload.startDate || payload.startDate < new Date()) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Start date cannot be in the past or undefined'
+    );
+  }
+
+  // Validate start and end date
+  if (!payload.endDate || payload.startDate > payload.endDate) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'End date cannot be undefined or less than start date'
+    );
+  }
+
   const eventData: Partial<IEvent> = {
     ...payload,
     creatorId: new Types.ObjectId(userId),
