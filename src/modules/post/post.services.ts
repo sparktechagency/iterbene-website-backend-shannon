@@ -1525,13 +1525,7 @@ const getEventPosts = async (
   if (!event) {
     throw new ApiError(404, 'Event not found');
   }
-  if (
-    userId &&
-    !event.interestedUsers.some(interestedId => interestedId.equals(userId))
-  ) {
-    throw new ApiError(403, 'User is not a participant of this event');
-  }
-
+  
   let currentUserId: Types.ObjectId | null = userId
     ? new Types.ObjectId(userId)
     : null;
@@ -1761,29 +1755,6 @@ const incrementItineraryViewCount = async (
   }
   post.itineraryViewCount += 1;
   await post.save();
-
-  // Send notification
-  const notification: INotification = {
-    senderId: undefined, // No specific sender for view count
-    receiverId: post.userId,
-    title: `Someone viewed your itinerary`,
-    message: `Your itinerary in post "${post.content?.substring(
-      0,
-      50
-    )}..." was viewed!`,
-    type: 'post',
-    linkId: postId,
-    role: 'user',
-    viewStatus: false,
-    image: undefined,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-  await NotificationService.addCustomNotification(
-    'notification',
-    notification,
-    post.userId.toString()
-  );
   return post;
 };
 
