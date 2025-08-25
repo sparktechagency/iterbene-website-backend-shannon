@@ -83,8 +83,7 @@ const getSingleNotification = catchAsync(async (req, res) => {
 
 const viewAllNotifications = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const { type } = req.query;
-  await NotificationService.viewAllNotifications(userId, type as string);
+  await NotificationService.viewAllNotifications(userId);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'All notifications viewed successfully',
@@ -92,6 +91,15 @@ const viewAllNotifications = catchAsync(async (req, res) => {
   });
 });
 
+const viewAllMessageNotifications = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  await NotificationService.viewAllMessageNotifications(userId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'All notifications viewed successfully',
+    data: {},
+  });
+})
 const viewSingleNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   await NotificationService.viewSingleNotification(id);
@@ -127,6 +135,7 @@ export const NotificationController = {
   getAdminNotifications,
   getSingleNotification,
   getUnViewNotificationCount,
+  viewAllMessageNotifications,
   viewAllNotifications,
   viewSingleNotification,
   deleteNotification,

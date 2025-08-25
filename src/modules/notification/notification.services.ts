@@ -115,14 +115,21 @@ const getUnViewMessageNotificationCount = async (userId: string) => {
   return { count: result };
 };
 
-const viewAllNotifications = async (userId: string, type?: string) => {
+const viewAllNotifications = async (userId: string) => {
   const result = await Notification.updateMany(
-    { receiverId: userId, ...(type && { type: type }) },
+    { receiverId: userId, type: { $ne: 'message' } },
     { viewStatus: true }
   );
   return result;
 };
 
+const viewAllMessageNotifications = async (userId: string) => {
+  const result = await Notification.updateMany(
+    { receiverId: userId, type: 'message' },
+    { viewStatus: true }
+  );
+  return result;
+};
 const viewSingleNotification = async (notificationId: string) => {
   const result = await Notification.findByIdAndUpdate(
     notificationId,
@@ -160,6 +167,7 @@ export const NotificationService = {
   addCustomNotification,
   viewAllNotifications,
   deleteNotification,
+  viewAllMessageNotifications,
   viewSingleNotification,
   getUnViewNotificationCount,
   clearAllNotification,

@@ -21,6 +21,11 @@ router
   .route('/view-all-notifications')
   .post(auth('Common'), NotificationController.viewAllNotifications);
 
+/** ========================View all message notifications route here==================== */
+router
+  .route('/view-all-message-notifications')
+  .post(auth('Common'), NotificationController.viewAllMessageNotifications);
+
 /** ========================Get all message notifications route here==================== */
 router
   .route('/get-all-message-notifications')
