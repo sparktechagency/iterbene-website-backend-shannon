@@ -64,6 +64,7 @@ const addConnection = async (
   const notification: INotification = {
     senderId: sentByUserId,
     receiverId: receivedByUserId,
+    username: sentByUser?.username,
     title: `${sentByUser?.fullName ?? 'Someone'} sent you a connection request`,
     message: `${
       sentByUser?.fullName ?? 'A user'
@@ -106,13 +107,13 @@ const acceptConnection = async (connectionId: string, userId: string) => {
   connection.status = ConnectionStatus.ACCEPTED;
   await connection.save();
 
-  const sentByUser = await User.findById(connection.sentBy);
   const receivedByUser = await User.findById(userId);
 
   // Notify the sender
   const notification: INotification = {
     senderId: userId,
     receiverId: connection.sentBy.toString(),
+    username: receivedByUser?.username,
     title: `${
       receivedByUser?.fullName ?? 'Someone'
     } accepted your connection request`,

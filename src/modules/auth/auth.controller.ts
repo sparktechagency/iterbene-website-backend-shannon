@@ -103,39 +103,39 @@ const login = catchAsync(async (req, res) => {
     return;
   }
 
-  // add mfa verification
-  user.isLoginMfa = true;
-  await user.save();
-  await OtpService.createLoginMfaOtp(user.email);
-  const tokens = await TokenService.accessAndRefreshToken(user);
-  //  send response
-  sendResponse(res, {
-    code: StatusCodes.OK,
-    message: 'Please verify your email.',
-    data: tokens,
-  });
-
-  // manually login
+  // // add mfa verification
+  // user.isLoginMfa = true;
+  // await user.save();
+  // await OtpService.createLoginMfaOtp(user.email);
   // const tokens = await TokenService.accessAndRefreshToken(user);
-  // // Set cookies for access and refresh tokens
-  // res.cookie('accessToken', tokens.accessToken, {
-  //   httpOnly: true,
-  //   secure: process.env.NODE_ENV === 'production',
-  //   sameSite: 'strict',
-  //   maxAge: 15 * 60 * 1000, // 15 minutes
-  // });
-  // res.cookie('refreshToken', tokens.refreshToken, {
-  //   httpOnly: true,
-  //   secure: config.environment === 'production',
-  //   sameSite: 'strict',
-  //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  // });
-  // // Send response with tokens
+  // //  send response
   // sendResponse(res, {
   //   code: StatusCodes.OK,
-  //   message: 'User logged in successfully.',
-  //   data: { tokens },
+  //   message: 'Please verify your email.',
+  //   data: tokens,
   // });
+
+  // manually login
+  const tokens = await TokenService.accessAndRefreshToken(user);
+  // Set cookies for access and refresh tokens
+  res.cookie('accessToken', tokens.accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+  res.cookie('refreshToken', tokens.refreshToken, {
+    httpOnly: true,
+    secure: config.environment === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+  // Send response with tokens
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'User logged in successfully.',
+    data: { tokens },
+  });
 });
 
 const verifyEmail = catchAsync(async (req, res) => {

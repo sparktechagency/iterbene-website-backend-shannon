@@ -5,6 +5,7 @@ export interface INotification {
   _id?: Types.ObjectId;
   senderId?: Types.ObjectId | string;
   receiverId?: Types.ObjectId | string;
+  username?: string;
   title: string;
   message?: string;
   image?: string;
