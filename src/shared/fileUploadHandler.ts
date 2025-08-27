@@ -36,7 +36,6 @@ const fileUploadHandler = (UPLOADS_FOLDER: string) => {
     file: Express.Multer.File,
     cb: FileFilterCallback
   ) => {
-    console.log('File types', file.mimetype);
     const allowedTypes = [
       'image/jpg',
       'image/jpeg',

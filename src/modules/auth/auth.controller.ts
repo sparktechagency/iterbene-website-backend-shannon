@@ -33,7 +33,6 @@ const register = catchAsync(async (req, res) => {
       'Unauthorized to create admin or super admin.'
     );
   }
-
   const result = await AuthService.createUser(req.body);
   sendResponse(res, {
     code: StatusCodes.CREATED,
@@ -43,7 +42,7 @@ const register = catchAsync(async (req, res) => {
 });
 
 const login = catchAsync(async (req, res) => {
-  const { email, password, mfaToken } = req.body;
+  const { email, password } = req.body;
   const user = await User.findOne({ email }).select('+password');
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid credentials.');

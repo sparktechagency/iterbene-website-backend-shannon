@@ -19,3 +19,9 @@ declare module 'express-xss-sanitizer' {
   import { RequestHandler } from 'express';
   export const xss: RequestHandler;
 }
+
+declare module 'xss-clean' {
+  import { RequestHandler } from 'express';
+  const xssClean: () => RequestHandler;
+  export = xssClean;
+}
