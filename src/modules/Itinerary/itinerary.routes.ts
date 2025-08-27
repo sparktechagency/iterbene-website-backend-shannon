@@ -2,12 +2,13 @@ import { Router } from 'express';
 import auth from '../../middlewares/auth';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import { ItineraryController } from './itinerary.controller';
+import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
 
-const UPLOADS_FOLDER = 'uploads/itineraries';
-const upload = fileUploadHandler(UPLOADS_FOLDER);
+const ITINERARY_UPLOADS_FOLDER = 'uploads/itineraries';
+const upload = fileUploadHandler(ITINERARY_UPLOADS_FOLDER);
 const router = Router();
 
-router.route('/').post( auth('Common'), ItineraryController.createItinerary);
+router.route('/').post(auth('Common'), ItineraryController.createItinerary);
 
 // pdf itinerary
 router
@@ -15,12 +16,13 @@ router
   .post(
     auth('Common'),
     upload.single('itineraryPDF'),
+    convertHeicToPngMiddleware(ITINERARY_UPLOADS_FOLDER),
     ItineraryController.createItineraryFromPDF
   );
 
 router
   .route('/:itineraryId')
-  .get( auth('Common'), ItineraryController.getItinerary)
-  .patch( auth('Common'), ItineraryController.updateItinerary);
+  .get(auth('Common'), ItineraryController.getItinerary)
+  .patch(auth('Common'), ItineraryController.updateItinerary);
 
 export const ItineraryRoutes = router;

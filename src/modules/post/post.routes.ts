@@ -4,9 +4,10 @@ import fileUploadHandler from '../../shared/fileUploadHandler';
 import validateRequest from '../../shared/validateRequest';
 import { PostController } from './post.controller';
 import { PostValidation } from './post.validation';
+import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
 
-const UPLOADS_FOLDER = 'uploads/posts';
-const upload = fileUploadHandler(UPLOADS_FOLDER);
+const UPLOADS_POST_FOLDER = 'uploads/posts';
+const upload = fileUploadHandler(UPLOADS_POST_FOLDER);
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router
   .post(
     auth('Common'),
     upload.array('postFiles', 10),
+    convertHeicToPngMiddleware(UPLOADS_POST_FOLDER),
     validateRequest(PostValidation.createPostValidationSchema),
     PostController.createPost
   );
@@ -29,7 +31,7 @@ router.post(
 );
 
 //get feed posts
-router.get('/feed',PostController.feedPosts);
+router.get('/feed', PostController.feedPosts);
 
 //incrementItineraryViewCount
 router.post(
@@ -110,10 +112,11 @@ router
   .patch(
     auth('Common'),
     upload.array('postFiles', 10),
+    convertHeicToPngMiddleware(UPLOADS_POST_FOLDER),
     validateRequest(PostValidation.updatePostValidationSchema),
     PostController.updatePost
   )
   // delete post
-  .delete( auth('Common'), PostController.deletePost);
+  .delete(auth('Common'), PostController.deletePost);
 
 export const PostRoutes = router;

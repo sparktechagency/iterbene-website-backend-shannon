@@ -46,7 +46,7 @@ router.post(
 // Get and fill up User Profile
 router
   .route('/profile')
-  .get(auth('Common'), UserController.getMyProfile)
+  .get(auth('Common'),  UserController.getMyProfile)
   .patch(auth('Common'), UserController.updateMyProfile)
   .delete(auth('Common'), UserController.deleteMyProfile);
 
@@ -67,7 +67,7 @@ router.post(
 // Get Single User by ID, Update User Profile, Change User Status
 router
   .route('/:userId')
-  .get(auth('Common'), UserController.getSingleUserByUser)
+  .get(auth('Common'),  UserController.getSingleUserByUser)
   .patch(
     auth('Admin'),
     UserController.updateUserStatus // Admin can change user status

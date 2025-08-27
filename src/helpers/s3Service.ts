@@ -11,7 +11,7 @@ import { USER_UPLOADS_FOLDER } from '../modules/user/user.constant';
 // Supported file types and their max sizes
 const FILE_LIMITS = {
   images: {
-    extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'],
     maxSize: 10 * 1024 * 1024, // 10MB
   },
   documents: {

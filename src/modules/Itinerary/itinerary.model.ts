@@ -85,7 +85,6 @@ itinerarySchema.pre('save', function (next) {
       this.overAllRating = calculateOverallRating(this.days);
     }
   } catch (error) {
-    console.error('Error calculating overall rating on save:', error);
     this.overAllRating = 0;
   }
   next();
@@ -104,7 +103,6 @@ itinerarySchema.pre(
         this.set({ overAllRating });
       }
     } catch (error) {
-      console.error('Error calculating overall rating on update:', error);
       this.set({ overAllRating: 0 });
     }
     next();

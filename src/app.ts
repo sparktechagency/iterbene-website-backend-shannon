@@ -9,6 +9,8 @@ import i18nextMiddleware from 'i18next-express-middleware';
 import helmet from 'helmet';
 import notFound from './middlewares/notFount';
 
+import { performanceMonitor } from './middlewares/performanceMiddleware';
+
 const app = express();
 
 // Security headers with relaxed CSP for development
@@ -106,6 +108,9 @@ app.use(
 
 // i18next middleware
 app.use(i18nextMiddleware.handle(i18next));
+
+// Performance monitoring
+app.use(performanceMonitor);
 
 // Add request logging middleware
 app.use((req, res, next) => {

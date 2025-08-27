@@ -4,8 +4,9 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../shared/validateRequest';
 import { StoryValidation } from './story.validation';
 import fileUploadHandler from '../../shared/fileUploadHandler';
-const UPLOADS_FOLDER = 'uploads/stories';
-const upload = fileUploadHandler(UPLOADS_FOLDER);
+import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
+const STORY_UPLOADS_FOLDER = 'uploads/stories';
+const upload = fileUploadHandler(STORY_UPLOADS_FOLDER);
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ router.post(
   '/',
   auth('Common'),
   upload.array('storyFiles', 10),
+  convertHeicToPngMiddleware(STORY_UPLOADS_FOLDER),
   validateRequest(StoryValidation.createStoryValidationSchema),
   StoryController.createStory
 );

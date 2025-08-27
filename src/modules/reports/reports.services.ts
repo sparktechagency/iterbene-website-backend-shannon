@@ -9,8 +9,6 @@ import {
   sendReportConfirmation,
   sendWarningEmail,
 } from '../../helpers/emailService';
-import { INotification } from '../notification/notification.interface';
-import { NotificationService } from '../notification/notification.services';
 import { Post } from '../post/post.model';
 import Message from '../message/message.model';
 
@@ -70,7 +68,6 @@ const addReport = async (payload: IReport): Promise<IReport> => {
   try {
     await sendReportConfirmation(reporter.email, reporter.fullName as string);
   } catch (error) {
-    console.error('Failed to send report confirmation email:', error);
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       'Failed to send report confirmation email'

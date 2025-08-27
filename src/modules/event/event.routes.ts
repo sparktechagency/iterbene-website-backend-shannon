@@ -6,6 +6,7 @@ import { EventInviteController } from '../eventInvite/eventInvite.controller';
 import { EVENT_UPLOADS_FOLDER } from './event.constant';
 import { EventController } from './event.controllers';
 import { EventValidation } from './event.validations';
+import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
 const upload = fileUploadHandler(EVENT_UPLOADS_FOLDER);
 
 const router = express.Router();
@@ -15,6 +16,7 @@ router.post(
   '/',
   auth('Common'),
   upload.single('eventImage'),
+  convertHeicToPngMiddleware(EVENT_UPLOADS_FOLDER),
   validateRequest(EventValidation.createEventValidationSchema),
   EventController.createEvent
 );

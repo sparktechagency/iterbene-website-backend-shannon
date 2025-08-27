@@ -15,7 +15,12 @@ process.on('uncaughtException', error => {
 let server: any;
 async function main() {
   try {
-    await mongoose.connect(config.database.mongoUrl as string);
+    await mongoose.connect(config.database.mongoUrl as string, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4
+    });
     logger.info(colors.green('🚀 Database connected successfully'));
 
     const port =
@@ -47,10 +52,10 @@ async function main() {
       },
     });
     socketHelper.socket(io);
-    // @ts-ignore
     global.io = io;
   } catch (error) {
-    errorLogger.error(colors.red('🤢 Failed to connect Database'));
+    errorLogger.error('🤢 Failed to connect Database', error);
+    process.exit(1);
   }
 
   // Handle unhandled rejection

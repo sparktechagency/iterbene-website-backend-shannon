@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { Request } from 'express';
+import { errorLogger } from './logger';
 
 const fileUploadHandler = (UPLOADS_FOLDER: string) => {
   // Ensure the upload folder exists
@@ -10,7 +11,7 @@ const fileUploadHandler = (UPLOADS_FOLDER: string) => {
     try {
       await fs.mkdir(UPLOADS_FOLDER, { recursive: true });
     } catch (err) {
-      console.error(`Failed to create upload folder: ${err}`);
+      errorLogger.error(`Failed to create upload folder: ${err}`);
       throw new Error('Unable to create upload folder');
     }
   };
@@ -35,6 +36,7 @@ const fileUploadHandler = (UPLOADS_FOLDER: string) => {
     file: Express.Multer.File,
     cb: FileFilterCallback
   ) => {
+    console.log('File types', file.mimetype);
     const allowedTypes = [
       'image/jpg',
       'image/jpeg',
@@ -47,6 +49,7 @@ const fileUploadHandler = (UPLOADS_FOLDER: string) => {
       'text/csv',
       'video/mp4',
       'audio/mpeg',
+      'application/octet-stream',
     ];
 
     if (allowedTypes.includes(file.mimetype)) {

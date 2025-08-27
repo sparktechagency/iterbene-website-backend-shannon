@@ -3,10 +3,10 @@ import auth from '../../middlewares/auth';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import { MESSAGE_UPLOADS_FOLDER } from './message.constant';
 import { MessageController } from './message.controller';
+import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
 const upload = fileUploadHandler(MESSAGE_UPLOADS_FOLDER);
 
 const router = Router();
-
 
 // unviewed message count
 router.get(
@@ -18,9 +18,14 @@ router.get(
 // send message
 router
   .route('/')
-  .post( auth('Common'), upload.array('files', 10), MessageController.sendMessage);
+  .post(
+    auth('Common'),
+    upload.array('files', 10),
+    convertHeicToPngMiddleware(MESSAGE_UPLOADS_FOLDER),
+    MessageController.sendMessage
+  );
 
-  // get all messages by receiverId
+// get all messages by receiverId
 router.get(
   '/:receiverId',
   auth('Common'),
@@ -30,10 +35,9 @@ router.get(
 // get single message
 router
   .route('/:messageId')
-  .put( auth('Common'), MessageController.updateMessage)
-  .patch( auth('Common'), MessageController.markMessageSeen)
-  .delete( auth('Common'), MessageController.deleteMessage);
-
+  .put(auth('Common'), MessageController.updateMessage)
+  .patch(auth('Common'), MessageController.markMessageSeen)
+  .delete(auth('Common'), MessageController.deleteMessage);
 
 // Additional routes for new features
 router.patch(
@@ -53,7 +57,6 @@ router.delete(
 );
 router.post('/reply', auth('Common'), MessageController.replyToMessage);
 
-
 router.post(
   '/:messageId/forward',
   auth('Common'),
@@ -71,7 +74,6 @@ router.post(
 );
 
 router.get('/:chatId/search', auth('Common'), MessageController.searchMessages);
-
 
 router.post(
   '/:chatId/typing',

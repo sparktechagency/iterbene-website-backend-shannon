@@ -36,9 +36,10 @@ const logger = createLogger({
         'success',
         '%DATE%-success.log'
       ),
-      datePattern: 'DD-MM-YYYY-HH',
-      maxSize: '20m',
-      maxFiles: '1d',
+      datePattern: 'DD-MM-YYYY',
+      zippedArchive: true,
+      maxSize: '10m',
+      maxFiles: '7d',
     }),
   ],
 });
@@ -55,9 +56,10 @@ const errorLogger = createLogger({
         'error',
         '%DATE%-error.log'
       ),
-      datePattern: 'DD-MM-YYYY-HH',
-      maxSize: '20m',
-      maxFiles: '1d',
+      datePattern: 'DD-MM-YYYY',
+      zippedArchive: true,
+      maxSize: '10m',
+      maxFiles: '7d',
     }),
   ],
 });

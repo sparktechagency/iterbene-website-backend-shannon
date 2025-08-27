@@ -29,7 +29,7 @@ const convertHeicToPngMiddleware = (UPLOADS_FOLDER: string) => {
 
         // Convert the HEIC buffer to PNG format
         const pngBuffer = await convert({
-          buffer: new Uint8Array(heicBuffer), // Convert Buffer to Uint8Array (ArrayBufferView)
+          buffer: heicBuffer.buffer, // Pass the underlying ArrayBuffer
           format: 'PNG',
         });
 

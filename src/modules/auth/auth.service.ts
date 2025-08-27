@@ -1,6 +1,8 @@
 import ApiError from '../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
 import { OtpService } from '../otp/otp.service';
+import { FastOtpService } from '../../services/fastOtpService';
+import { errorLogger } from '../../shared/logger';
 import { User } from '../user/user.model';
 import bcrypt from 'bcrypt';
 import { config } from '../../config';
@@ -22,7 +24,11 @@ const createUser = async (userData: TUser) => {
 
   const user = await User.create(userData);
   if (!user.isEmailVerified) {
-    await OtpService.createVerificationEmailOtp(user.email);
+    // Use fast OTP service for background email processing
+    FastOtpService.createVerificationEmailOtpFast(user.email).catch(error => {
+      // Log error but don't block user registration
+      errorLogger.error('Failed to send verification email:', error);
+    });
     const tokens = await TokenService.accessAndRefreshToken(user);
     return tokens;
   }

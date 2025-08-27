@@ -6,8 +6,8 @@ import validateRequest from '../../shared/validateRequest';
 import { GroupInviteController } from '../groupInvite/groupInvite.controllers';
 import { GroupController } from './group.controllers';
 import { GroupValidation } from './group.validation';
-const UPLOADS_FOLDER = 'uploads/groups';
-const upload = fileUploadHandler(UPLOADS_FOLDER);
+const GROUP_UPLOADS_FOLDER = 'uploads/groups';
+const upload = fileUploadHandler(GROUP_UPLOADS_FOLDER);
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.post(
   '/',
   auth('Common'),
   upload.single('groupImage'),
-  convertHeicToPngMiddleware(UPLOADS_FOLDER),
+  convertHeicToPngMiddleware(GROUP_UPLOADS_FOLDER),
   // validateRequest(GroupValidation.createGroupValidationSchema),
   GroupController.createGroup
 );
