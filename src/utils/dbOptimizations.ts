@@ -24,11 +24,11 @@ export const getCountsInParallel = async (countQueries: Array<() => Promise<numb
 
 export const batchUserPopulate: PopulateOptions = {
   path: 'userId',
-  select: 'fullName username profileImage',
+  select: 'firstName lastName username profileImage',
   options: { lean: true }
 };
 
-export const commonUserFields = 'fullName username profileImage email isOnline';
+export const commonUserFields = 'firstName lastName username profileImage email isOnline';
 
 export const withTransaction = async <T>(operation: () => Promise<T>): Promise<T> => {
   const session = await require('mongoose').startSession();

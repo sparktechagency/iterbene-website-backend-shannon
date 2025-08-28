@@ -29,7 +29,7 @@ const unblockUser = catchAsync(async (req: Request, res: Response) => {
 
 const getBlockedUsers = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filters = pick(req.query, ['fullName']);
+  const filters = pick(req.query, ['firstName', 'lastName', 'email']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   filters.userId = userId;
   const result = await BlockedUserService.getBlockedUsers(filters, options);

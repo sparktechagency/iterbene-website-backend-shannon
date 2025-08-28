@@ -66,7 +66,7 @@ const addReport = async (payload: IReport): Promise<IReport> => {
   const result = await Report.create(payload);
 
   try {
-    await sendReportConfirmation(reporter.email, reporter.fullName as string);
+    await sendReportConfirmation(reporter.email, `${reporter?.firstName} ${reporter?.lastName}` as string);
   } catch (error) {
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
@@ -77,9 +77,9 @@ const addReport = async (payload: IReport): Promise<IReport> => {
   // const adminNotificationEvent = 'admin-notification';
   // const adminNotificationPayload: INotification = {
   //   title: `New ${payload.reportType} Report Submitted`,
-  //   message: `${reporter.fullName || 'A user'} has reported a ${
+  //   message: `${reporter.firstName lastName || 'A user'} has reported a ${
   //     payload.reportType
-  //   } by ${reportedUser.fullName || 'another user'} for "${
+  //   } by ${reportedUser.firstName lastName || 'another user'} for "${
   //     payload.reportReason.join(', ') || 'unspecified reasons'
   //   }". Please review the report.`,
   //   linkId: result._id,
@@ -101,11 +101,11 @@ const getAllReports = async (
   options.populate = [
     {
       path: 'reporter',
-      select: 'fullName email profileImage username ',
+      select: 'firstName lastName email profileImage username ',
     },
     {
       path: 'reportedUser',
-      select: 'fullName email profileImage username ',
+      select: 'firstName lastName email profileImage username ',
     },
   ];
   const result = await Report.paginate(filters, options);
@@ -116,11 +116,11 @@ const getSingleReport = async (reportId: string): Promise<IReport> => {
   const result = await Report.findById(reportId).populate([
     {
       path: 'reporter',
-      select: 'fullName email profileImage username',
+      select: 'firstName lastName email profileImage username',
     },
     {
       path: 'reportedUser',
-      select: 'fullName email profileImage username',
+      select: 'firstName lastName email profileImage username',
     },
   ]);
   if (!result) {
@@ -138,7 +138,7 @@ const sendWarningMessageForReportedUser = async (
   }
   sendWarningEmail(
     reportedUser.email,
-    reportedUser?.fullName as string,
+    `${reportedUser?.firstName} ${reportedUser?.lastName}` as string,
     warningMessage
   );
 };
@@ -185,7 +185,7 @@ const banUser = async (bannedUserId: string, duration: string) => {
   // ✅ Send Email Notification to the User
   await sendBanNotificationEmail(
     user.email,
-    user?.fullName as string,
+    `${user?.firstName} ${user?.lastName}` as string,
     banMessage,
     banUntil
   );

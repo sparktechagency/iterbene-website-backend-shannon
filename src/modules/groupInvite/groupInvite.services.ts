@@ -76,8 +76,8 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
   const notifications: INotification[] = recipients.map(toId => ({
     senderId: fromId,
     receiverId: toId,
-    title: `${sender?.fullName ?? 'Someone'} invited you to a group`,
-    message: `${sender?.fullName ?? 'A user'} invited you to join "${
+    title: `${sender?.firstName} ${sender?.lastName} invited you to a group`,
+    message: `${sender?.firstName} ${sender?.lastName} invited you to join "${
       group.name ?? 'a group'
     }". Check it out!`,
     type: 'group',
@@ -137,8 +137,8 @@ const acceptInvite = async (
     const senderNotification: INotification = {
       senderId: userId,
       receiverId: invite.from.toString(),
-      title: `${recipient?.fullName ?? 'Someone'} joined your group`,
-      message: `${recipient?.fullName ?? 'A user'} accepted your invite to "${
+      title: `${recipient?.firstName} ${recipient?.lastName} joined your group`,
+      message: `${recipient?.firstName} ${recipient?.lastName} accepted your invite to "${
         group.name ?? 'a group'
       }".`,
       type: 'group',
@@ -162,8 +162,8 @@ const acceptInvite = async (
     const adminNotifications: INotification[] = group.admins.map(adminId => ({
       senderId: userId,
       receiverId: adminId.toString(),
-      title: `${recipient?.fullName ?? 'Someone'} requested to join your group`,
-      message: `${recipient?.fullName ?? 'A user'} accepted an invite to "${
+      title: `${recipient?.firstName} ${recipient?.lastName}requested to join your group`,
+      message: `${recipient?.firstName} ${recipient?.lastName} accepted an invite to "${
         group.name ?? 'a group'
       }" and is awaiting approval.`,
       type: 'group',
@@ -216,8 +216,8 @@ const declineInvite = async (
   const senderNotification: INotification = {
     senderId: userId,
     receiverId: invite.from.toString(),
-    title: `${recipient?.fullName ?? 'Someone'} declined your group invite`,
-    message: `${recipient?.fullName ?? 'A user'} won't be joining "${
+    title: `${recipient?.firstName} ${recipient?.lastName} declined your group invite`,
+    message: `${recipient?.firstName} ${recipient?.lastName} won't be joining "${
       group.name ?? 'your group'
     }".`,
     type: 'group',
@@ -267,7 +267,7 @@ const cancelInvite = async (
     senderId: userId,
     receiverId: invite.to.toString(),
     title: `Invite to ${group.name ?? 'a group'} canceled`,
-    message: `${sender?.fullName ?? 'A group admin'} canceled your invite to "${
+    message: `${sender?.firstName} ${sender?.lastName} canceled your invite to "${
       group.name ?? 'a group'
     }".`,
     type: 'group',

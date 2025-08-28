@@ -13,9 +13,14 @@ import { Roles } from '../../middlewares/roles';
 
 const userSchema = new Schema<TUser, UserModal>(
   {
-    fullName: {
+    firstName: {
       type: String,
-      required: [true, 'Full name is required'],
+      required: [true, 'First name is required'],
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: [true, 'Last name is required'],
       trim: true,
     },
     username: {
@@ -32,8 +37,7 @@ const userSchema = new Schema<TUser, UserModal>(
     profileImage: {
       type: String,
       required: false,
-      default:
-        'https://iter-bene.s3.eu-north-1.amazonaws.com/basic/user.jpg',
+      default: 'https://iter-bene.s3.eu-north-1.amazonaws.com/basic/user.jpg',
     },
     coverImage: {
       type: String,
@@ -143,52 +147,63 @@ const userSchema = new Schema<TUser, UserModal>(
     },
     lockUntil: { type: Date },
     privacySettings: {
+      email: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.FRIENDS,
+      },
+      address: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.FRIENDS,
+      },
       ageRange: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.ONLY_ME,
+        default: PrivacyVisibility.FRIENDS,
       },
       nickname: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.FRIENDS,
       },
       gender: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.ONLY_ME,
+        default: PrivacyVisibility.FRIENDS,
       },
       location: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.FRIENDS,
       },
       locationName: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.FRIENDS,
       },
       country: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
-      },
-      state: {
-        type: String,
-        enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.FRIENDS,
       },
       city: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.FRIENDS,
+      },
+      state: {
+        type: String,
+        enum: PrivacyVisibility,
+        default: PrivacyVisibility.FRIENDS,
       },
       profession: {
         type: String,
         enum: PrivacyVisibility,
         default: PrivacyVisibility.PUBLIC,
       },
-      aboutMe: {
+
+      description: {
         type: String,
         enum: PrivacyVisibility,
         default: PrivacyVisibility.PUBLIC,
@@ -196,12 +211,12 @@ const userSchema = new Schema<TUser, UserModal>(
       phoneNumber: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.ONLY_ME,
+        default: PrivacyVisibility.FRIENDS,
       },
       maritalStatus: {
         type: String,
         enum: PrivacyVisibility,
-        default: PrivacyVisibility.PUBLIC,
+        default: PrivacyVisibility.FRIENDS,
       },
     },
     connectionPrivacy: {

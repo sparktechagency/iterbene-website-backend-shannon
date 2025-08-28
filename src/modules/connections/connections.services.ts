@@ -65,10 +65,8 @@ const addConnection = async (
     senderId: sentByUserId,
     receiverId: receivedByUserId,
     username: sentByUser?.username,
-    title: `${sentByUser?.fullName ?? 'Someone'} sent you a connection request`,
-    message: `${
-      sentByUser?.fullName ?? 'A user'
-    } wants to connect with you. Check it out!`,
+    title: `${sentByUser?.firstName} ${sentByUser?.lastName} sent you a connection request`,
+    message: `${sentByUser?.firstName} ${sentByUser?.lastName} wants to connect with you. Check it out!`,
     type: 'connection',
     linkId: newConnection?._id?.toString(),
     role: 'user',
@@ -114,10 +112,8 @@ const acceptConnection = async (connectionId: string, userId: string) => {
     senderId: userId,
     receiverId: connection.sentBy.toString(),
     username: receivedByUser?.username,
-    title: `${
-      receivedByUser?.fullName ?? 'Someone'
-    } accepted your connection request`,
-    message: `${receivedByUser?.fullName ?? 'A user'} is now your connection!`,
+    title: `${receivedByUser?.firstName} ${receivedByUser?.lastName } accepted your connection request`,
+    message: `${receivedByUser?.firstName} ${receivedByUser?.lastName } is now your connection!`,
     type: 'connection',
     linkId: connection._id?.toString(),
     role: 'user',
@@ -297,11 +293,11 @@ const getMyAllConnections = async (
   options.populate = [
     {
       path: 'sentBy',
-      select: 'fullName profileImage username',
+      select: 'firstName lastName profileImage username',
     },
     {
       path: 'receivedBy',
-      select: 'fullName profileImage username',
+      select: 'firstName lastName profileImage username',
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';
@@ -316,7 +312,8 @@ const getMyAllConnections = async (
 
     return {
       _id: friend._id,
-      fullName: friend.fullName,
+      firstName: friend.firstName,
+      lastName: friend.lastName,
       profileImage: friend.profileImage,
       username: friend.username,
     };
@@ -343,7 +340,7 @@ const getMyAllRequests = async (
   options.populate = [
     {
       path: 'sentBy',
-      select: 'fullName profileImage username',
+      select: 'firstName lastName profileImage username',
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';
@@ -367,7 +364,7 @@ const getSentMyRequests = async (
   options.populate = [
     {
       path: 'receivedBy',
-      select: 'fullName profileImage username',
+      select: 'firstName lastName profileImage username',
     },
   ];
   options.sortBy = options.sortBy || '-createdAt';
@@ -476,7 +473,7 @@ const getConnectionSuggestions = async (
   //   });
   // }
 
-  options.select = '_id fullName profileImage username';
+  options.select = '_id firstName lastName profileImage username';
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
 

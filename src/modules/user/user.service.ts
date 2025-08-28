@@ -7,9 +7,9 @@ import { Types } from 'mongoose';
 import { Connections } from '../connections/connections.model';
 import { ConnectionStatus } from '../connections/connections.interface';
 
-
 interface IAdminOrSuperAdminPayload {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phoneNumber: string;
   password: string;
@@ -46,7 +46,8 @@ const filterUserFields = async (
 
   const filteredUser: Record<string, any> = {
     _id: user._id,
-    fullName: user.fullName,
+    firstName: user.firstName,
+    lastName: user.lastName,
     username: user.username,
     profileImage: user.profileImage,
     coverImage: user.coverImage,
@@ -59,6 +60,9 @@ const filterUserFields = async (
   };
 
   const privateFields: (keyof TUser)[] = [
+    'phoneNumber',
+    'email',
+    'address',
     'ageRange',
     'nickname',
     'gender',
@@ -120,7 +124,8 @@ const createAdminOrSuperAdmin = async (
   }
 
   const result = new User({
-    fullName: payload.fullName,
+    firstName: payload.firstName,
+    lastName: payload.lastName,
     email: payload.email,
     phoneNumber: payload.phoneNumber,
     password: payload.password,

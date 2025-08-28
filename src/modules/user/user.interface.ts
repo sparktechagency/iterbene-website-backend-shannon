@@ -3,7 +3,8 @@ import { PaginateOptions, PaginateResult } from '../../types/paginate';
 
 export type TUser = {
   _id: Types.ObjectId;
-  fullName?: string;
+  firstName?: string;
+  lastName?: string;
   username?: string;
   nickname?: string;
   profileImage?: string;
@@ -41,6 +42,8 @@ export type TUser = {
   failedLoginAttempts: number;
   lockUntil?: Date;
   privacySettings: {
+    email: PrivacyVisibility;
+    address: PrivacyVisibility;
     ageRange: PrivacyVisibility;
     nickname: PrivacyVisibility;
     gender: PrivacyVisibility;
@@ -50,7 +53,7 @@ export type TUser = {
     city: PrivacyVisibility;
     state: PrivacyVisibility;
     profession: PrivacyVisibility;
-    aboutMe: PrivacyVisibility;
+    description: PrivacyVisibility;
     phoneNumber: PrivacyVisibility;
     maritalStatus: PrivacyVisibility;
   };

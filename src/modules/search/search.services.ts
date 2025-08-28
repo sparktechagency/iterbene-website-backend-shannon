@@ -499,7 +499,7 @@ const searchUsersHashtags = async (
     }
 
     const userQuery = {
-      $or: [{ fullName: { $regex: new RegExp(searchTerm, 'i') } }],
+      $or: [{ username: { $regex: new RegExp(searchTerm, 'i') } }],
       role: { $nin: ['Admin', 'Super_Admin'] },
       isDeleted: false,
       isBanned: false,
@@ -507,7 +507,7 @@ const searchUsersHashtags = async (
 
     const totalUsers = await User.countDocuments(userQuery);
     const users = await User.find(userQuery)
-      .select('fullName username profileImage')
+      .select('firstName lastName username profileImage')
       .lean();
 
     const hashtagQuery = {

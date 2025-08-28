@@ -20,7 +20,7 @@ const getAllChatsByUserId = async (
       '\\$&'
     );
     const user = await User.findOne({
-      fullName: { $regex: new RegExp(escapedUserName, 'i') },
+      username: { $regex: new RegExp(escapedUserName, 'i') },
     }).select('_id');
 
     if (!user) {
@@ -46,7 +46,7 @@ const getAllChatsByUserId = async (
   options.populate = [
     {
       path: 'participants',
-      select: 'fullName email profileImage',
+      select: 'firstName lastName username email profileImage',
     },
     {
       path: 'lastMessage',

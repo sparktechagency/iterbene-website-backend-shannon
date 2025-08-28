@@ -77,8 +77,8 @@ const sendInvite = async (
   const notifications: INotification[] = recipients.map(toId => ({
     senderId: fromId,
     receiverId: toId,
-    title: `${sender?.fullName ?? 'Someone'} invited you to an event`,
-    message: `${sender?.fullName ?? 'A user'} invited you to "${
+    title: `${sender?.firstName} ${sender?.lastName} invited you to an event`,
+    message: `${sender?.firstName} ${sender?.lastName} invited you to "${
       event.eventName ?? 'an event'
     }". Join the fun!`,
     type: 'event',
@@ -141,8 +141,8 @@ const acceptInvite = async (
   const senderNotification: INotification = {
     senderId: userId,
     receiverId: invite.from.toString(),
-    title: `${recipient?.fullName ?? 'Someone'} joined your event`,
-    message: `${recipient?.fullName ?? 'A user'} accepted your invite to "${
+    title: `${recipient?.firstName} ${recipient?.lastName} joined your event`,
+    message: `${recipient?.firstName} ${recipient?.lastName} accepted your invite to "${
       event.eventName ?? 'an event'
     }".`,
     type: 'event',
@@ -223,8 +223,8 @@ const declineInvite = async (
   const senderNotification: INotification = {
     senderId: userId,
     receiverId: invite.from.toString(),
-    title: `${recipient?.fullName ?? 'Someone'} declined your event invite`,
-    message: `${recipient?.fullName ?? 'A user'} won't be joining "${
+    title: `${recipient?.firstName} ${recipient?.lastName} declined your event invite`,
+    message: `${recipient?.firstName} ${recipient?.lastName} won't be joining "${
       event.eventName ?? 'your event'
     }".`,
     type: 'event',
@@ -280,7 +280,7 @@ const cancelInvite = async (
     senderId: userId,
     receiverId: invite.to.toString(),
     title: `Invite to ${event.eventName ?? 'an event'} canceled`,
-    message: `${sender?.fullName ?? 'A host'} canceled your invite to "${
+    message: `${sender?.firstName} ${sender?.lastName} canceled your invite to "${
       event.eventName ?? 'an event'
     }".`,
     type: 'event',
@@ -348,7 +348,7 @@ const getMyInvites = async (
         'eventName eventImage startDate endDate duration eventCost interestCount',
       populate: {
         path: 'creatorId',
-        select: 'fullName username profileImage',
+        select: 'firstName lastName username profileImage',
       },
     },
   ];

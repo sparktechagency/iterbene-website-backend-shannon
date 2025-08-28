@@ -384,23 +384,23 @@ const getGroup = async (
   const group = await Group.findById(groupId).populate([
     {
       path: 'creatorId',
-      select: 'fullName  profileImage username createdAt description',
+      select: 'firstName lastName  profileImage username createdAt description',
     },
     {
       path: 'admins',
-      select: 'fullName  profileImage username',
+      select: 'firstName lastName  profileImage username',
     },
     {
       path: 'coLeaders',
-      select: 'fullName  profileImage username',
+      select: 'firstName lastName  profileImage username',
     },
     {
       path: 'members',
-      select: 'fullName  profileImage username',
+      select: 'firstName lastName  profileImage username',
     },
     {
       path: 'pendingMembers',
-      select: 'fullName  profileImage username',
+      select: 'firstName lastName  profileImage username',
     },
   ]);
   if (!group || group.isDeleted) {

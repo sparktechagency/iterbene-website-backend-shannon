@@ -44,7 +44,7 @@ const getAllMessagesByReceiverId = async (
   options.populate = [
     {
       path: 'receiverId',
-      select: 'fullName profileImage email',
+      select: 'firstName lastName profileImage email',
     },
     {
       path: 'replyTo',
@@ -133,8 +133,8 @@ const sendMessage = async (payload: IMessage) => {
   const recipient = await User.findById(payload.receiverId);
   if (!recipient?.isInMessageBox || !recipient?.isOnline) {
     const notification: INotification = {
-      title: `${sender?.fullName} sent you a message`,
-      message: `You have a new message from ${sender?.fullName}`,
+      title: `${sender?.firstName} ${sender?.lastName} sent you a message`,
+      message: `You have a new message from ${sender?.firstName} ${sender?.lastName}`,
       senderId: new Types.ObjectId(payload.senderId),
       receiverId: new Types.ObjectId(payload.receiverId),
       linkId: sender?._id,
@@ -175,7 +175,7 @@ const sendMessage = async (payload: IMessage) => {
   const updateChat = await Chat.findById(payload.chatId).populate([
     {
       path: 'participants',
-      select: 'fullName email profileImage',
+      select: 'firstName lastName email profileImage',
     },
     {
       path: 'lastMessage',
@@ -188,7 +188,7 @@ const sendMessage = async (payload: IMessage) => {
   const message = await Message.findById(newMessage?.id).populate([
     {
       path: 'receiverId',
-      select: 'fullName profileImage email',
+      select: 'firstName lastName profileImage email',
     },
   ]);
 
@@ -491,11 +491,11 @@ const searchMessages = async (
   options.populate = [
     {
       path: 'senderId',
-      select: 'fullName profileImage email',
+      select: 'firstName lastName profileImage email',
     },
     {
       path: 'receiverId',
-      select: 'fullName profileImage email',
+      select: 'firstName lastName profileImage email',
     },
   ];
   options.sortBy = options.sortBy || 'createdAt';

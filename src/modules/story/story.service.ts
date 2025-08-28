@@ -473,10 +473,8 @@ const reactToStoryMedia = async (
   const notification: INotification = {
     senderId: userId,
     receiverId: story.userId._id?.toString(),
-    title: `${reactor?.fullName ?? 'Someone'} reacted to your story`,
-    message: `${
-      reactor?.fullName ?? 'A user'
-    } reacted with a ${reactionType?.toLowerCase()} to your story.`,
+    title: `${reactor?.firstName} ${reactor?.lastName} reacted to your story`,
+    message: `${reactor?.firstName} ${reactor?.lastName} reacted with a ${reactionType?.toLowerCase()} to your story.`,
     type: 'story',
     linkId: story?._id || mediaId?.toString(),
     role: 'user',

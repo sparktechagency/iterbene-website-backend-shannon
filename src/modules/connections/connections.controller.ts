@@ -96,7 +96,7 @@ const getMyAllConnections = catchAsync(async (req: Request, res: Response) => {
 
 const getMyAllRequests = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filters = pick(req.query, ['fullName']);
+  const filters = pick(req.query, ['firstName', 'lastName', 'email']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   filters.userId = userId;
   const result = await ConnectionsService.getMyAllRequests(filters, options);
@@ -133,7 +133,7 @@ const getMutualConnections = catchAsync(async (req: Request, res: Response) => {
 const getConnectionSuggestions = catchAsync(
   async (req: Request, res: Response) => {
     const { userId } = req.user;
-    const filters = pick(req.query, ['fullName']);
+    const filters = pick(req.query, ['firstName', 'lastName', 'email']);
     const options = pick(req.query, ['page', 'limit', 'populate', 'sortBy']);
     const result = await ConnectionsService.getConnectionSuggestions(
       userId,

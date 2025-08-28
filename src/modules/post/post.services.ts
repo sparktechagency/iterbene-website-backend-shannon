@@ -211,18 +211,18 @@ const updatePost = async (
   }).populate([
     { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId', select: 'fullName username profileImage' },
+    { path: 'userId', select: 'firstName lastName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'fullName username profileImage' },
-        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -397,13 +397,13 @@ const getPostById = async (postId: string): Promise<IPost> => {
     { path: 'itinerary' },
     {
       path: 'userId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
     {
       path: 'reactions',
       populate: {
         path: 'userId',
-        select: 'fullName username profileImage',
+        select: 'firstName lastName username profileImage',
       },
     },
     {
@@ -411,17 +411,17 @@ const getPostById = async (postId: string): Promise<IPost> => {
       populate: [
         {
           path: 'userId',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'mentions',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
         {
@@ -429,17 +429,17 @@ const getPostById = async (postId: string): Promise<IPost> => {
           populate: [
             {
               path: 'userId',
-              select: 'fullName username profileImage',
+              select: 'firstName lastName username profileImage',
             },
             {
               path: 'mentions',
-              select: 'fullName username profileImage',
+              select: 'firstName lastName username profileImage',
             },
             {
               path: 'reactions',
               populate: {
                 path: 'userId',
-                select: 'fullName username profileImage',
+                select: 'firstName lastName username profileImage',
               },
             },
           ],
@@ -650,10 +650,8 @@ const addOrRemoveReaction = async (
       const addOrRemoveReactionNotification: INotification = {
         senderId: payload.userId,
         receiverId: post.userId,
-        title: `${user?.fullName} reacted to your post`,
-        message: `${
-          user?.fullName
-        } ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
+        title: `${user?.firstName} ${user?.lastName} reacted to your post`,
+        message: `${user?.firstName} ${user?.lastName} ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
           0,
           50
         )}..."`,
@@ -688,18 +686,18 @@ const addOrRemoveReaction = async (
   return Post.findById(postId).populate([
     { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId', select: 'fullName username profileImage' },
+    { path: 'userId', select: 'firstName lastName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'fullName username profileImage' },
-        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -776,10 +774,8 @@ const addOrRemoveCommentReaction = async (
     const addOrRemoveReactionNotification: INotification = {
       senderId: userId,
       receiverId: post.userId,
-      title: `${user?.fullName} reacted to your comment`,
-      message: `${
-        user?.fullName
-      } ${reactionType.toLowerCase()}d your comment: "${comment.comment?.substring(
+      title: `${user?.firstName} ${user?.lastName} reacted to your comment`,
+      message: `${user?.firstName} ${user?.lastName} ${reactionType.toLowerCase()}d your comment: "${comment.comment?.substring(
         0,
         50
       )}..."`,
@@ -801,18 +797,18 @@ const addOrRemoveCommentReaction = async (
   return Post.findById(postId).populate([
     { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId', select: 'fullName username profileImage' },
+    { path: 'userId', select: 'firstName lastName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'fullName username profileImage' },
-        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -906,8 +902,8 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
     const notification: INotification = {
       senderId: payload.userId,
       receiverId: post.userId,
-      title: `${user?.fullName} commented on your post`,
-      message: `${user?.fullName} commented: "${payload.comment.substring(
+      title: `${user?.firstName} ${user?.lastName} commented on your post`,
+      message: `${user?.firstName} ${user?.lastName} commented: "${payload.comment.substring(
         0,
         50
       )}..."`,
@@ -933,8 +929,8 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
       const replyNotification: INotification = {
         senderId: payload.userId,
         receiverId: new Types.ObjectId(replyTo),
-        title: `${user?.fullName} replied to your comment`,
-        message: `${user?.fullName} replied: "${payload.comment.substring(
+        title: `${user?.firstName} ${user?.lastName} replied to your comment`,
+        message: `${user?.firstName} ${user?.lastName} replied: "${payload.comment.substring(
           0,
           50
         )}..."`,
@@ -957,18 +953,18 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
   return Post.findById(postId).populate([
     { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId', select: 'fullName username profileImage' },
+    { path: 'userId', select: 'firstName lastName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'fullName username profileImage' },
-        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -1026,18 +1022,18 @@ const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
   return Post.findById(postId).populate([
     { path: 'media', select: 'mediaType mediaUrl' },
     { path: 'itinerary' },
-    { path: 'userId', select: 'fullName username profileImage' },
+    { path: 'userId', select: 'firstName lastName username profileImage' },
     { path: 'sourceId' },
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'fullName username profileImage' },
-        { path: 'userId', select: 'fullName username profileImage' },
+        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -1197,13 +1193,13 @@ const feedPosts = async (
     { path: 'itinerary' },
     {
       path: 'userId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
     {
       path: 'reactions',
       populate: {
         path: 'userId',
-        select: 'fullName username profileImage',
+        select: 'firstName lastName username profileImage',
       },
     },
     {
@@ -1211,17 +1207,17 @@ const feedPosts = async (
       populate: [
         {
           path: 'userId',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'mentions',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -1342,13 +1338,13 @@ const getUserTimelinePosts = async (
     { path: 'itinerary' },
     {
       path: 'userId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
     {
       path: 'reactions',
       populate: {
         path: 'userId',
-        select: 'fullName username profileImage',
+        select: 'firstName lastName username profileImage',
       },
     },
     {
@@ -1356,17 +1352,17 @@ const getUserTimelinePosts = async (
       populate: [
         {
           path: 'userId',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'mentions',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -1469,13 +1465,13 @@ const getGroupPosts = async (
     { path: 'itinerary' },
     {
       path: 'userId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
     {
       path: 'reactions',
       populate: {
         path: 'userId',
-        select: 'fullName username profileImage',
+        select: 'firstName lastName username profileImage',
       },
     },
     {
@@ -1483,17 +1479,17 @@ const getGroupPosts = async (
       populate: [
         {
           path: 'userId',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'mentions',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -1589,13 +1585,13 @@ const getEventPosts = async (
     { path: 'itinerary' },
     {
       path: 'userId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
     {
       path: 'reactions',
       populate: {
         path: 'userId',
-        select: 'fullName username profileImage',
+        select: 'firstName lastName username profileImage',
       },
     },
     {
@@ -1603,17 +1599,17 @@ const getEventPosts = async (
       populate: [
         {
           path: 'userId',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'mentions',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
       ],
@@ -1667,37 +1663,37 @@ const getVisitedPostsWithDistance = async (
     {
       path: 'comments',
       populate: [
-        { path: 'userId', select: 'fullName username profileImage' },
-        { path: 'mentions', select: 'fullName username profileImage' },
+        { path: 'userId', select: 'firstName lastName username profileImage' },
+        { path: 'mentions', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
         {
           path: 'replies',
           populate: [
-            { path: 'userId', select: 'fullName username profileImage' },
-            { path: 'mentions', select: 'fullName username profileImage' },
+            { path: 'userId', select: 'firstName lastName username profileImage' },
+            { path: 'mentions', select: 'firstName lastName username profileImage' },
             {
               path: 'reactions',
               populate: {
                 path: 'userId',
-                select: 'fullName username profileImage',
+                select: 'firstName lastName username profileImage',
               },
             },
             {
               path: 'replies',
               populate: [
-                { path: 'userId', select: 'fullName username profileImage' },
-                { path: 'mentions', select: 'fullName username profileImage' },
+                { path: 'userId', select: 'firstName lastName username profileImage' },
+                { path: 'mentions', select: 'firstName lastName username profileImage' },
                 {
                   path: 'reactions',
                   populate: {
                     path: 'userId',
-                    select: 'fullName username profileImage',
+                    select: 'firstName lastName username profileImage',
                   },
                 },
               ],

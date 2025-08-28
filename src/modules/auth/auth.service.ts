@@ -24,13 +24,10 @@ const createUser = async (userData: TUser) => {
 
   const user = await User.create(userData);
   if (!user.isEmailVerified) {
-    // Use fast OTP service for background email processing
-    FastOtpService.createVerificationEmailOtpFast(user.email).catch(error => {
-      // Log error but don't block user registration
-      errorLogger.error('Failed to send verification email:', error);
-    });
-    const tokens = await TokenService.accessAndRefreshToken(user);
-    return tokens;
+    await OtpService.createVerificationEmailOtp(user.email);
+    const emailVerificationToken =
+      await TokenService.createEmailVerificationToken(user);
+    return { emailVerificationToken };
   }
 };
 
@@ -64,7 +61,7 @@ const forgotPassword = async (email: string) => {
   await OtpService.createResetPasswordOtp(user.email);
   user.isResetPassword = true;
   await user.save();
-  const tokens = await TokenService.accessAndRefreshToken(user);
+  const tokens = await TokenService.createResetPasswordToken(user);
   return tokens;
 };
 
@@ -81,12 +78,12 @@ const resendOtp = async (email: string) => {
     await OtpService.createResetPasswordOtp(user.email);
     return { resetPasswordToken };
   } else if (user.isLoginMfa) {
-    const loginMfaToken = await TokenService.accessAndRefreshToken(user);
+    const loginMfaToken = await TokenService.createLoginMfaToken(user);
     await OtpService.createLoginMfaOtp(user.email);
     return { loginMfaToken };
   }
   await OtpService.createVerificationEmailOtp(user.email);
-  const tokens = await TokenService.accessAndRefreshToken(user);
+  const tokens = await TokenService.createEmailVerificationToken(user);
   return tokens;
 };
 

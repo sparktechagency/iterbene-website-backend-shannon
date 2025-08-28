@@ -46,7 +46,7 @@ const getSavedPost = async (
     { path: 'postId' },
     {
       path: 'userId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
   ];
   return await SavedPostItinerary.paginate(query, options);

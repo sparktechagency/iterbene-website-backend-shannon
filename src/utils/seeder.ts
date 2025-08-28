@@ -27,7 +27,8 @@ const seedUsers = async () => {
   try {
     const usersData = [
       {
-        fullName: 'Shannon Lawrence',
+        firstName: 'Shannon ',
+        lastName: 'Lawrence',
         email: 'iterbeneadmin@iterbene.com',
         username: 'iterbeneadmin',
         phoneNumber: '+12025550120',

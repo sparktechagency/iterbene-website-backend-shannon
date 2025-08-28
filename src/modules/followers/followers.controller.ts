@@ -29,7 +29,7 @@ const unfollowUser = catchAsync(async (req: Request, res: Response) => {
 
 const getFollowers = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filters = pick(req.query, ['fullName']);
+  const filters = pick(req.query, ['firstName', 'lastName', 'email']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   filters.userId = userId;
   const result = await FollowerService.getFollowers(filters, options);
@@ -42,7 +42,7 @@ const getFollowers = catchAsync(async (req: Request, res: Response) => {
 
 const getFollowing = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const filters = pick(req.query, ['fullName']);
+  const filters = pick(req.query, ['firstName', 'lastName', 'email']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   filters.userId = userId;
   const result = await FollowerService.getFollowing(filters, options);

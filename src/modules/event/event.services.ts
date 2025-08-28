@@ -69,8 +69,8 @@ const interestEvent = async (
     notification = {
       senderId: userId,
       receiverId: event.creatorId.toString(),
-      title: `${user?.fullName ?? 'Someone'} requested to join your event`,
-      message: `${user?.fullName ?? 'A user'} wants to join "${
+      title: `${user?.firstName} ${user?.lastName} requested to join your event`,
+      message: `${user?.firstName} ${user?.lastName} wants to join "${
         event.eventName ?? 'your event'
       }". Review their request!`,
       type: 'event',
@@ -92,8 +92,8 @@ const interestEvent = async (
     notification = {
       senderId: userId,
       receiverId: event.creatorId.toString(),
-      title: `${user?.fullName ?? 'Someone'} is interested in your event`,
-      message: `${user?.fullName ?? 'A user'} is interested in "${
+      title: `${user?.firstName} ${user?.lastName} is interested in your event`,
+      message: `${user?.firstName} ${user?.lastName} is interested in "${
         event.eventName ?? 'your event'
       }".`,
       type: 'event',
@@ -340,19 +340,19 @@ const getEvent = async (eventId: string, userId: string): Promise<IEvent> => {
     .populate([
       {
         path: 'creatorId',
-        select: 'fullName profileImage username createdAt description',
+        select: 'firstName lastName profileImage username createdAt description',
       },
       {
         path: 'coHosts',
-        select: 'fullName profileImage username',
+        select: 'firstName lastName profileImage username',
       },
       {
         path: 'interestedUsers',
-        select: 'fullName profileImage username',
+        select: 'firstName lastName profileImage username',
       },
       {
         path: 'pendingInterestedUsers',
-        select: 'fullName profileImage username',
+        select: 'firstName lastName profileImage username',
       },
     ])
     .select('-isDeleted -createdAt -updatedAt -__v');
@@ -424,7 +424,7 @@ const getMyEvents = async (
   options.populate = [
     {
       path: 'creatorId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
   ];
   options.select =
@@ -449,7 +449,7 @@ const getMyInterestedEvents = async (
   options.populate = [
     {
       path: 'creatorId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
   ];
   options.select =
@@ -525,7 +525,7 @@ const getEventSuggestions = async (
   options.populate = [
     {
       path: 'creatorId',
-      select: 'fullName username profileImage',
+      select: 'firstName lastName username profileImage',
     },
   ];
   options.select =

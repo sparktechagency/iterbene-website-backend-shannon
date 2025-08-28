@@ -78,12 +78,12 @@ const login = catchAsync(async (req, res) => {
 
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
-    const tokens = await TokenService.accessAndRefreshToken(user);
-
+    const emailVerificationToken =
+      await TokenService.createEmailVerificationToken(user);
     sendResponse(res, {
       code: StatusCodes.OK,
       message: 'Email is not verified. Please verify your email.',
-      data: tokens,
+      data: emailVerificationToken,
     });
     return;
   }
@@ -108,14 +108,14 @@ const login = catchAsync(async (req, res) => {
     secure: config.environment === 'production',
     sameSite: 'strict',
     maxAge: 15 * 60 * 1000, // 15 minutes
-    path: '/'
+    path: '/',
   });
   res.cookie('refreshToken', tokens.refreshToken, {
     httpOnly: true,
     secure: config.environment === 'production',
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: '/'
+    path: '/',
   });
   // Send response with tokens
   sendResponse(res, {
@@ -132,7 +132,7 @@ const verifyEmail = catchAsync(async (req, res) => {
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Email verified successfully.',
-    data: { result },
+    data:  result ,
   });
 });
 
@@ -157,7 +157,7 @@ const forgotPassword = catchAsync(async (req, res) => {
 
 const changePassword = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const { currentPassword, newPassword,  } = req.body;
+  const { currentPassword, newPassword } = req.body;
 
   const result = await AuthService.changePassword(
     userId,
@@ -192,21 +192,21 @@ const logout = catchAsync(async (req, res) => {
       // Continue with logout even if token cleanup fails
     }
   }
-  
+
   // Clear cookies
   res.clearCookie('accessToken', {
     httpOnly: true,
     secure: config.environment === 'production',
     sameSite: 'strict',
-    path: '/'
+    path: '/',
   });
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: config.environment === 'production',
     sameSite: 'strict',
-    path: '/'
+    path: '/',
   });
-  
+
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'User logged out successfully.',

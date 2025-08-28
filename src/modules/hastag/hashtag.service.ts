@@ -26,13 +26,13 @@ const getHashtagPosts = async (
         { path: 'itinerary' },
         {
           path: 'userId',
-          select: 'fullName username profileImage',
+          select: 'firstName lastName username profileImage',
         },
         {
           path: 'reactions',
           populate: {
             path: 'userId',
-            select: 'fullName username profileImage',
+            select: 'firstName lastName username profileImage',
           },
         },
         {
@@ -40,17 +40,17 @@ const getHashtagPosts = async (
           populate: [
             {
               path: 'userId',
-              select: 'fullName username profileImage',
+              select: 'firstName lastName username profileImage',
             },
             {
               path: 'mentions',
-              select: 'fullName username profileImage',
+              select: 'firstName lastName username profileImage',
             },
             {
               path: 'reactions',
               populate: {
                 path: 'userId',
-                select: 'fullName username profileImage',
+                select: 'firstName lastName username profileImage',
               },
             },
           ],

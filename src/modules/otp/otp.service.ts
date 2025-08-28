@@ -95,6 +95,9 @@ const verifyOTP = async (userEmail: string, otp: string, type: string) => {
 
   otpDoc.verified = true;
   await otpDoc.save();
+
+  // Delete all OTPs for the user 
+  await OTP.deleteMany({ userEmail, type });
   return true;
 };
 
