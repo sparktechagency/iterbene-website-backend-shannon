@@ -3,7 +3,7 @@ import { Model } from 'mongoose';
 export type TOtp = {
   userEmail: string;
   otp: string;
-  type: string;
+  type: OtpType;
   verified: boolean;
   expiresAt: Date;
   attempts: number;
@@ -12,12 +12,17 @@ export type TOtp = {
   updatedAt: Date;
 };
 
-export const OtpType = {
-  VERIFY: 'verify',
-  RESET_PASSWORD: 'resetPassword',
-  LOGIN_MFA: 'loginMfa',
-} as const;
+export enum OtpType {
+  VERIFY = 'verify',
+  RESET_PASSWORD = 'resetPassword',
+  LOGIN_MFA = 'loginMfa',
+}
+
+export const isValidOtpType = (type: string): type is OtpType => {
+  return Object.values(OtpType).includes(type as OtpType);
+};
 
 export interface OtpModel extends Model<TOtp> {
-  isExistOtpByEmail(email: string, type: string): Promise<TOtp | null>;
+  isExistOtpByEmail(email: string, type: OtpType): Promise<TOtp | null>;
+  findValidOtp(email: string, otp: string, type: OtpType): Promise<TOtp | null>;
 }

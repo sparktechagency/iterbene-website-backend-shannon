@@ -1,13 +1,13 @@
 import { Router } from 'express';
-import auth from '../../middlewares/auth';
 import { MapsController } from './maps.controllers';
+import { fullAuth } from '../../middlewares/smartAuth';
 
 const router = Router();
 
-router.get('/my-maps', auth('Common'), MapsController.myMaps);
+router.get('/my-maps', fullAuth('Common'), MapsController.myMaps);
 router.post(
   '/add-interested-location',
-  auth('Common'),
+  fullAuth('Common'),
   MapsController.addInterestedLocation
 );
 

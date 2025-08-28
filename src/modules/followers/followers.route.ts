@@ -1,12 +1,12 @@
 import express from 'express';
-import auth from '../../middlewares/auth';
 import { FollowerController } from './followers.controller';
+import { fullAuth } from '../../middlewares/smartAuth';
 
 const router = express.Router();
 
-router.post('/follow', auth('Common'), FollowerController.followUser);
-router.post('/unfollow', auth('Common'), FollowerController.unfollowUser);
-router.get('/followers', auth('Common'), FollowerController.getFollowers);
-router.get('/following', auth('Common'), FollowerController.getFollowing);
+router.post('/follow', fullAuth('Common'), FollowerController.followUser);
+router.post('/unfollow', fullAuth('Common'), FollowerController.unfollowUser);
+router.get('/followers', fullAuth('Common'), FollowerController.getFollowers);
+router.get('/following', fullAuth('Common'), FollowerController.getFollowing);
 
 export const FollowerRoutes = router;

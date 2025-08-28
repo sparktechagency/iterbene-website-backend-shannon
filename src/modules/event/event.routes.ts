@@ -1,5 +1,4 @@
 import express from 'express';
-import auth from '../../middlewares/auth';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import validateRequest from '../../shared/validateRequest';
 import { EventInviteController } from '../eventInvite/eventInvite.controller';
@@ -7,99 +6,100 @@ import { EVENT_UPLOADS_FOLDER } from './event.constant';
 import { EventController } from './event.controllers';
 import { EventValidation } from './event.validations';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
+import { fullAuth } from '../../middlewares/smartAuth';
 const upload = fileUploadHandler(EVENT_UPLOADS_FOLDER);
 
 const router = express.Router();
 
-// Create an event (any authenticated user)
+// Create an event (any fullAuthenticated user)
 router.post(
   '/',
-  auth('Common'),
+  fullAuth('Common'),
   upload.single('eventImage'),
   convertHeicToPngMiddleware(EVENT_UPLOADS_FOLDER),
   validateRequest(EventValidation.createEventValidationSchema),
   EventController.createEvent
 );
 
-// interest an event (any authenticated user)
-router.post('/interest/:eventId', auth('Common'), EventController.interestEvent);
-// Leave an event (any authenticated user)
+// interest an event (any fullAuthenticated user)
+router.post('/interest/:eventId', fullAuth('Common'), EventController.interestEvent);
+// Leave an event (any fullAuthenticated user)
 router.post(
   '/not-interest/:eventId',
-  auth('Common'),
+  fullAuth('Common'),
   EventController.notInterestEvent
 );
 
-// Get my events (any authenticated user)
-router.get('/my-events', auth('Common'), EventController.getMyEvents);
+// Get my events (any fullAuthenticated user)
+router.get('/my-events', fullAuth('Common'), EventController.getMyEvents);
 
-// Get my interested events (any authenticated user)
+// Get my interested events (any fullAuthenticated user)
 router.get(
   '/my-interested-events',
-  auth('Common'),
+  fullAuth('Common'),
   EventController.getMyInterestedEvents
 );
 
-// Get event suggestions (any authenticated user)
+// Get event suggestions (any fullAuthenticated user)
 router.get('/suggestions', EventController.getEventSuggestions);
 
 // Event Invite Routes
 
-// Send event invite (any authenticated user, interested user/co-host in service)
+// Send event invite (any fullAuthenticated user, interested user/co-host in service)
 router.post(
   '/invites/send',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(EventValidation.sendInviteValidationSchema),
   EventInviteController.sendInvite
 );
 
-// Accept event invite (any authenticated user)
+// Accept event invite (any fullAuthenticated user)
 router.post(
   '/invites/accept',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(EventValidation.acceptInviteValidationSchema),
   EventInviteController.acceptInvite
 );
 
-// Decline event invite (any authenticated user)
+// Decline event invite (any fullAuthenticated user)
 router.post(
   '/invites/decline',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(EventValidation.declineInviteValidationSchema),
   EventInviteController.declineInvite
 );
 router.get(
   '/invites/my-invites',
-  auth('Common'),
+  fullAuth('Common'),
   EventInviteController.getMyInvites
 );
 
-// Cancel event invite (any authenticated user, sender/co-host in service)
+// Cancel event invite (any fullAuthenticated user, sender/co-host in service)
 router.post(
   '/invites/cancel',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(EventValidation.cancelInviteValidationSchema),
   EventInviteController.cancelInvite
 );
 
-// Get my event invites (any authenticated user)
+// Get my event invites (any fullAuthenticated user)
 router.get(
   '/invites/my-invites',
-  auth('Common'),
+  fullAuth('Common'),
   EventInviteController.getMyInvites
 );
 
-// Get event details (any authenticated user)
+// Get event details (any fullAuthenticated user)
 
 router
   .route('/:id')
   .get(
-    auth('Common'),
+    fullAuth('Common'),
     validateRequest(EventValidation.getEventValidationSchema),
     EventController.getEvent
   )
   .delete(
-    auth('Common'),
+    fullAuth('Common'),
     validateRequest(EventValidation.deleteEventValidationSchema),
     EventController.deleteEvent
   );

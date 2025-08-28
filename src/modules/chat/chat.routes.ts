@@ -1,37 +1,38 @@
 import { Router } from 'express';
-import auth from '../../middlewares/auth';
+
 import { ChatController } from './chat.controller';
+import { fullAuth } from '../../middlewares/smartAuth';
 
 const router = Router();
 
 router
   .route('/group-chat')
-  .post( auth('Common'), ChatController.createGroupChat);
+  .post(fullAuth('Common'), ChatController.createGroupChat);
 
 router
   .route('/')
-  .get( auth('Common'), ChatController.getAllChatsByUserId)
-  .post( auth('Common'), ChatController.createSingleChat);
+  .get(fullAuth('Common'), ChatController.getAllChatsByUserId)
+  .post(fullAuth('Common'), ChatController.createSingleChat);
 
 router
   .route('/:chatId')
-  .get( auth('Common'), ChatController.getSingleChat)
-  .delete( auth('Common'), ChatController.deleteChat);
+  .get(fullAuth('Common'), ChatController.getSingleChat)
+  .delete(fullAuth('Common'), ChatController.deleteChat);
 
 // Additional routes for group chat management
 router.post(
   '/:chatId/participants',
-  auth('Common'),
+  fullAuth('Common'),
   ChatController.addParticipantToGroup
 );
 router.delete(
   '/:chatId/participants',
-  auth('Common'),
+  fullAuth('Common'),
   ChatController.removeParticipantFromGroup
 );
 router.patch(
   '/:chatId/settings',
-  auth('Common'),
+  fullAuth('Common'),
   ChatController.updateGroupSettings
 );
 

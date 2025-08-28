@@ -3,33 +3,13 @@ import { AuthController } from './auth.controller';
 import validateRequest from '../../shared/validateRequest';
 import { UserValidation } from '../user/user.validation';
 import { AuthValidation } from './auth.validations';
-import auth from '../../middlewares/auth';
-import rateLimit from 'express-rate-limit';
+import {
+  fullAuth,
+  emailVerificationAuth,
+  multiTokenAuth,
+  resetPasswordAuth,
+} from '../../middlewares/smartAuth';
 const router = Router();
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Too many login attempts. Please try again later.',
-});
-
-const forgotPasswordLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 3,
-  message: 'Too many password reset requests. Please try again later.',
-});
-
-const verifyEmailLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: 'Too many email verification attempts. Please try again later.',
-});
-
-const resendOtpLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 3,
-  message: 'Too many OTP resend requests. Please try again later.',
-});
 
 router.post(
   '/register',
@@ -39,43 +19,40 @@ router.post(
 
 router.post(
   '/login',
-  // loginLimiter,
   validateRequest(AuthValidation.loginValidationSchema),
   AuthController.login
 );
 
 router.post(
   '/verify-email',
-  // verifyEmailLimiter,
-  auth('Common'),
+  multiTokenAuth(),
   validateRequest(AuthValidation.verifyEmailValidationSchema),
   AuthController.verifyEmail
 );
 
 router.post(
   '/resend-otp',
-  auth('Common'),
-  resendOtpLimiter,
+  multiTokenAuth(),
+  validateRequest(AuthValidation.resendOtpValidationSchema),
   AuthController.resendOtp
 );
 
 router.post(
   '/forgot-password',
-  // forgotPasswordLimiter,
   validateRequest(AuthValidation.forgotPasswordValidationSchema),
   AuthController.forgotPassword
 );
 
 router.post(
   '/reset-password',
-  auth('Common'),
+  resetPasswordAuth(),
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword
 );
 
 router.post(
   '/change-password',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(AuthValidation.changePasswordValidationSchema),
   AuthController.changePassword
 );

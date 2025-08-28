@@ -8,50 +8,58 @@ import { TokenService } from '../modules/token/token.service';
 import { TokenType } from '../modules/token/token.interface';
 import { User } from '../modules/user/user.model';
 import { roleRights } from './roles';
+import { AuthUtils } from '../utils/authUtils';
 
-const auth = (...roles: string[]) =>
+const auth = (...requiredRights: string[]) =>
   catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const tokenWithBearer = req.headers.authorization;
-    if (!tokenWithBearer || !tokenWithBearer.startsWith('Bearer')) {
+    // Extract token from Authorization header or cookies
+    const token = AuthUtils.extractToken(req.headers.authorization, req.cookies);
+
+    if (!token) {
       throw new ApiError(
         StatusCodes.UNAUTHORIZED,
-        'Unauthorized to access'
+        'Authorization to access this resource is denied.'
       );
     }
 
-    const token = tokenWithBearer.split(' ')[1];
     const verifyUser = await TokenService.verifyToken(
       token,
       config.jwt.accessSecret as Secret,
       TokenType.ACCESS
     );
 
-    if (verifyUser) {
-      req.user = verifyUser;
-    } else {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token.');
+    if (!verifyUser) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token.');
     }
 
+    req.user = verifyUser;
+
     const user = await User.findById(verifyUser.userId);
-    if (!user || user.isDeleted) {
+    if (!user) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
     }
-    if (user.isBlocked || user.isBanned) {
+    
+    // Validate user account status
+    const statusValidation = AuthUtils.validateUserStatus(user);
+    if (!statusValidation.isValid) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        'Your account is blocked or banned.'
+        statusValidation.error || 'Account access denied.'
       );
     }
-    if (roles.length) {
-      const userRole = roleRights.get(verifyUser?.role);
-      const hasRole = userRole?.some(role => roles.includes(role));
-      if (!hasRole) {
+    
+    // Check permissions
+    if (requiredRights.length > 0) {
+      const userRights = roleRights.get(user.role) || [];
+      
+      if (!AuthUtils.hasPermission(userRights, requiredRights)) {
         throw new ApiError(
           StatusCodes.FORBIDDEN,
-          "You don't have permission to access this API."
+          "You don't have permission to access this resource."
         );
       }
     }
+    
     next();
   });
 

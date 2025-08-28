@@ -1,6 +1,6 @@
 import express from 'express';
 import { UserController } from './user.controller';
-import auth from '../../middlewares/auth';
+import { fullAuth } from '../../middlewares/smartAuth';
 import validateRequest from '../../shared/validateRequest';
 import { UserValidation } from './user.validation';
 import fileUploadHandler from '../../shared/fileUploadHandler';
@@ -12,14 +12,14 @@ const router = express.Router();
 //check user name already exists
 router.get(
   '/check-username/:userName',
-  auth('Common'),
+  fullAuth('Common'),
   UserController.checkUserNameAlreadyExists
 );
 
 // update privacy
 router.patch(
   '/privacy-settings',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(UserValidation.privacySettingsValidationSchema),
   UserController.updatePrivacySettings
 );
@@ -30,7 +30,7 @@ router.get('/username/:userName', UserController.getSingleUser);
 //update profile image
 router.post(
   '/profile-image',
-  auth('Common'),
+  fullAuth('Common'),
   upload.single('profileImage'),
   UserController.updateProfileImage
 );
@@ -38,7 +38,7 @@ router.post(
 //update cover image
 router.post(
   '/cover-image',
-  auth('Common'),
+  fullAuth('Common'),
   upload.single('coverImage'),
   UserController.updateCoverImage
 );
@@ -46,30 +46,30 @@ router.post(
 // Get and fill up User Profile
 router
   .route('/profile')
-  .get(auth('Common'),  UserController.getMyProfile)
-  .patch(auth('Common'), UserController.updateMyProfile)
-  .delete(auth('Common'), UserController.deleteMyProfile);
+  .get(fullAuth('Common'), UserController.getMyProfile)
+  .patch(fullAuth('Common'), UserController.updateMyProfile)
+  .delete(fullAuth('Common'), UserController.deleteMyProfile);
 
 // Set Latest User Location
 router.post(
   '/location',
-  auth('Common'),
+  fullAuth('Common'),
   validateRequest(UserValidation.setLatestLocationValidationSchema),
   UserController.setUserLatestLocation
 );
 
 router.post(
   '/create-user',
-  auth('Super_Admin'),
+  fullAuth('Super_Admin'),
   UserController.createAdminOrSuperAdmin
 );
 
 // Get Single User by ID, Update User Profile, Change User Status
 router
   .route('/:userId')
-  .get(auth('Common'),  UserController.getSingleUserByUser)
+  .get(fullAuth('Common'), UserController.getSingleUserByUser)
   .patch(
-    auth('Admin'),
+    fullAuth('Admin'),
     UserController.updateUserStatus // Admin can change user status
   );
 

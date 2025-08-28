@@ -1,43 +1,43 @@
 import { Router } from 'express';
-import auth from '../../middlewares/auth';
 import { ReportController } from './reports.controllers';
 import validateRequest from '../../shared/validateRequest';
 import { ReportValidation } from './reports.validation';
+import { fullAuth } from '../../middlewares/smartAuth';
 const router = Router();
 
 router
   .route('/send-warning-message')
   .post(
-    auth('Admin'),
+    fullAuth('Admin'),
     validateRequest(ReportValidation.sendWarningMessageValidationSchema),
     ReportController.sendWarningMessageForReportedUser
   );
 
 router.patch(
   '/users/:userId/ban',
-  auth('Admin'),
+  fullAuth('Admin'),
   validateRequest(ReportValidation.banUserValidationSchema),
   ReportController.banUser
 );
 
 router.patch(
   '/users/:userId/unban',
-  auth('Admin'),
+  fullAuth('Admin'),
   validateRequest(ReportValidation.unbanUserValidationSchema),
   ReportController.unbanUser
 );
 
 router
   .route('/')
-  .get(auth('Admin'), ReportController.getAllReports)
+  .get(fullAuth('Admin'), ReportController.getAllReports)
   .post(
-    auth('Common'),
+    fullAuth('Common'),
     validateRequest(ReportValidation.addReportValidationSchema),
     ReportController.addReport
   );
 
 router
   .route('/:reportId')
-  .get(auth('Admin'), ReportController.getSingleReport);
+  .get(fullAuth('Admin'), ReportController.getSingleReport);
 
 export const ReportRoutes = router;

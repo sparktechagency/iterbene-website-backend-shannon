@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import auth from '../../middlewares/auth';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import { MESSAGE_UPLOADS_FOLDER } from './message.constant';
 import { MessageController } from './message.controller';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
+import { fullAuth } from '../../middlewares/smartAuth';
 const upload = fileUploadHandler(MESSAGE_UPLOADS_FOLDER);
 
 const router = Router();
@@ -11,7 +11,7 @@ const router = Router();
 // unviewed message count
 router.get(
   '/unviewed-count',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.unviewedMessagesCount
 );
 
@@ -19,7 +19,7 @@ router.get(
 router
   .route('/')
   .post(
-    auth('Common'),
+    fullAuth('Common'),
     upload.array('files', 10),
     convertHeicToPngMiddleware(MESSAGE_UPLOADS_FOLDER),
     MessageController.sendMessage
@@ -28,61 +28,61 @@ router
 // get all messages by receiverId
 router.get(
   '/:receiverId',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.getAllMessagesByReceiverId
 );
 
 // get single message
 router
   .route('/:messageId')
-  .put(auth('Common'), MessageController.updateMessage)
-  .patch(auth('Common'), MessageController.markMessageSeen)
-  .delete(auth('Common'), MessageController.deleteMessage);
+  .put(fullAuth('Common'), MessageController.updateMessage)
+  .patch(fullAuth('Common'), MessageController.markMessageSeen)
+  .delete(fullAuth('Common'), MessageController.deleteMessage);
 
 // Additional routes for new features
 router.patch(
   '/view-all-messages/:chatId',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.viewAllMessages
 );
 router.post(
   '/reaction/:messageId',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.addReaction
 );
 router.delete(
   '/reaction/:messageId',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.removeReaction
 );
-router.post('/reply', auth('Common'), MessageController.replyToMessage);
+router.post('/reply', fullAuth('Common'), MessageController.replyToMessage);
 
 router.post(
   '/:messageId/forward',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.forwardMessage
 );
 router.post(
   '/:messageId/pin/:chatId',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.pinMessage
 );
 router.post(
   '/:messageId/unpin/:chatId',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.unpinMessage
 );
 
-router.get('/:chatId/search', auth('Common'), MessageController.searchMessages);
+router.get('/:chatId/search', fullAuth('Common'), MessageController.searchMessages);
 
 router.post(
   '/:chatId/typing',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.sendTypingIndicator
 );
 router.post(
   '/:chatId/stop-typing',
-  auth('Common'),
+  fullAuth('Common'),
   MessageController.stopTypingIndicator
 );
 

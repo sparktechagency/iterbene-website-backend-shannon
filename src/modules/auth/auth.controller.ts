@@ -49,17 +49,10 @@ const login = catchAsync(async (req, res) => {
   }
   validateUserStatus(user);
   if (user.lockUntil && user.lockUntil > new Date()) {
-    const tokens = await TokenService.accessAndRefreshToken(user);
-    const responseData = {
-      lockTime: config.auth.lockTime,
-      lockUntil: user.lockUntil,
-      tokens,
-    };
-    sendResponse(res, {
-      code: StatusCodes.OK,
-      message: `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`,
-      data: responseData,
-    });
+    throw new ApiError(
+      StatusCodes.LOCKED,
+      `Account is locked until ${user.lockUntil.toLocaleString()} due to too many failed login attempts.`
+    );
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -68,17 +61,10 @@ const login = catchAsync(async (req, res) => {
     if (user.failedLoginAttempts >= config.auth.maxLoginAttempts) {
       user.lockUntil = moment().add(config.auth.lockTime, 'minutes').toDate();
       await user.save();
-      const tokens = await TokenService.accessAndRefreshToken(user);
-      const responseData = {
-        lockTime: config.auth.lockTime,
-        lockUntil: user.lockUntil,
-        tokens,
-      };
-      sendResponse(res, {
-        code: StatusCodes.OK,
-        message: `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`,
-        data: responseData,
-      });
+      throw new ApiError(
+        StatusCodes.LOCKED,
+        `Account locked for ${config.auth.lockTime} minutes due to too many failed attempts.`
+      );
     }
     await user.save();
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid credentials.');
@@ -116,18 +102,20 @@ const login = catchAsync(async (req, res) => {
 
   // manually login
   const tokens = await TokenService.accessAndRefreshToken(user);
-  // Set cookies for access and refresh tokens
+  // Set secure cookies for access and refresh tokens
   res.cookie('accessToken', tokens.accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.environment === 'production',
     sameSite: 'strict',
     maxAge: 15 * 60 * 1000, // 15 minutes
+    path: '/'
   });
   res.cookie('refreshToken', tokens.refreshToken, {
     httpOnly: true,
     secure: config.environment === 'production',
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/'
   });
   // Send response with tokens
   sendResponse(res, {
@@ -169,9 +157,7 @@ const forgotPassword = catchAsync(async (req, res) => {
 
 const changePassword = catchAsync(async (req, res) => {
   const { userId } = req.user;
-  const { currentPassword, newPassword, mfaToken } = req.body;
-
-  const user = await User.findById(userId).select('+mfaSecret');
+  const { currentPassword, newPassword,  } = req.body;
 
   const result = await AuthService.changePassword(
     userId,
@@ -197,12 +183,30 @@ const resetPassword = catchAsync(async (req, res) => {
 });
 
 const logout = catchAsync(async (req, res) => {
-  //get refresh token from cookies
+  // Get refresh token from cookies
   const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Refresh token is required.');
+  if (refreshToken) {
+    try {
+      await AuthService.logout(refreshToken);
+    } catch (error) {
+      // Continue with logout even if token cleanup fails
+    }
   }
-  await AuthService.logout(refreshToken);
+  
+  // Clear cookies
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    secure: config.environment === 'production',
+    sameSite: 'strict',
+    path: '/'
+  });
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: config.environment === 'production',
+    sameSite: 'strict',
+    path: '/'
+  });
+  
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'User logged out successfully.',

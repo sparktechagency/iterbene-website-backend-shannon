@@ -44,6 +44,16 @@ otpSchema.statics.isExistOtpByEmail = async function (email: string, type: strin
   return await this.findOne({ userEmail: email, type });
 };
 
+otpSchema.statics.findValidOtp = async function (email: string, otp: string, type: string) {
+  return await this.findOne({
+    userEmail: email,
+    otp,
+    type,
+    verified: false,
+    expiresAt: { $gt: new Date() },
+  });
+};
+
 otpSchema.index({ userEmail: 1, type: 1 });
 
 export default model<TOtp, OtpModel>('OTP', otpSchema);

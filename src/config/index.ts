@@ -17,6 +17,13 @@ export const config = {
     refreshSecret:
       process.env.JWT_REFRESH_SECRET ||
       'bc4b3506f99e4254fc3b8382bf135ffec4a4adf043720555dd0849cb51aa5b02',
+      tokenSecret:
+      process.env.TOKEN_SECRET ||
+      '065ec2afe73bb1e47454907a56146e5b75ee441af05fe5bb82bdf169a1901d26',
+    emailVerificationTokenExpiration:
+      process.env.JWT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_TIME || '30m',
+    resetPasswordTokenExpiration:
+      process.env.JWT_RESET_PASSWORD_TOKEN_EXPIRATION_TIME || '30m',
     accessExpiration: process.env.JWT_ACCESS_EXPIRATION_TIME || '5d',
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION_TIME || '365d',
   },
@@ -24,15 +31,6 @@ export const config = {
   auth: {
     maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5'),
     lockTime: parseInt(process.env.LOCK_TIME || '2'),
-  },
-  token: {
-    TokenSecret:
-      process.env.TOKEN_SECRET ||
-      '065ec2afe73bb1e47454907a56146e5b75ee441af05fe5bb82bdf169a1901d26',
-    verifyEmailTokenExpiration:
-      process.env.VERIFY_EMAIL_TOKEN_EXPIRATION_TIME || '30m',
-    resetPasswordTokenExpiration:
-      process.env.RESET_PASSWORD_TOKEN_EXPIRATION_TIME || '30m',
   },
 
   otp: {
@@ -49,7 +47,7 @@ export const config = {
   bcrypt: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12'),
   },
-  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY  || '',
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -76,7 +74,7 @@ export const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   },
   cors: {
-    allowedOrigins: process.env.ALLOWED_ORIGINS 
+    allowedOrigins: process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
       : [
           'https://iterbene.com',

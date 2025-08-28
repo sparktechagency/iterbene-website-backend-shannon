@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import auth from '../../middlewares/auth';
 import { HashtagController } from './hashtag.controller';
 
 const router = Router();

@@ -5,7 +5,6 @@ import ApiError from '../../errors/ApiError';
 import { Token } from './token.model';
 import { TUser } from '../user/user.interface';
 import { TokenType } from './token.interface';
-import moment from 'moment';
 import { addMinutes, addDays } from 'date-fns';
 
 interface TokenPayload {
@@ -53,17 +52,30 @@ const verifyToken = async (
       token,
       type,
       user: payload.userId,
+      expiresAt: { $gt: new Date() },
     });
     if (!tokenDoc) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token.');
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token.');
     }
     return payload;
   } catch (error) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token.');
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token format.');
+    }
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Token has expired.');
+    }
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Token verification failed.');
   }
 };
 
 const accessAndRefreshToken = async (user: TUser) => {
+  // Clean up existing tokens for the user
+  await Token.deleteMany({
+    user: user._id,
+    type: { $in: [TokenType.ACCESS, TokenType.REFRESH] },
+  });
+
   const accessTokenPayload: TokenPayload = {
     userId: user._id.toString(),
     email: user.email,
@@ -108,6 +120,29 @@ const accessAndRefreshToken = async (user: TUser) => {
   return { accessToken, refreshToken };
 };
 
+const createEmailVerificationToken = async (user: TUser) => {
+  const emailVerificationTokenPayload: TokenPayload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+  };
+  const emailVerificationToken = generateToken(
+    emailVerificationTokenPayload,
+    config.jwt.tokenSecret as Secret,
+    config.jwt.emailVerificationTokenExpiration
+  );
+  const emailVerificationExpires = getExpirationTime(
+    config.jwt.emailVerificationTokenExpiration
+  );
+  await saveToken(
+    emailVerificationToken,
+    user._id.toString(),
+    TokenType.VERIFY_EMAIL,
+    emailVerificationExpires
+  );
+  return emailVerificationToken;
+};
+
 const createResetPasswordToken = async (user: TUser) => {
   const resetPasswordTokenPayload: TokenPayload = {
     userId: user._id.toString(),
@@ -116,12 +151,12 @@ const createResetPasswordToken = async (user: TUser) => {
   };
   const resetPasswordToken = generateToken(
     resetPasswordTokenPayload,
-    config.token.TokenSecret as Secret,
-    config.token.resetPasswordTokenExpiration
+    config.jwt.tokenSecret as Secret,
+    config.jwt.resetPasswordTokenExpiration
   );
 
   const resetPasswordExpires = getExpirationTime(
-    config.token.resetPasswordTokenExpiration
+    config.jwt.resetPasswordTokenExpiration
   );
 
   await saveToken(
@@ -134,10 +169,36 @@ const createResetPasswordToken = async (user: TUser) => {
   return resetPasswordToken;
 };
 
+const createLoginMfaToken = async (user: TUser) => {
+  const loginMfaTokenPayload: TokenPayload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+  };
+  const loginMfaToken = generateToken(
+    loginMfaTokenPayload,
+    config.jwt.tokenSecret as Secret,
+    config.jwt.accessExpiration // Use shorter expiration for MFA
+  );
+
+  const loginMfaExpires = getExpirationTime(config.jwt.accessExpiration);
+
+  await saveToken(
+    loginMfaToken,
+    user._id.toString(),
+    TokenType.LOGIN_MFA,
+    loginMfaExpires
+  );
+
+  return loginMfaToken;
+};
+
 export const TokenService = {
   generateToken,
   saveToken,
   verifyToken,
   accessAndRefreshToken,
+  createEmailVerificationToken,
   createResetPasswordToken,
+  createLoginMfaToken,
 };
