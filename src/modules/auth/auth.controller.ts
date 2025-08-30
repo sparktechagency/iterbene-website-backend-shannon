@@ -83,7 +83,7 @@ const login = catchAsync(async (req, res) => {
     sendResponse(res, {
       code: StatusCodes.OK,
       message: 'Email is not verified. Please verify your email.',
-      data: emailVerificationToken,
+      data: {emailVerificationToken},
     });
     return;
   }

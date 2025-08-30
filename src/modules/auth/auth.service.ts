@@ -61,8 +61,8 @@ const forgotPassword = async (email: string) => {
   await OtpService.createResetPasswordOtp(user.email);
   user.isResetPassword = true;
   await user.save();
-  const tokens = await TokenService.createResetPasswordToken(user);
-  return tokens;
+  const resetPasswordToken = await TokenService.createResetPasswordToken(user);
+  return {resetPasswordToken};
 };
 
 const resendOtp = async (email: string) => {
