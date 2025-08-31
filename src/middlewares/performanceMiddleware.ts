@@ -27,8 +27,8 @@ export const performanceMonitor = (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    // Log performance for all requests in development
-    if (process.env.NODE_ENV === 'development') {
+    // Log performance for requests in development (with throttling)
+    if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
       logger.info(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration.toFixed(2)}ms`);
     }
 

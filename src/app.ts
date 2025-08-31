@@ -14,7 +14,7 @@ import globalErrorHandler from './middlewares/globalErrorHandler';
 import router from './routes';
 import i18next from './i18n/i18n';
 import i18nextMiddleware from 'i18next-express-middleware';
-import notFound from './middlewares/notFount';
+import notFound from './middlewares/notFound';
 import { performanceMonitor } from './middlewares/performanceMiddleware';
 import { config } from './config';
 

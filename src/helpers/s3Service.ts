@@ -105,7 +105,10 @@ export const uploadSingleFileToS3 = async (
     const fileName = customFileName || `${uuidv4()}.${fileExtension}`;
     const key = `${uploadsFolder}/${fileName}`;
 
-    logger.info(colors.blue(`📤 Uploading file to S3: ${file.originalname}`));
+    // Only log in development or for large files
+    if (process.env.NODE_ENV === 'development' || file.size > 5 * 1024 * 1024) {
+      logger.info(colors.blue(`📤 Uploading file to S3: ${file.originalname}`));
+    }
 
     // Upload to S3
     const command = new PutObjectCommand({
@@ -124,7 +127,10 @@ export const uploadSingleFileToS3 = async (
     // Generate file URL
     const fileUrl = `https://${config.aws.bucketName}.s3.${config.aws.region}.amazonaws.com/${key}`;
 
-    logger.info(colors.green(`✅ File uploaded successfully: ${fileUrl}`));
+    // Only log successful uploads in development or for large files
+    if (process.env.NODE_ENV === 'development' || file.size > 5 * 1024 * 1024) {
+      logger.info(colors.green(`✅ File uploaded successfully: ${fileUrl}`));
+    }
 
     return fileUrl;
   } catch (error) {
