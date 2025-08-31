@@ -12,10 +12,7 @@ export interface IEvent {
     latitude: number;
     longitude: number;
   };
-  duration: {
-    days: number;
-    nights: number;
-  };
+  duration: number;
   locationName: string;
   privacy: EventPrivacy;
   coHosts: Types.ObjectId[];

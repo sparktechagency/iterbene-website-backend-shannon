@@ -15,9 +15,6 @@ const createEvent = catchAsync(async (req: Request, res: Response) => {
   if (typeof req?.body?.location === 'string') {
     req.body.location = JSON.parse(req?.body?.location);
   }
-  if (typeof req?.body?.duration === 'string') {
-    req.body.duration = JSON.parse(req?.body?.duration);
-  }
   const eventImage = await uploadFilesToS3([file], EVENT_UPLOADS_FOLDER);
   payload.eventImage = eventImage[0];
   const result = await EventService.createEvent(userId, payload);

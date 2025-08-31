@@ -15,13 +15,10 @@ const createEventValidationSchema = z.object({
       required_error: 'Event name is required',
       invalid_type_error: 'Event name must be a string',
     }),
-    description: z.string().optional(),
     startDate: z.string(),
     endDate: z.string(),
     locationName: z.string().optional(),
-    coHosts: z.array(objectIdSchema).optional(),
-    eventCost: z.string().optional(),
-    interests: z.array(objectIdSchema).optional(),
+    description: z.string().optional(),
   }),
 });
 
