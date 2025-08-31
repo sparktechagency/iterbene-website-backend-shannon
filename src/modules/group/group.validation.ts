@@ -5,10 +5,6 @@ const objectIdSchema = z.string({
   required_error: 'ID is required',
   invalid_type_error: 'ID must be a string',
 }).regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format');
-
-// Group Routes Validation
-
-// POST /groups
 const createGroupValidationSchema = z.object({
   body: z.object({
     name: z.string({
@@ -16,19 +12,6 @@ const createGroupValidationSchema = z.object({
       invalid_type_error: 'Name must be a string',
     }),
     description: z.string().optional(),
-    location: z
-      .object({
-        latitude: z.number({
-          required_error: 'Latitude is required',
-          invalid_type_error: 'Latitude must be a number',
-        }),
-        longitude: z.number({
-          required_error: 'Longitude is required',
-          invalid_type_error: 'Longitude must be a number',
-        }),
-      })
-      .optional(),
-    locationName: z.string().optional(),
     coLeaders: z
       .array(objectIdSchema, {
         invalid_type_error: 'Co-leaders must be an array of valid ObjectIds',

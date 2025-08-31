@@ -3,8 +3,6 @@ import ApiError from '../../errors/ApiError';
 import { IGroup, GroupPrivacy } from './group.interface';
 import Group from './group.model';
 import { User } from '../user/user.model';
-import { Connections } from '../connections/connections.model';
-import { ConnectionStatus } from '../connections/connections.interface';
 import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import mongoose from 'mongoose';
@@ -15,8 +13,6 @@ interface CreateGroupPayload {
   description?: string;
   groupImage?: string;
   privacy: GroupPrivacy;
-  location?: { latitude: number; longitude: number };
-  locationName?: string;
   coLeaders?: string[];
   members?: string[];
 }
@@ -35,10 +31,6 @@ const createGroup = async (
   if (!payload.name?.trim()) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Group name is required');
   }
-  if (!payload.location || !payload.locationName?.trim()) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Location is required');
-  }
-
   const coLeaders = payload.coLeaders || [];
   const members = payload.members || [];
 
@@ -91,14 +83,12 @@ const createGroup = async (
     name: payload.name.trim(),
     description: payload.description?.trim() || '',
     groupImage: payload.groupImage || null,
-    location: payload.location,
-    locationName: payload.locationName.trim(),
-    admins: [creatorObjectId], // Creator is admin
+    admins: [creatorObjectId],
     coLeaders: coLeaderObjectIds,
     members: [
-      creatorObjectId, // Creator is also a member
-      ...coLeaderObjectIds, // Co-leaders are also members
-      ...memberObjectIds, // Regular members
+      creatorObjectId, 
+      ...coLeaderObjectIds, 
+      ...memberObjectIds
     ],
     participantCount: totalParticipants,
   });

@@ -12,8 +12,6 @@ export interface IGroup {
   members: Types.ObjectId[];
   pendingMembers: Types.ObjectId[];
   description: string;
-  location: { latitude: number; longitude: number };
-  locationName: string;
   isDeleted: boolean;
   participantCount: number;
   createdAt: Date;

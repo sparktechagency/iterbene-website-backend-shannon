@@ -10,10 +10,6 @@ const UPLOADS_FOLDER = 'uploads/groups';
 const createGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const file = req.file as Express.Multer.File;
-  // parse the JSON string location and coleaders
-  if (typeof req.body.location === 'string') {
-    req.body.location = JSON.parse(req.body.location);
-  }
   if (typeof req.body.coLeaders === 'string') {
     req.body.coLeaders = JSON.parse(req.body.coLeaders);
   }

@@ -57,11 +57,6 @@ const GroupSchema = new Schema<IGroup, IGroupModel>(
       required: false,
       default: '',
     },
-    location: {
-      latitude: { type: Number, required: false },
-      longitude: { type: Number, required: false },
-    },
-    locationName: { type: String },
     isDeleted: {
       type: Boolean,
       default: false,

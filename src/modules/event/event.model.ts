@@ -1,6 +1,6 @@
 import { model, Schema } from 'mongoose';
-import { EventPrivacy, IEvent, IEventModel } from './event.interface';
 import paginate from '../../common/plugins/paginate';
+import { EventPrivacy, IEvent, IEventModel } from './event.interface';
 
 const eventSchema = new Schema<IEvent, IEventModel>(
   {
@@ -86,24 +86,24 @@ const eventSchema = new Schema<IEvent, IEventModel>(
 // Pre-save middleware to calculate duration
 eventSchema.pre('save', function (next) {
   if (this.startDate && this.endDate) {
-    // Calculate the difference in days
     const start = new Date(this.startDate);
     const end = new Date(this.endDate);
 
-    // Ensure dates are at the start of the day to avoid time-based discrepancies
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
+    // Extract only date parts (ignore time completely)
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
 
-    // Calculate duration in days
-    const durationInMs = end.getTime() - start.getTime();
-    const durationInDays = Math.ceil(durationInMs / (1000 * 60 * 60 * 24));
-
-    // If same day event, duration should be 1
-    this.duration = durationInDays === 0 ? 1 : durationInDays + 1;
+    // Calculate difference in days
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) {
+      this.duration = 1; 
+    } else {
+      this.duration = diffDays;
+    }
   }
   next();
 });
-
 // Add paginate plugin
 eventSchema.plugin(paginate);
 
