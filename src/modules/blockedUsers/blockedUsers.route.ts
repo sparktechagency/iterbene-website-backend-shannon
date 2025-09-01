@@ -1,22 +1,22 @@
 import express from 'express';
 import { BlockedUserController } from './blockedUsers.controller';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 
 const router = express.Router();
 
 router.post(
   '/block/:blockedId',
-  fullAuth('Common'),
+  auth('Common'),
   BlockedUserController.blockUser
 );
 router.post(
   '/unblock/:blockedId',
-  fullAuth('Common'),
+  auth('Common'),
   BlockedUserController.unblockUser
 );
 router.get(
   '/my-block-users',
-  fullAuth('Common'),
+  auth('Common'),
   BlockedUserController.getBlockedUsers
 );
 

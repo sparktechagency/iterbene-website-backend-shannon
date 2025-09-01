@@ -15,10 +15,6 @@ export interface IConnectionsModel extends Model<IConnections> {
     filters: Record<string, any>,
     options: PaginateOptions
   ): Promise<PaginateResult<IConnections>>;
-  aggregatePaginate<T>(
-    aggregate: any,
-    options: PaginateOptions
-  ): Promise<PaginateResult<T>>;
 }
 
 export enum ConnectionStatus {

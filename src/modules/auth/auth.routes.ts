@@ -3,12 +3,7 @@ import { AuthController } from './auth.controller';
 import validateRequest from '../../shared/validateRequest';
 import { UserValidation } from '../user/user.validation';
 import { AuthValidation } from './auth.validations';
-import {
-  fullAuth,
-  emailVerificationAuth,
-  multiTokenAuth,
-  resetPasswordAuth,
-} from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 const router = Router();
 
 router.post(
@@ -25,14 +20,12 @@ router.post(
 
 router.post(
   '/verify-email',
-  multiTokenAuth(),
   validateRequest(AuthValidation.verifyEmailValidationSchema),
   AuthController.verifyEmail
 );
 
 router.post(
   '/resend-otp',
-  multiTokenAuth(),
   validateRequest(AuthValidation.resendOtpValidationSchema),
   AuthController.resendOtp
 );
@@ -45,14 +38,13 @@ router.post(
 
 router.post(
   '/reset-password',
-  resetPasswordAuth(),
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword
 );
 
 router.post(
   '/change-password',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(AuthValidation.changePasswordValidationSchema),
   AuthController.changePassword
 );

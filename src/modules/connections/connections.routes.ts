@@ -1,69 +1,69 @@
 import { Router } from 'express';
 import { ConnectionsController } from './connections.controller';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 
 const router = Router();
 
-router.post('/add', fullAuth('Common'), ConnectionsController.addConnection);
+router.post('/add', auth('Common'), ConnectionsController.addConnection);
 
 router.get(
   '/check-sent-connection/:friendId',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.checkIsSentConnectionExists
 );
 router.patch(
   '/accept/:connectionId',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.acceptConnection
 );
 
 router.patch(
   '/decline/:connectionId',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.declineConnection
 );
 
 router.delete(
   '/remove/:removedByUserId',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.removeConnection
 );
 
 router.delete(
   '/cancel/:friendId',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.cancelRequest
 );
 
 router.delete(
   '/delete/:deleteByUserId',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.deleteConnection
 );
 
-router.get('/', fullAuth('Common'), ConnectionsController.getMyAllConnections);
+router.get('/', auth('Common'), ConnectionsController.getMyAllConnections);
 
 router.get(
   '/requests/received',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.getMyAllRequests
 );
 
 router.get(
   '/requests/sent',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.getSentMyRequests
 );
 
 router.get(
   '/mutual/:userId2',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.getMutualConnections
 );
 
 router.get(
   '/suggestions',
-  fullAuth('Common'),
+  auth('Common'),
   ConnectionsController.getConnectionSuggestions
 );
 

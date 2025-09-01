@@ -4,58 +4,58 @@ import validateRequest from '../../shared/validateRequest';
 import { StoryValidation } from './story.validation';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 const STORY_UPLOADS_FOLDER = 'uploads/stories';
 const upload = fileUploadHandler(STORY_UPLOADS_FOLDER);
 
 const router = express.Router();
 
-// Create a story (any fullAuthenticated user)
+// Create a story (any authenticated user)
 router.post(
   '/',
-  fullAuth('Common'),
+  auth('Common'),
   upload.array('storyFiles', 10),
   convertHeicToPngMiddleware(STORY_UPLOADS_FOLDER),
   validateRequest(StoryValidation.createStoryValidationSchema),
   StoryController.createStory
 );
 
-// View a story (any fullAuthenticated user with access)
+// View a story (any authenticated user with access)
 router.post(
   '/view',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(StoryValidation.viewStoryValidationSchema),
   StoryController.viewStory
 );
 
-// React to a story (any fullAuthenticated user with access)
+// React to a story (any authenticated user with access)
 router.post(
   '/react',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(StoryValidation.reactStoryValidationSchema),
   StoryController.reactToStory
 );
 
-// Reply to a story (any fullAuthenticated user with access)
+// Reply to a story (any authenticated user with access)
 router.post(
   '/reply',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(StoryValidation.replyStoryValidationSchema),
   StoryController.replyToStory
 );
 
-// Get story feed (any fullAuthenticated user)
-router.get('/feed', fullAuth('Common'), StoryController.getStoryFeed);
+// Get story feed (any authenticated user)
+router.get('/feed', auth('Common'), StoryController.getStoryFeed);
 
 // Get story viewers (creator only)
 router.get(
   '/viewers/:mediaId',
-  fullAuth('Common'),
+  auth('Common'),
   StoryController.getStoryViewers
 );
 
-// Get a story (any fullAuthenticated user with access)
-router.route('/:storyId').get(fullAuth('Common'), StoryController.getStory);
-router.route('/:mediaId').delete(fullAuth('Common'), StoryController.deleteStory);
+// Get a story (any authenticated user with access)
+router.route('/:storyId').get(auth('Common'), StoryController.getStory);
+router.route('/:mediaId').delete(auth('Common'), StoryController.deleteStory);
 
 export const StoryRoutes = router;

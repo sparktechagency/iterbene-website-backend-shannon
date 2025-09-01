@@ -2,19 +2,19 @@ import { Router } from 'express';
 import fileUploadHandler from '../../shared/fileUploadHandler';
 import { ItineraryController } from './itinerary.controller';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 
 const ITINERARY_UPLOADS_FOLDER = 'uploads/itineraries';
 const upload = fileUploadHandler(ITINERARY_UPLOADS_FOLDER);
 const router = Router();
 
-router.route('/').post(fullAuth('Common'), ItineraryController.createItinerary);
+router.route('/').post(auth('Common'), ItineraryController.createItinerary);
 
 // pdf itinerary
 router
   .route('/pdf')
   .post(
-    fullAuth('Common'),
+    auth('Common'),
     upload.single('itineraryPDF'),
     convertHeicToPngMiddleware(ITINERARY_UPLOADS_FOLDER),
     ItineraryController.createItineraryFromPDF
@@ -22,7 +22,7 @@ router
 
 router
   .route('/:itineraryId')
-  .get(fullAuth('Common'), ItineraryController.getItinerary)
-  .patch(fullAuth('Common'), ItineraryController.updateItinerary);
+  .get(auth('Common'), ItineraryController.getItinerary)
+  .patch(auth('Common'), ItineraryController.updateItinerary);
 
 export const ItineraryRoutes = router;

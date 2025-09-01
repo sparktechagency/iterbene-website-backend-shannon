@@ -5,7 +5,6 @@ import {
   IConnectionsModel,
 } from './connections.interface';
 import paginate from '../../common/plugins/paginate';
-import aggregatePaginate from '../../common/plugins/aggregatePaginate';
 
 const connectionsSchema = new Schema<IConnections, IConnectionsModel>(
   {
@@ -32,7 +31,6 @@ const connectionsSchema = new Schema<IConnections, IConnectionsModel>(
 
 // add paginate plugin
 connectionsSchema.plugin(paginate);
-connectionsSchema.plugin(aggregatePaginate)
 
 // create indexes
 connectionsSchema.index({ sentBy: 1, status: 1 });

@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { fullAuth } from '../../middlewares/smartAuth';
 import { AdminController } from './admin.controller';
+import auth from '../../middlewares/auth';
 
 const router = Router();
 
 router
   .route('/get-dashboard-data')
-  .get(fullAuth('Admin'), AdminController.getDashboardData);
+  .get(auth('Admin'), AdminController.getDashboardData);
 
 export const AdminRoutes = router;

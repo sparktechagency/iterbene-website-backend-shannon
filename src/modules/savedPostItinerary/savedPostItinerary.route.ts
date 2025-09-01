@@ -1,21 +1,21 @@
 import { Router } from 'express';
 import { SavedPostItineraryController } from './savedPostItinerary.controller';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 
 const router = Router();
 
 router.get(
   '/already-saved/:postId',
-  fullAuth('Common'),
+  auth('Common'),
   SavedPostItineraryController.isPostAlreadySaved
 );
 router
   .route('/')
-  .post( fullAuth('Common'), SavedPostItineraryController.addPostSaved)
-  .get( fullAuth('Common'), SavedPostItineraryController.getSavedPost);
+  .post( auth('Common'), SavedPostItineraryController.addPostSaved)
+  .get( auth('Common'), SavedPostItineraryController.getSavedPost);
 
 router
   .route('/:postId')
-  .delete( fullAuth('Common'), SavedPostItineraryController.removePostSaved);
+  .delete( auth('Common'), SavedPostItineraryController.removePostSaved);
 
 export const SavedPostItineraryRoutes = router;

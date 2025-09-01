@@ -78,12 +78,12 @@ const login = catchAsync(async (req, res) => {
 
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
-    const emailVerificationToken =
-      await TokenService.createEmailVerificationToken(user);
     sendResponse(res, {
       code: StatusCodes.OK,
       message: 'Email is not verified. Please verify your email.',
-      data: {emailVerificationToken},
+      data: {
+        email: user.email,
+      },
     });
     return;
   }
@@ -126,18 +126,17 @@ const login = catchAsync(async (req, res) => {
 });
 
 const verifyEmail = catchAsync(async (req, res) => {
-  const { email } = req.user;
-  const { otp } = req.body;
+  const { email, otp } = req.body;
   const result = await AuthService.verifyEmail(email, otp);
   sendResponse(res, {
     code: StatusCodes.OK,
     message: 'Email verified successfully.',
-    data:  result ,
+    data: result,
   });
 });
 
 const resendOtp = catchAsync(async (req, res) => {
-  const { email } = req.user;
+  const { email } = req.body;
   const result = await AuthService.resendOtp(email);
   sendResponse(res, {
     code: StatusCodes.OK,
@@ -172,8 +171,7 @@ const changePassword = catchAsync(async (req, res) => {
 });
 
 const resetPassword = catchAsync(async (req, res) => {
-  const { email } = req.user;
-  const { password } = req.body;
+  const { email, password } = req.body;
   const result = await AuthService.resetPassword(email, password);
   sendResponse(res, {
     code: StatusCodes.OK,

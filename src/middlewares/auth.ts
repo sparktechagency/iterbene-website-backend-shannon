@@ -27,7 +27,6 @@ const auth = (...requiredRights: string[]) =>
       config.jwt.accessSecret as Secret,
       TokenType.ACCESS
     );
-
     if (!verifyUser) {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token.');
     }

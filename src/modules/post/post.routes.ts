@@ -4,7 +4,7 @@ import validateRequest from '../../shared/validateRequest';
 import { PostController } from './post.controller';
 import { PostValidation } from './post.validation';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 
 const UPLOADS_POST_FOLDER = 'uploads/posts';
 const upload = fileUploadHandler(UPLOADS_POST_FOLDER);
@@ -15,7 +15,7 @@ const router = Router();
 router
   .route('/')
   .post(
-    fullAuth('Common'),
+    auth('Common'),
     upload.array('postFiles', 10),
     convertHeicToPngMiddleware(UPLOADS_POST_FOLDER),
     validateRequest(PostValidation.createPostValidationSchema),
@@ -25,7 +25,7 @@ router
 // Share post
 router.post(
   '/share',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(PostValidation.sharePostValidationSchema),
   PostController.sharePost
 );
@@ -36,28 +36,28 @@ router.get('/feed', PostController.feedPosts);
 //incrementItineraryViewCount
 router.post(
   '/increment-itinerary-view-count',
-  fullAuth('Common'),
+  auth('Common'),
   PostController.incrementItineraryViewCount
 );
 
 // get user timeline post
 router.get(
   '/user-timeline/:username',
-  fullAuth('Common'),
+  auth('Common'),
   PostController.getUserTimelinePosts
 );
 // get group timeline post
-router.get('/group/:groupId', fullAuth('Common'), PostController.getGroupPosts);
+router.get('/group/:groupId', auth('Common'), PostController.getGroupPosts);
 
 // get event timeline post
-router.get('/event/:eventId', fullAuth('Common'), PostController.getEventPosts);
+router.get('/event/:eventId', auth('Common'), PostController.getEventPosts);
 
 // Reaction routes
 
 //add or remove reaction
 router.post(
   '/reaction',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(PostValidation.addOrRemoveReactionValidationSchema),
   PostController.addOrRemoveReaction
 );
@@ -65,7 +65,7 @@ router.post(
 //add or remove comment reaction
 router.post(
   '/comment-reaction',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(PostValidation.addOrRemoveCommentReactionValidationSchema),
   PostController.addOrRemoveCommentReaction
 );
@@ -75,7 +75,7 @@ router.post(
 //create comment
 router.post(
   '/comment',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(PostValidation.createCommentValidationSchema),
   PostController.createComment
 );
@@ -83,7 +83,7 @@ router.post(
 //update  comment
 router.patch(
   '/comment/:commentId',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(PostValidation.updateCommentValidationSchema),
   PostController.updateComment
 );
@@ -91,7 +91,7 @@ router.patch(
 //delete comment
 router.delete(
   '/comment/:commentId',
-  fullAuth('Common'),
+  auth('Common'),
   validateRequest(PostValidation.deleteCommentValidationSchema),
   PostController.deleteComment
 );
@@ -99,7 +99,7 @@ router.delete(
 // get visited posts
 router.get(
   '/visited-posts',
-  fullAuth('Common'),
+  auth('Common'),
   PostController.getVisitedPostsWithDistance
 );
 
@@ -110,13 +110,13 @@ router
   .get(PostController.getPostById)
   // update post
   .patch(
-    fullAuth('Common'),
+    auth('Common'),
     upload.array('postFiles', 10),
     convertHeicToPngMiddleware(UPLOADS_POST_FOLDER),
     validateRequest(PostValidation.updatePostValidationSchema),
     PostController.updatePost
   )
   // delete post
-  .delete(fullAuth('Common'), PostController.deletePost);
+  .delete(auth('Common'), PostController.deletePost);
 
 export const PostRoutes = router;

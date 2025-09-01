@@ -1,8 +1,6 @@
 import ApiError from '../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
 import { OtpService } from '../otp/otp.service';
-import { FastOtpService } from '../../services/fastOtpService';
-import { errorLogger } from '../../shared/logger';
 import { User } from '../user/user.model';
 import bcrypt from 'bcrypt';
 import { config } from '../../config';
@@ -25,9 +23,9 @@ const createUser = async (userData: TUser) => {
   const user = await User.create(userData);
   if (!user.isEmailVerified) {
     await OtpService.createVerificationEmailOtp(user.email);
-    const emailVerificationToken =
-      await TokenService.createEmailVerificationToken(user);
-    return { emailVerificationToken };
+    return {
+      email: user.email,
+    };
   }
 };
 
@@ -61,8 +59,7 @@ const forgotPassword = async (email: string) => {
   await OtpService.createResetPasswordOtp(user.email);
   user.isResetPassword = true;
   await user.save();
-  const resetPasswordToken = await TokenService.createResetPasswordToken(user);
-  return {resetPasswordToken};
+  return { email: user.email };
 };
 
 const resendOtp = async (email: string) => {
@@ -72,19 +69,16 @@ const resendOtp = async (email: string) => {
   }
 
   if (user.isResetPassword) {
-    const resetPasswordToken = await TokenService.createResetPasswordToken(
-      user
-    );
     await OtpService.createResetPasswordOtp(user.email);
-    return { resetPasswordToken };
+    return { email: user.email };
   } else if (user.isLoginMfa) {
-    const loginMfaToken = await TokenService.createLoginMfaToken(user);
     await OtpService.createLoginMfaOtp(user.email);
-    return { loginMfaToken };
+    {
+      email: user.email;
+    }
   }
   await OtpService.createVerificationEmailOtp(user.email);
-  const tokens = await TokenService.createEmailVerificationToken(user);
-  return tokens;
+  return { email: user.email };
 };
 
 const resetPassword = async (email: string, password: string) => {
@@ -95,7 +89,7 @@ const resetPassword = async (email: string, password: string) => {
   user.password = password;
   user.isResetPassword = false;
   await user.save();
-  return user;
+  return null;
 };
 
 const changePassword = async (

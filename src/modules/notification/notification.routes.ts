@@ -1,62 +1,62 @@
 import { Router } from 'express';
 import { NotificationController } from './notification.controllers';
-import { fullAuth } from '../../middlewares/smartAuth';
+import auth from '../../middlewares/auth';
 
 const router = Router();
 
 router.get(
   '/unview-notification-count',
-  fullAuth('Common'),
+  auth('Common'),
   NotificationController.getUnViewNotificationCount
 );
 
 router.get(
   '/unview-message-notification-count',
-  fullAuth('Common'),
+  auth('Common'),
   NotificationController.getUnViewMessageNotificationCount
 );
 
 /** ========================View all notifications route here==================== */
 router
   .route('/view-all-notifications')
-  .post(fullAuth('Common'), NotificationController.viewAllNotifications);
+  .post(auth('Common'), NotificationController.viewAllNotifications);
 
 /** ========================View all message notifications route here==================== */
 router
   .route('/view-all-message-notifications')
-  .post(fullAuth('Common'), NotificationController.viewAllMessageNotifications);
+  .post(auth('Common'), NotificationController.viewAllMessageNotifications);
 
 /** ========================Get all message notifications route here==================== */
 router
   .route('/get-all-message-notifications')
-  .get(fullAuth('Common'), NotificationController.getALLMessageNotification);
+  .get(auth('Common'), NotificationController.getALLMessageNotification);
 
 /** ========================View single notifications route here==================== */
 router
   .route('/view-single-notification')
-  .post(fullAuth('Common'), NotificationController.viewSingleNotification);
+  .post(auth('Common'), NotificationController.viewSingleNotification);
 
 /** ========================Clear all notifications route here==================== */
 router
   .route('/clear-all-notifications')
-  .delete(fullAuth('Common'), NotificationController.clearAllNotification);
+  .delete(auth('Common'), NotificationController.clearAllNotification);
 
 /** ========================Admin all notifications route here==================== */
 router
   .route('/admin-notifications')
-  .get(fullAuth('admin'), NotificationController.getAdminNotifications);
+  .get(auth('admin'), NotificationController.getAdminNotifications);
 
 /** ========================User all notifications route here==================== */
 router
   .route('/')
-  .get(fullAuth('Common'), NotificationController.getALLNotification);
+  .get(auth('Common'), NotificationController.getALLNotification);
 
 /** ========================Single notifications route here==================== */
 router
   .route('/:id')
-  .get(fullAuth('Common'), NotificationController.getSingleNotification)
-  .patch(fullAuth('Common'), NotificationController.viewSingleNotification)
+  .get(auth('Common'), NotificationController.getSingleNotification)
+  .patch(auth('Common'), NotificationController.viewSingleNotification)
   /** ========================Delete Single notifications route here==================== */
-  .delete(fullAuth('Common'), NotificationController.deleteNotification);
+  .delete(auth('Common'), NotificationController.deleteNotification);
 
 export const NotificationRoutes = router;
