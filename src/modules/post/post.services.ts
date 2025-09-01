@@ -47,11 +47,11 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
 
   if (sourceId && postType === PostType.GROUP) {
     const group = await Group.findById(sourceId);
-    if (!group || group.isDeleted) throw new ApiError(404, 'Group not found');
+    if (!group || group.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
   if (sourceId && postType === PostType.EVENT) {
     const event = await Event.findById(sourceId);
-    if (!event || event.isDeleted) throw new ApiError(404, 'Event not found');
+    if (!event || event.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   if (postType !== PostType.USER && !sourceId) {
     throw new ApiError(400, `${postType} posts require a sourceId`);
@@ -60,7 +60,7 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
   let itinerary: Types.ObjectId | undefined;
   if (itineraryId) {
     const itineraryDoc = await Itinerary.findById(itineraryId);
-    if (!itineraryDoc) throw new ApiError(404, 'Itinerary not found');
+    if (!itineraryDoc) throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
     itinerary = itineraryDoc._id;
   }
 
@@ -201,7 +201,7 @@ const updatePost = async (
 
   // Validate user exists
   const user = await User.findById(userId);
-  if (!user) throw new ApiError(404, 'User not found');
+  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
 
   // Find the post
   const post = await Post.findOne({
@@ -228,17 +228,17 @@ const updatePost = async (
       ],
     },
   ]);
-  if (!post) throw new ApiError(404, 'Post not found');
+  if (!post) throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
 
   // Validate sourceId if postType is being updated
   if (postType && sourceId) {
     if (postType === PostType.GROUP) {
       const group = await Group.findById(sourceId);
-      if (!group || group.isDeleted) throw new ApiError(404, 'Group not found');
+      if (!group || group.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
     }
     if (postType === PostType.EVENT) {
       const event = await Event.findById(sourceId);
-      if (!event || event.isDeleted) throw new ApiError(404, 'Event not found');
+      if (!event || event.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
     }
   }
 
@@ -247,7 +247,7 @@ const updatePost = async (
   if (itineraryId !== undefined) {
     if (itineraryId) {
       const itineraryDoc = await Itinerary.findById(itineraryId);
-      if (!itineraryDoc) throw new ApiError(404, 'Itinerary not found');
+      if (!itineraryDoc) throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
       itinerary = itineraryDoc._id;
     } else {
       itinerary = undefined;
@@ -447,7 +447,7 @@ const getPostById = async (postId: string): Promise<IPost> => {
       ],
     },
   ]);
-  if (!post || post.isDeleted) throw new ApiError(404, 'Post not found');
+  if (!post || post.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   return post;
 };
 
@@ -545,7 +545,7 @@ const sharePost = async (payload: SharePostPayload): Promise<IPost> => {
 
   const originalPost = await Post.findById(originalPostId);
   if (!originalPost) {
-    throw new ApiError(404, 'Original post not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Original post not found');
   }
 
   const sharedPost = await Post.create({
@@ -595,12 +595,12 @@ const addOrRemoveReaction = async (
   const { userId, postId, reactionType } = payload;
   const post = await Post.findById(postId);
   if (!post) {
-    throw new ApiError(404, 'Post not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
   // Check if the reaction type is valid
   if (!Object.values(ReactionType).includes(reactionType)) {
-    throw new ApiError(400, 'Invalid reaction type');
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid reaction type');
   }
 
   // Find the existing reaction
@@ -713,12 +713,12 @@ const addOrRemoveCommentReaction = async (
 
   const post = await Post.findById(postId);
   if (!post) {
-    throw new ApiError(404, 'Post not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
   const comment = post.comments.find(c => c._id.toString() === commentId);
   if (!comment) {
-    throw new ApiError(404, 'Comment not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Comment not found');
   }
 
   if (!Object.values(ReactionType).includes(reactionType)) {
@@ -978,14 +978,14 @@ const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
 
   const post = await Post.findById(postId);
   if (!post) {
-    throw new ApiError(404, 'Post not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
   const existingComment = post.comments.find(
     c => c._id.toString() === commentId
   );
   if (!existingComment) {
-    throw new ApiError(404, 'Comment not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Comment not found');
   }
   if (existingComment.userId.toString() !== userId.toString()) {
     throw new ApiError(403, 'Not authorized to update this comment');
@@ -1047,12 +1047,12 @@ const deleteComment = async (payload: DeleteCommentPayload): Promise<IPost> => {
 
   const post = await Post.findById(postId);
   if (!post) {
-    throw new ApiError(404, 'Post not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
   const comment = post.comments.find(c => c._id.toString() === commentId);
   if (!comment) {
-    throw new ApiError(404, 'Comment not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Comment not found');
   }
   if (comment.userId.toString() !== userId.toString()) {
     throw new ApiError(403, 'Not authorized to delete this comment');
@@ -1260,7 +1260,7 @@ const getUserTimelinePosts = async (
   // Fetch requested user
   const requestedUser = await User.findOne({ username });
   if (!requestedUser) {
-    throw new ApiError(404, 'User not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
   let currentUserId: Types.ObjectId | null = userId
@@ -1401,7 +1401,7 @@ const getGroupPosts = async (
   // Check group membership
   const group = await Group.findById(groupId);
   if (!group) {
-    throw new ApiError(404, 'Group not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
   let currentUserId: Types.ObjectId | null = userId
     ? new Types.ObjectId(userId)
@@ -1519,7 +1519,7 @@ const getEventPosts = async (
   // Check event participation
   const event = await Event.findById(eventId);
   if (!event) {
-    throw new ApiError(404, 'Event not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   
   let currentUserId: Types.ObjectId | null = userId
@@ -1747,7 +1747,7 @@ const incrementItineraryViewCount = async (
     itinerary: new Types.ObjectId(itineraryId),
   });
   if (!post) {
-    throw new ApiError(404, 'Post not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
   post.itineraryViewCount += 1;
   await post.save();

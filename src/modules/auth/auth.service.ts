@@ -29,7 +29,7 @@ const createUser = async (userData: TUser) => {
   }
 };
 
-const verifyEmail = async (email: string, otp: string) => {
+const verifyOtp = async (email: string, otp: string) => {
   const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.');
@@ -154,7 +154,7 @@ const refreshAuth = async (refreshToken: string) => {
 
 export const AuthService = {
   createUser,
-  verifyEmail,
+  verifyOtp,
   resetPassword,
   forgotPassword,
   resendOtp,

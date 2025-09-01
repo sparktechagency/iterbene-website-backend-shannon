@@ -2,11 +2,10 @@ import { z } from 'zod';
 
 const loginValidationSchema = z.object({
   body: z.object({
-    email: z
-      .string({
-        required_error: 'Email is required',
-        invalid_type_error: 'Email must be a string',
-      }),
+    email: z.string({
+      required_error: 'Email is required',
+      invalid_type_error: 'Email must be a string',
+    }),
     password: z
       .string({
         required_error: 'Password is required',
@@ -16,7 +15,7 @@ const loginValidationSchema = z.object({
   }),
 });
 
-const verifyEmailValidationSchema = z.object({
+const verifyOtpValidationSchema = z.object({
   body: z.object({
     otp: z
       .string({
@@ -25,6 +24,12 @@ const verifyEmailValidationSchema = z.object({
       })
       .length(6, 'OTP must be exactly 6 characters long')
       .regex(/^\d+$/, 'OTP must contain only numbers'),
+    email: z
+      .string({
+        required_error: 'Email is required',
+        invalid_type_error: 'Email must be a string',
+      })
+      .email('Invalid email format'),
   }),
 });
 
@@ -81,7 +86,7 @@ const resendOtpValidationSchema = z.object({
 
 export const AuthValidation = {
   loginValidationSchema,
-  verifyEmailValidationSchema,
+  verifyOtpValidationSchema,
   forgotPasswordValidationSchema,
   resetPasswordValidationSchema,
   changePasswordValidationSchema,
