@@ -70,11 +70,8 @@ const cancelRequest = catchAsync(async (req: Request, res: Response) => {
 
 const deleteConnection = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const { deleteByUserId } = req.params;
-  await ConnectionsService.deleteConnection(
-    deleteByUserId,
-    userId
-  );
+  const { targetUserId } = req.params;
+  await ConnectionsService.deleteConnection(userId, targetUserId);
   sendResponse(res, {
     code: 200,
     message: 'Connection deleted successfully',

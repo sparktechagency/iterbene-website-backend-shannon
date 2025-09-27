@@ -38,6 +38,32 @@ const addConnection = async (
         StatusCodes.BAD_REQUEST,
         'Connection request already sent'
       );
+    } else if (existingConnection.status === ConnectionStatus.DECLINED) {
+      // Allow resending to declined connections by updating existing record
+      existingConnection.status = ConnectionStatus.PENDING;
+      await existingConnection.save();
+
+      // Send notification for resent request
+      const notification: INotification = {
+        senderId: sentByUserId,
+        receiverId: receivedByUserId,
+        username: sentByUser?.username,
+        title: `${sentByUser?.firstName} ${sentByUser?.lastName} sent you a connection request`,
+        message: `${sentByUser?.firstName} ${sentByUser?.lastName} wants to connect with you. Check it out!`,
+        type: 'connection',
+        linkId: existingConnection._id?.toString(),
+        role: 'user',
+        viewStatus: false,
+        image: sentByUser?.profileImage,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await NotificationService.addCustomNotification?.(
+        'notification',
+        notification,
+        receivedByUserId
+      );
+      return existingConnection;
     }
   }
 
@@ -168,18 +194,20 @@ const cancelRequest = async (userId: string, friendId: string) => {
   return result;
 };
 
-const deleteConnection = async (deleteByUserId: string, userId: string) => {
+const deleteConnection = async (userId: string, targetUserId: string) => {
   const connection = await Connections.findOne({
     $or: [
-      { sentBy: deleteByUserId, receivedBy: userId },
-      { sentBy: userId, receivedBy: deleteByUserId },
+      { sentBy: userId, receivedBy: targetUserId },
+      { sentBy: targetUserId, receivedBy: userId },
     ],
+    status: ConnectionStatus.ACCEPTED,
   });
 
   if (!connection) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Connection not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Accepted connection not found');
   }
 
+  // Both users in the connection can delete it
   if (
     connection.sentBy.toString() !== userId &&
     connection.receivedBy.toString() !== userId
@@ -187,13 +215,6 @@ const deleteConnection = async (deleteByUserId: string, userId: string) => {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'You are not authorized to remove this connection'
-    );
-  }
-
-  if (connection.status !== ConnectionStatus.ACCEPTED) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      `Only accepted connections can be removed`
     );
   }
 

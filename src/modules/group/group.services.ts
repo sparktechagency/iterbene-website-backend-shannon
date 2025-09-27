@@ -7,6 +7,8 @@ import { BlockedUser } from '../blockedUsers/blockedUsers.model';
 import { PaginateOptions, PaginateResult } from '../../types/paginate';
 import mongoose from 'mongoose';
 import { validateUsers } from '../../utils/validateUsers';
+import { NotificationService } from '../notification/notification.services';
+import { INotification } from '../notification/notification.interface';
 
 interface CreateGroupPayload {
   name: string;
@@ -25,11 +27,6 @@ const createGroup = async (
   const user = await User.findById(creatorId);
   if (!user || user.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Creator not found');
-  }
-
-  // Validate required fields
-  if (!payload.name?.trim()) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Group name is required');
   }
   const coLeaders = payload.coLeaders || [];
   const members = payload.members || [];
@@ -85,11 +82,7 @@ const createGroup = async (
     groupImage: payload.groupImage || null,
     admins: [creatorObjectId],
     coLeaders: coLeaderObjectIds,
-    members: [
-      creatorObjectId, 
-      ...coLeaderObjectIds, 
-      ...memberObjectIds
-    ],
+    members: [creatorObjectId, ...coLeaderObjectIds, ...memberObjectIds],
     participantCount: totalParticipants,
   });
 
@@ -102,7 +95,10 @@ const joinGroup = async (userId: string, groupId: string): Promise<IGroup> => {
   if (!group || group.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
-
+  const user = await User.findById(userId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+  }
   await validateUsers(userId, group.creatorId.toString(), 'Join group');
 
   if (group.members.includes(new mongoose.Types.ObjectId(userId))) {
@@ -120,6 +116,25 @@ const joinGroup = async (userId: string, groupId: string): Promise<IGroup> => {
       );
     }
     group.pendingMembers.push(new mongoose.Types.ObjectId(userId));
+
+    const requestNotification: INotification = {
+      senderId: userId,
+      receiverId: group.creatorId.toString(),
+      title: `${user?.firstName} ${user?.lastName} wants to join your group "${group.name}"`,
+      message: `${user?.firstName} ${user?.lastName} has sent a request to join your group "${group.name}".`,
+      type: 'group',
+      linkId: group._id.toString(),
+      role: 'user',
+      viewStatus: false,
+      image: group.groupImage || undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await NotificationService?.addCustomNotification?.(
+      'notification',
+      requestNotification,
+      group.creatorId.toString()
+    );
   }
 
   await group.save();
@@ -155,6 +170,10 @@ const approveJoinRequest = async (
   userId: string
 ): Promise<IGroup> => {
   const group = await Group.findById(groupId);
+  const user = await User.findById(userId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+  }
   if (!group || group.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
@@ -180,6 +199,27 @@ const approveJoinRequest = async (
   group.participantCount += 1;
 
   await group.save();
+
+  // Send notification to user about approval
+  const approvalNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `Your request to join the group "${group.name}" has been approved`,
+    message: `You are now a member of the group "${group.name}".`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    approvalNotification,
+    userId
+  );
+
   return group;
 };
 
@@ -191,6 +231,11 @@ const rejectJoinRequest = async (
   const group = await Group.findById(groupId);
   if (!group || group.isDeleted) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+  }
+
+  const user = await User.findById(userId);
+  if (!user || user.isDeleted) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
 
   if (!group.admins.includes(new mongoose.Types.ObjectId(adminId))) {
@@ -212,6 +257,26 @@ const rejectJoinRequest = async (
   );
 
   await group.save();
+
+  // Send notification to user about rejection
+  const rejectionNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `Your request to join the group "${group.name}" has been rejected`,
+    message: `Unfortunately, your request to join the group "${group.name}" was not approved.`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    rejectionNotification,
+    userId
+  );
   return group;
 };
 
@@ -243,6 +308,25 @@ const removeMember = async (
   group.participantCount -= 1;
 
   await group.save();
+  // Send notification to user about removal
+  const removalNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `You have been removed from the group "${group.name}"`,
+    message: `You are no longer a member of the group "${group.name}".`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    removalNotification,
+    userId
+  );
   return group;
 };
 
@@ -275,6 +359,25 @@ const promoteToAdmin = async (
   group.coLeaders = group.coLeaders.filter(id => id.toString() !== userId);
 
   await group.save();
+  // Send notification to user about promotion
+  const promotionNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `You have been promoted to admin in the group "${group.name}"`,
+    message: `You are now an admin of the group "${group.name}".`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    promotionNotification,
+    userId
+  );
   return group;
 };
 
@@ -306,6 +409,26 @@ const demoteAdmin = async (
   group.admins = group.admins.filter(id => id.toString() !== userId);
 
   await group.save();
+  // Send notification to user about demotion
+  const demotionNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `You have been demoted from admin in the group "${group.name}"`,
+    message: `You are no longer an admin of the group "${group.name}".`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    demotionNotification,
+    userId
+  );
+
   return group;
 };
 
@@ -338,6 +461,25 @@ const promoteToCoLeader = async (
   group.admins = group.admins.filter(id => id.toString() !== userId);
 
   await group.save();
+  // Send notification to user about promotion
+  const promotionNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `You have been promoted to co-leader in the group "${group.name}"`,
+    message: `You are now a co-leader of the group "${group.name}".`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    promotionNotification,
+    userId
+  );
   return group;
 };
 
@@ -365,6 +507,27 @@ const demoteCoLeader = async (
   group.coLeaders = group.coLeaders.filter(id => id.toString() !== userId);
 
   await group.save();
+  // Send notification to user about demotion
+  const demotionNotification: INotification = {
+    senderId: adminId,
+    receiverId: userId,
+    title: `You have been demoted from co-leader in the group "${group.name}"`,
+    message: `You are no longer a co-leader of the group "${group.name}".`,
+    type: 'group',
+    linkId: group._id.toString(),
+    role: 'user',
+    viewStatus: false,
+    image: group.groupImage || undefined,
+
+    createdAt: new Date(),
+
+    updatedAt: new Date(),
+  };
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    demotionNotification,
+    userId
+  );
   return group;
 };
 const getGroup = async (
@@ -469,7 +632,12 @@ const getMyGroups = async (
 ): Promise<PaginateResult<IGroup>> => {
   const query: Record<string, any> = {
     isDeleted: false,
-    $or: [{ creatorId: userId }],
+    $or: [
+      { creatorId: userId },
+      // { members: userId },
+      // { admins: userId },
+      // { coLeaders: userId },
+    ],
   };
 
   if (filters.privacy) {
@@ -491,7 +659,7 @@ const getMyJoinGroups = async (
 ): Promise<PaginateResult<IGroup>> => {
   // Ensure userId is a valid ObjectId
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new Error('Invalid userId');
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID');
   }
 
   const query: Record<string, any> = {
@@ -519,7 +687,6 @@ const getGroupSuggestions = async (
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
   }
-
 
   const blockedUsers = await BlockedUser.find({
     $or: [{ blockerId: userId }, { blockedId: userId }],

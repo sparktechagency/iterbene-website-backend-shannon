@@ -56,15 +56,12 @@ const interestEvent = async (
   if (event.pendingInterestedUsers.includes(userObjectId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Join request already pending');
   }
-  if (event.privacy == EventPrivacy.PRIVATE) {
-    event.pendingInterestedUsers.push(userObjectId);
-    await event.save();
-    return event;
-  }
+
   const user = await User.findById(userId);
-  // Create notification
   let notification: INotification;
-  if ((event.privacy as EventPrivacy) === EventPrivacy.PRIVATE) {
+
+  if (event.privacy === EventPrivacy.PRIVATE) {
+    // For private events: add to pending and send request notification
     event.pendingInterestedUsers.push(userObjectId);
     notification = {
       senderId: userId,
@@ -81,12 +78,8 @@ const interestEvent = async (
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await NotificationService?.addCustomNotification?.(
-      'notification',
-      notification,
-      event.creatorId.toString()
-    );
   } else {
+    // For public events: directly add to interested users
     event.interestedUsers.push(userObjectId);
     event.interestCount = event.interestedUsers.length;
     notification = {
@@ -104,12 +97,13 @@ const interestEvent = async (
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await NotificationService?.addCustomNotification?.(
-      'notification',
-      notification,
-      event.creatorId.toString()
-    );
   }
+
+  await NotificationService?.addCustomNotification?.(
+    'notification',
+    notification,
+    event.creatorId.toString()
+  );
 
   await event.save();
   // Update or add maps user interested locations

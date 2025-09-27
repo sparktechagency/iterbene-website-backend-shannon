@@ -10,12 +10,18 @@ const UPLOADS_FOLDER = 'uploads/groups';
 const createGroup = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const file = req.file as Express.Multer.File;
+
   if (typeof req.body.coLeaders === 'string') {
     req.body.coLeaders = JSON.parse(req.body.coLeaders);
   }
-  const groupImage = await uploadFilesToS3([file], UPLOADS_FOLDER);
+
   const payload = req.body;
-  payload.groupImage = groupImage[0];
+
+  // Handle file upload safely
+  if (file) {
+    const groupImage = await uploadFilesToS3([file], UPLOADS_FOLDER);
+    payload.groupImage = groupImage[0];
+  }
 
   const result = await GroupService.createGroup(userId, payload);
   sendResponse(res, {

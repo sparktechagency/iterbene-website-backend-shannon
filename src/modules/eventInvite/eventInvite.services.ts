@@ -67,9 +67,12 @@ const sendInvite = async (
     eventId: new mongoose.Types.ObjectId(payload.eventId),
     status: EventInviteStatus.PENDING,
   }));
+
+  // Add to event's pendingInterestedUsers
   event.pendingInterestedUsers.push(
     ...recipients.map(toId => new mongoose.Types.ObjectId(toId))
   );
+  // Save event with updated pendingInterestedUsers
   const createdInvites = await EventInvite.insertMany(invites);
 
   // Send notification to each recipient
@@ -100,7 +103,7 @@ const sendInvite = async (
     )
   );
 
-  await event.save();
+  // No need to save event since we're not modifying pendingInterestedUsers
   return createdInvites;
 };
 
@@ -128,10 +131,14 @@ const acceptInvite = async (
   }
 
   invite.status = EventInviteStatus.ACCEPTED;
+
+  // For events: directly add to interestedUsers (no pending logic needed)
   if (!event.interestedUsers.includes(invite.to)) {
     event.interestedUsers.push(invite.to);
     event.interestCount += 1;
   }
+
+  // Remove from pendingInterestedUsers (in case it was added before)
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     user => !user.equals(invite.to)
   );
@@ -142,9 +149,9 @@ const acceptInvite = async (
     senderId: userId,
     receiverId: invite.from.toString(),
     title: `${recipient?.firstName} ${recipient?.lastName} joined your event`,
-    message: `${recipient?.firstName} ${recipient?.lastName} accepted your invite to "${
-      event.eventName ?? 'an event'
-    }".`,
+    message: `${recipient?.firstName} ${
+      recipient?.lastName
+    } accepted your invite to "${event.eventName ?? 'an event'}".`,
     type: 'event',
     linkId: invite.eventId.toString(),
     role: 'user',
@@ -214,6 +221,7 @@ const declineInvite = async (
   }
 
   invite.status = EventInviteStatus.DECLINED;
+  // Remove from pendingInterestedUsers if added there
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     user => !user.equals(invite.to)
   );
@@ -224,9 +232,9 @@ const declineInvite = async (
     senderId: userId,
     receiverId: invite.from.toString(),
     title: `${recipient?.firstName} ${recipient?.lastName} declined your event invite`,
-    message: `${recipient?.firstName} ${recipient?.lastName} won't be joining "${
-      event.eventName ?? 'your event'
-    }".`,
+    message: `${recipient?.firstName} ${
+      recipient?.lastName
+    } won't be joining "${event.eventName ?? 'your event'}".`,
     type: 'event',
     linkId: invite.eventId.toString(),
     role: 'user',
@@ -270,19 +278,20 @@ const cancelInvite = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
 
-  invite.status = EventInviteStatus.DECLINED;
+  // Remove from pendingInterestedUsers if added there
   event.pendingInterestedUsers = event.pendingInterestedUsers.filter(
     user => !user.equals(invite.to)
   );
+  await event.save();
 
   const sender = await User.findById(userId);
   const recipientNotification: INotification = {
     senderId: userId,
     receiverId: invite.to.toString(),
     title: `Invite to ${event.eventName ?? 'an event'} canceled`,
-    message: `${sender?.firstName} ${sender?.lastName} canceled your invite to "${
-      event.eventName ?? 'an event'
-    }".`,
+    message: `${sender?.firstName} ${
+      sender?.lastName
+    } canceled your invite to "${event.eventName ?? 'an event'}".`,
     type: 'event',
     linkId: invite.eventId.toString(),
     role: 'user',
@@ -297,7 +306,8 @@ const cancelInvite = async (
     invite.to.toString()
   );
 
-  await Promise.all([invite.save(), event.save()]);
+  // Delete the invite instead of updating status
+  await invite.deleteOne();
   return invite;
 };
 

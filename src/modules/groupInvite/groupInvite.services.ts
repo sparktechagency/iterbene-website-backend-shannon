@@ -66,9 +66,11 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
     groupId: new mongoose.Types.ObjectId(payload.groupId),
     status: 'pending' as const,
   }));
+
   group.pendingMembers.push(
     ...recipients.map(toId => new mongoose.Types.ObjectId(toId))
   );
+  // Don't add to pendingMembers immediately - only when user accepts
   const createdInvites = await GroupInvite.insertMany(invites);
 
   // Send notification to each recipient
@@ -99,7 +101,7 @@ const sendInvite = async (fromId: string, payload: InvitePayload) => {
     )
   );
 
-  await group.save();
+  // No need to save group since we're not modifying pendingMembers
   return createdInvites;
 };
 
@@ -130,6 +132,11 @@ const acceptInvite = async (
   );
 
   if (group.privacy === 'public' || isSenderAdmin) {
+    // remove from pendingMembers if present
+    group.pendingMembers = group.pendingMembers.filter(
+      memberId => !memberId.equals(userId)
+    );
+    // For public groups or admin invites: directly add to members
     group.members.push(new mongoose.Types.ObjectId(userId));
     group.participantCount += 1;
 
@@ -138,9 +145,9 @@ const acceptInvite = async (
       senderId: userId,
       receiverId: invite.from.toString(),
       title: `${recipient?.firstName} ${recipient?.lastName} joined your group`,
-      message: `${recipient?.firstName} ${recipient?.lastName} accepted your invite to "${
-        group.name ?? 'a group'
-      }".`,
+      message: `${recipient?.firstName} ${
+        recipient?.lastName
+      } accepted your invite to "${group.name ?? 'a group'}".`,
       type: 'group',
       linkId: invite.groupId.toString(),
       role: 'user',
@@ -155,6 +162,7 @@ const acceptInvite = async (
       invite.from.toString()
     );
   } else {
+    // For private groups: add to pendingMembers for admin approval
     if (!group.pendingMembers.includes(new mongoose.Types.ObjectId(userId))) {
       group.pendingMembers.push(new mongoose.Types.ObjectId(userId));
     }
@@ -163,7 +171,9 @@ const acceptInvite = async (
       senderId: userId,
       receiverId: adminId.toString(),
       title: `${recipient?.firstName} ${recipient?.lastName}requested to join your group`,
-      message: `${recipient?.firstName} ${recipient?.lastName} accepted an invite to "${
+      message: `${recipient?.firstName} ${
+        recipient?.lastName
+      } accepted an invite to "${
         group.name ?? 'a group'
       }" and is awaiting approval.`,
       type: 'group',
@@ -212,14 +222,20 @@ const declineInvite = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
 
+  // Remove from pendingMembers if user was added there
+  group.pendingMembers = group.pendingMembers.filter(
+    memberId => !memberId.equals(userId)
+  );
+  await group.save();
+
   const recipient = await User.findById(userId);
   const senderNotification: INotification = {
     senderId: userId,
     receiverId: invite.from.toString(),
     title: `${recipient?.firstName} ${recipient?.lastName} declined your group invite`,
-    message: `${recipient?.firstName} ${recipient?.lastName} won't be joining "${
-      group.name ?? 'your group'
-    }".`,
+    message: `${recipient?.firstName} ${
+      recipient?.lastName
+    } won't be joining "${group.name ?? 'your group'}".`,
     type: 'group',
     linkId: invite.groupId.toString(),
     role: 'user',
@@ -262,14 +278,20 @@ const cancelInvite = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invite is not pending');
   }
 
+  // Remove from pendingMembers if added there
+  group.pendingMembers = group.pendingMembers.filter(
+    memberId => !memberId.equals(invite.to.toString())
+  );
+  await group.save();
+
   const sender = await User.findById(userId);
   const recipientNotification: INotification = {
     senderId: userId,
     receiverId: invite.to.toString(),
     title: `Invite to ${group.name ?? 'a group'} canceled`,
-    message: `${sender?.firstName} ${sender?.lastName} canceled your invite to "${
-      group.name ?? 'a group'
-    }".`,
+    message: `${sender?.firstName} ${
+      sender?.lastName
+    } canceled your invite to "${group.name ?? 'a group'}".`,
     type: 'group',
     linkId: invite.groupId.toString(),
     role: 'user',
