@@ -22,8 +22,8 @@ const getExpirationTime = (expiration: string) => {
   return new Date();
 };
 
-const generateToken = (payload: object, secret: Secret, expireTime: string) => {
-  return jwt.sign(payload, secret, { expiresIn: expireTime });
+const generateToken = (payload: object, secret: Secret, expireTime: string): string => {
+  return jwt.sign(payload, secret, { expiresIn: expireTime }) as string;
 };
 
 const saveToken = async (

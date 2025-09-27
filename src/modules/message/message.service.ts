@@ -74,8 +74,7 @@ const viewAllMessages = async (chatId: string, receiverId: string) => {
       deliveryStatus: 'sent',
       isDeleted: false,
     },
-    { seenBy: [receiverId], deliveryStatus: 'seen' },
-    { new: true }
+    { seenBy: [receiverId], deliveryStatus: 'seen' }
   );
   return result;
 };
