@@ -3,8 +3,7 @@ import fileUploadHandler from '../../shared/fileUploadHandler';
 import { ItineraryController } from './itinerary.controller';
 import convertHeicToPngMiddleware from '../../shared/convertHeicToPngMiddleware';
 import auth from '../../middlewares/auth';
-
-const ITINERARY_UPLOADS_FOLDER = 'uploads/itineraries';
+import { ITINERARY_UPLOADS_FOLDER } from './itinerary.constant';
 const upload = fileUploadHandler(ITINERARY_UPLOADS_FOLDER);
 const router = Router();
 
@@ -15,7 +14,7 @@ router
   .route('/pdf')
   .post(
     auth('Common'),
-    upload.single('itineraryPDF'),
+    upload.single('pdf'),
     convertHeicToPngMiddleware(ITINERARY_UPLOADS_FOLDER),
     ItineraryController.createItineraryFromPDF
   );

@@ -4,7 +4,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 const xss = require('xss-clean');
@@ -81,23 +80,6 @@ const getCorsOptions = (allowedOrigins: string[]) => {
   };
 };
 
-/**
- * Configure rate limiter
- */
-const getRateLimiter = () => {
-  return rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-    message: {
-      error: 'Too many requests from this IP, please try again later.',
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: req => {
-      return req.path === '/test' || req.path === '/health';
-    },
-  });
-};
 
 /**
  * Configure Helmet security headers
@@ -302,8 +284,6 @@ app.use(i18nextMiddleware.handle(i18next));
 // Security Middlewares
 // =====================
 
-// Rate limiting
-app.use(getRateLimiter());
 
 // Helmet security headers
 app.use(getHelmetConfig(allowedOrigins));
@@ -337,7 +317,7 @@ app.get('/test', (req: Request, res: Response) => {
     security: {
       cors: 'enabled',
       helmet: 'enabled',
-      rateLimit: 'enabled',
+      rateLimit: 'disabled',
       csrf: process.env.NODE_ENV === 'production' ? 'enabled' : 'disabled',
       xss: 'enabled',
       hpp: 'enabled',

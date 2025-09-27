@@ -30,41 +30,18 @@ interface ExtractedItineraryData {
 
 const createItineraryFromPDF = async (
   userId: Types.ObjectId,
-  filePath: string
+  pdfUrl: string
 ): Promise<IItinerary> => {
   try {
-    // Parse PDF
-    const dataBuffer = fs.readFileSync(filePath);
-    const pdfData = await pdfParse(dataBuffer);
-    const text = pdfData.text;
-    // Extract data using regex and text processing
-    const extractedData = extractItineraryData(text);
-
-    // Validate extracted data
-    if (
-      !extractedData.tripName ||
-      !extractedData.travelMode ||
-      !extractedData.departure ||
-      !extractedData.arrival ||
-      !extractedData.days.length
-    ) {
-      throw new ApiError(400, 'Incomplete itinerary data extracted from PDF');
-    }
-
-    // Create itinerary
-    const itineraryData: any = {
-      ...extractedData,
+    const itinerary = await Itinerary.create({
       userId,
       postId: new Types.ObjectId(),
-    };
-
-    const itinerary = await Itinerary.create(itineraryData);
+      pdfUrl,
+      isPdf: true,
+    });
     return itinerary;
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(500, `Error processing PDF`);
+    throw new ApiError(500, 'Failed to create itinerary from PDF');
   }
 };
 

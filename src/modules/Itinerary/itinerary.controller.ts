@@ -5,6 +5,8 @@ import sendResponse from '../../shared/sendResponse';
 import pick from '../../shared/pick';
 import { ItineraryService } from './itinerary.service';
 import ApiError from '../../errors/ApiError';
+import { uploadFilesToS3 } from '../../helpers/s3Service';
+import { ITINERARY_UPLOADS_FOLDER } from './itinerary.constant';
 
 const createItineraryFromPDF = catchAsync(
   async (req: Request, res: Response) => {
@@ -12,10 +14,10 @@ const createItineraryFromPDF = catchAsync(
     if (!req.file) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'PDF file is required');
     }
-    const filePath = req.file.path;
+    const fileUrl = await uploadFilesToS3([req.file], ITINERARY_UPLOADS_FOLDER);
     const result = await ItineraryService.createItineraryFromPDF(
       userId,
-      filePath
+      fileUrl[0]
     );
     sendResponse(res, {
       code: StatusCodes.CREATED,

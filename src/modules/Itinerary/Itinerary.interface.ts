@@ -25,15 +25,18 @@ export interface IItinerary {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   postId: Types.ObjectId;
-  tripName: string;
-  travelMode: string;
-  departure: string;
-  arrival: string;
-  days: IDay[];
-  overAllRating: number;
+  tripName?: string;
+  travelMode?: string;
+  departure?: string;
+  arrival?: string;
+  days?: IDay[];
+  overAllRating?: number;
+  pdfUrl?: string;
+  isPdf: boolean;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
+  
 }
 
 export interface ItineraryModel extends Model<IItinerary> {

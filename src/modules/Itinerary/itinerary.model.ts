@@ -36,12 +36,16 @@ const daySchema = new Schema({
 const itinerarySchema = new Schema<IItinerary, ItineraryModel>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   postId: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
-  tripName: { type: String, required: true },
-  travelMode: { type: String, required: true },
-  departure: { type: String, required: true },
-  arrival: { type: String, required: true },
-  days: [daySchema],
+  tripName: { type: String },
+  travelMode: { type: String },
+  departure: { type: String },
+  arrival: { type: String },
+  days: {
+    type: [daySchema],
+  },
   overAllRating: { type: Number, default: 0 },
+  isPdf: { type: Boolean, default: false },
+  pdfUrl: { type: String },
   isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -82,7 +86,7 @@ itinerarySchema.pre('save', function (next) {
   try {
     // Only calculate if days field exists and is modified (or new document)
     if (this.isNew || this.isModified('days')) {
-      this.overAllRating = calculateOverallRating(this.days);
+      this.overAllRating = calculateOverallRating(this.days || []);
     }
   } catch (error) {
     this.overAllRating = 0;
@@ -99,7 +103,7 @@ itinerarySchema.pre(
 
       // Only calculate if days field is being updated
       if (update && update.days) {
-        const overAllRating = calculateOverallRating(update.days);
+        const overAllRating = calculateOverallRating(update.days || []);
         this.set({ overAllRating });
       }
     } catch (error) {
