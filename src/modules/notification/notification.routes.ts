@@ -36,6 +36,11 @@ router
   .route('/view-single-notification')
   .post(auth('Common'), NotificationController.viewSingleNotification);
 
+/** ========================View single notifications viewSingleNotificationBySenderId==================== */
+router
+  .route('/view-single-message-notification/:senderId')
+  .patch(auth('Common'), NotificationController.viewSingleMessageNotification);
+
 /** ========================Clear all notifications route here==================== */
 router
   .route('/clear-all-notifications')

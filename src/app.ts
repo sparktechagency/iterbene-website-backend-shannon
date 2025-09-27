@@ -4,7 +4,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
-import csrf from 'csurf';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
@@ -61,8 +60,6 @@ const getCorsOptions = (allowedOrigins: string[]) => {
       ) {
         return callback(null, true);
       }
-
-      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -100,25 +97,6 @@ const getRateLimiter = () => {
     skip: req => {
       return req.path === '/test' || req.path === '/health';
     },
-  });
-};
-
-/**
- * Configure CSRF protection
- */
-const getCsrfProtection = () => {
-  const ignoreMethods =
-    process.env.NODE_ENV === 'development'
-      ? ['GET', 'HEAD', 'OPTIONS', 'DELETE', 'POST', 'PATCH', 'PUT']
-      : ['GET', 'HEAD', 'OPTIONS'];
-
-  return csrf({
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    },
-    ignoreMethods,
   });
 };
 
@@ -354,11 +332,6 @@ app.use(performanceMonitor);
 
 // Rate limiting
 app.use(getRateLimiter());
-
-// CSRF Protection
-if (process.env.NODE_ENV !== 'development') {
-  app.use(getCsrfProtection());
-}
 
 // Helmet security headers
 app.use(getHelmetConfig(allowedOrigins));

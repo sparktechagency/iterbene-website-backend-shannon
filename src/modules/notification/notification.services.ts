@@ -141,6 +141,18 @@ const viewSingleNotification = async (notificationId: string) => {
   }
   return result;
 };
+
+const viewSingleMessageNotification = async (
+  senderId: string,
+  receiverId: string
+) => {
+  const result = await Notification.updateMany(
+    { senderId, receiverId, viewStatus: false },
+    { viewStatus: true }
+  );
+  return result;
+};
+
 const deleteNotification = async (notificationId: string) => {
   const result = await Notification.findByIdAndDelete(notificationId);
   if (!result) {
@@ -161,6 +173,7 @@ const clearAllNotification = async (userId: string) => {
 export const NotificationService = {
   addNotification,
   getALLNotification,
+  viewSingleMessageNotification,
   getALLMessageNotification,
   getAdminNotifications,
   getSingleNotification,

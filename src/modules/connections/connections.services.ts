@@ -198,13 +198,6 @@ const deleteConnection = async (deleteByUserId: string, userId: string) => {
   }
 
   const result = await Connections.findByIdAndDelete(connection._id);
-
-  // Add to removed connections for temporary exclusion from suggestions
-  await RemovedConnection.create({
-    userId: userId,
-    removedUserId: deleteByUserId,
-  });
-
   return result;
 };
 

@@ -233,6 +233,8 @@ const createStory = async (
 
     return story;
   } catch (error) {
+
+    console.log("Error creating story:", error);
     // Cleanup on error
     if (mediaData.length > 0) {
       const createdMediaIds = mediaData.map(m => m._id).filter(Boolean);

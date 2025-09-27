@@ -99,7 +99,7 @@ const viewAllMessageNotifications = catchAsync(async (req, res) => {
     message: 'All notifications viewed successfully',
     data: {},
   });
-})
+});
 const viewSingleNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   await NotificationService.viewSingleNotification(id);
@@ -109,6 +109,17 @@ const viewSingleNotification = catchAsync(async (req, res) => {
     data: {},
   });
 });
+const viewSingleMessageNotification = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+  const { senderId } = req.params;
+  await NotificationService.viewSingleMessageNotification(senderId, userId);
+  sendResponse(res, {
+    code: StatusCodes.OK,
+    message: 'Notification viewed successfully',
+    data: {},
+  });
+});
+
 const deleteNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   await NotificationService.deleteNotification(id);
@@ -136,6 +147,7 @@ export const NotificationController = {
   getSingleNotification,
   getUnViewNotificationCount,
   viewAllMessageNotifications,
+  viewSingleMessageNotification,
   viewAllNotifications,
   viewSingleNotification,
   deleteNotification,

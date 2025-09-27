@@ -47,11 +47,13 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
 
   if (sourceId && postType === PostType.GROUP) {
     const group = await Group.findById(sourceId);
-    if (!group || group.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+    if (!group || group.isDeleted)
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
   }
   if (sourceId && postType === PostType.EVENT) {
     const event = await Event.findById(sourceId);
-    if (!event || event.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
+    if (!event || event.isDeleted)
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
   if (postType !== PostType.USER && !sourceId) {
     throw new ApiError(400, `${postType} posts require a sourceId`);
@@ -60,7 +62,8 @@ const createPost = async (payload: CreatePostPayload): Promise<IPost> => {
   let itinerary: Types.ObjectId | undefined;
   if (itineraryId) {
     const itineraryDoc = await Itinerary.findById(itineraryId);
-    if (!itineraryDoc) throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
+    if (!itineraryDoc)
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
     itinerary = itineraryDoc._id;
   }
 
@@ -216,7 +219,10 @@ const updatePost = async (
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        {
+          path: 'mentions',
+          select: 'firstName lastName username profileImage',
+        },
         { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
@@ -234,11 +240,13 @@ const updatePost = async (
   if (postType && sourceId) {
     if (postType === PostType.GROUP) {
       const group = await Group.findById(sourceId);
-      if (!group || group.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
+      if (!group || group.isDeleted)
+        throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found');
     }
     if (postType === PostType.EVENT) {
       const event = await Event.findById(sourceId);
-      if (!event || event.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
+      if (!event || event.isDeleted)
+        throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
     }
   }
 
@@ -247,7 +255,8 @@ const updatePost = async (
   if (itineraryId !== undefined) {
     if (itineraryId) {
       const itineraryDoc = await Itinerary.findById(itineraryId);
-      if (!itineraryDoc) throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
+      if (!itineraryDoc)
+        throw new ApiError(StatusCodes.NOT_FOUND, 'Itinerary not found');
       itinerary = itineraryDoc._id;
     } else {
       itinerary = undefined;
@@ -447,7 +456,8 @@ const getPostById = async (postId: string): Promise<IPost> => {
       ],
     },
   ]);
-  if (!post || post.isDeleted) throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
+  if (!post || post.isDeleted)
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   return post;
 };
 
@@ -651,7 +661,9 @@ const addOrRemoveReaction = async (
         senderId: payload.userId,
         receiverId: post.userId,
         title: `${user?.firstName} ${user?.lastName} reacted to your post`,
-        message: `${user?.firstName} ${user?.lastName} ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
+        message: `${user?.firstName} ${
+          user?.lastName
+        } ${payload.reactionType.toLowerCase()}d your post: "${post.content?.substring(
           0,
           50
         )}..."`,
@@ -691,7 +703,10 @@ const addOrRemoveReaction = async (
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        {
+          path: 'mentions',
+          select: 'firstName lastName username profileImage',
+        },
         { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
@@ -775,7 +790,9 @@ const addOrRemoveCommentReaction = async (
       senderId: userId,
       receiverId: post.userId,
       title: `${user?.firstName} ${user?.lastName} reacted to your comment`,
-      message: `${user?.firstName} ${user?.lastName} ${reactionType.toLowerCase()}d your comment: "${comment.comment?.substring(
+      message: `${user?.firstName} ${
+        user?.lastName
+      } ${reactionType.toLowerCase()}d your comment: "${comment.comment?.substring(
         0,
         50
       )}..."`,
@@ -802,7 +819,10 @@ const addOrRemoveCommentReaction = async (
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        {
+          path: 'mentions',
+          select: 'firstName lastName username profileImage',
+        },
         { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
@@ -903,10 +923,9 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
       senderId: payload.userId,
       receiverId: post.userId,
       title: `${user?.firstName} ${user?.lastName} commented on your post`,
-      message: `${user?.firstName} ${user?.lastName} commented: "${payload.comment.substring(
-        0,
-        50
-      )}..."`,
+      message: `${user?.firstName} ${
+        user?.lastName
+      } commented: "${payload.comment.substring(0, 50)}..."`,
       type: 'comment',
       linkId: postId,
       role: 'user',
@@ -930,10 +949,9 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
         senderId: payload.userId,
         receiverId: new Types.ObjectId(replyTo),
         title: `${user?.firstName} ${user?.lastName} replied to your comment`,
-        message: `${user?.firstName} ${user?.lastName} replied: "${payload.comment.substring(
-          0,
-          50
-        )}..."`,
+        message: `${user?.firstName} ${
+          user?.lastName
+        } replied: "${payload.comment.substring(0, 50)}..."`,
         type: 'comment',
         linkId: postId,
         role: 'user',
@@ -958,7 +976,10 @@ const createComment = async (payload: CreateCommentPayload): Promise<IPost> => {
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        {
+          path: 'mentions',
+          select: 'firstName lastName username profileImage',
+        },
         { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
@@ -1027,7 +1048,10 @@ const updateComment = async (payload: UpdateCommentPayload): Promise<IPost> => {
     {
       path: 'comments',
       populate: [
-        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        {
+          path: 'mentions',
+          select: 'firstName lastName username profileImage',
+        },
         { path: 'userId', select: 'firstName lastName username profileImage' },
         {
           path: 'reactions',
@@ -1179,7 +1203,7 @@ const feedPosts = async (
     (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO)
       ? {
           path: 'media',
-          match: { mediaType: mediaType }, // Only populate matching media types
+          match: { mediaType: mediaType },
           select: 'mediaType mediaUrl',
         }
       : {
@@ -1326,6 +1350,7 @@ const getUserTimelinePosts = async (
       },
     ];
   } else {
+    query.postType = PostType.USER;
     query.privacy = PostPrivacy.PUBLIC;
   }
 
@@ -1455,6 +1480,7 @@ const getGroupPosts = async (
       },
     ];
   } else {
+    query.postType = PostType.GROUP;
     query.privacy = PostPrivacy.PUBLIC;
   }
   options.populate = [
@@ -1521,7 +1547,7 @@ const getEventPosts = async (
   if (!event) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
   }
-  
+
   let currentUserId: Types.ObjectId | null = userId
     ? new Types.ObjectId(userId)
     : null;
@@ -1573,6 +1599,7 @@ const getEventPosts = async (
       },
     ];
   } else {
+    query.postType = PostType.EVENT;
     query.privacy = PostPrivacy.PUBLIC;
   }
 
@@ -1664,7 +1691,10 @@ const getVisitedPostsWithDistance = async (
       path: 'comments',
       populate: [
         { path: 'userId', select: 'firstName lastName username profileImage' },
-        { path: 'mentions', select: 'firstName lastName username profileImage' },
+        {
+          path: 'mentions',
+          select: 'firstName lastName username profileImage',
+        },
         {
           path: 'reactions',
           populate: {
@@ -1675,8 +1705,14 @@ const getVisitedPostsWithDistance = async (
         {
           path: 'replies',
           populate: [
-            { path: 'userId', select: 'firstName lastName username profileImage' },
-            { path: 'mentions', select: 'firstName lastName username profileImage' },
+            {
+              path: 'userId',
+              select: 'firstName lastName username profileImage',
+            },
+            {
+              path: 'mentions',
+              select: 'firstName lastName username profileImage',
+            },
             {
               path: 'reactions',
               populate: {
@@ -1687,8 +1723,14 @@ const getVisitedPostsWithDistance = async (
             {
               path: 'replies',
               populate: [
-                { path: 'userId', select: 'firstName lastName username profileImage' },
-                { path: 'mentions', select: 'firstName lastName username profileImage' },
+                {
+                  path: 'userId',
+                  select: 'firstName lastName username profileImage',
+                },
+                {
+                  path: 'mentions',
+                  select: 'firstName lastName username profileImage',
+                },
                 {
                   path: 'reactions',
                   populate: {
