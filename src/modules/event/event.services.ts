@@ -340,7 +340,8 @@ const getEvent = async (eventId: string, userId: string): Promise<IEvent> => {
     .populate([
       {
         path: 'creatorId',
-        select: 'firstName lastName profileImage username createdAt description',
+        select:
+          'firstName lastName profileImage username createdAt description',
       },
       {
         path: 'coHosts',
@@ -428,7 +429,7 @@ const getMyEvents = async (
     },
   ];
   options.select =
-    'eventName eventImage creatorId interestCount startDate endDate ';
+    'eventName description eventImage creatorId interestCount startDate endDate ';
   options.sortBy = options.sortBy || '-createdAt';
   return Event.paginate(query, options);
 };
@@ -453,7 +454,7 @@ const getMyInterestedEvents = async (
     },
   ];
   options.select =
-    'eventName eventImage creatorId interestCount startDate endDate ';
+    'eventName description eventImage creatorId interestCount startDate endDate ';
   options.sortBy = options.sortBy || '-createdAt';
   return Event.paginate(query, options);
 };
@@ -529,7 +530,7 @@ const getEventSuggestions = async (
     },
   ];
   options.select =
-    'eventName eventImage creatorId interestCount startDate endDate ';
+    'eventName description eventImage creatorId interestCount startDate endDate ';
   options.sortBy = options.sortBy || '-createdAt';
   const events = await Event.paginate(query, options);
   return events;

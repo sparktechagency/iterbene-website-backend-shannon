@@ -476,7 +476,7 @@ const getMyGroups = async (
     query.privacy = filters.privacy;
   }
   options.select =
-    'name groupImage privacy participantCount createdAt updatedAt';
+    'name groupImage description privacy participantCount createdAt updatedAt';
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
 
@@ -503,7 +503,7 @@ const getMyJoinGroups = async (
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
   options.select =
-    'name  groupImage privacy participantCount  createdAt updatedAt';
+    'name  groupImage description privacy participantCount  createdAt updatedAt';
   const groups = await Group.paginate(query, options);
   return groups;
 };
@@ -548,7 +548,7 @@ const getGroupSuggestions = async (
   options.sortBy = options.sortBy || 'createdAt';
   options.sortOrder = -1;
   options.select =
-    'name groupImage privacy participantCount createdAt updatedAt';
+    'name groupImage description privacy participantCount createdAt updatedAt';
 
   const groups = await Group.paginate(query, options);
   return groups;

@@ -345,7 +345,7 @@ const getMyInvites = async (
     {
       path: 'eventId',
       select:
-        'eventName eventImage startDate endDate duration eventCost interestCount',
+        'eventName eventImage startDate endDate duration eventCost interestCount description',
       populate: {
         path: 'creatorId',
         select: 'firstName lastName username profileImage',
