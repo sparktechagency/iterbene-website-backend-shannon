@@ -1,5 +1,3 @@
-import path from 'path';
-import DailyRotateFile from 'winston-daily-rotate-file';
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, label, printf } = format;
 
@@ -24,73 +22,21 @@ const myFormat = printf(
   }
 );
 
-// Base logger configuration
-const baseConfig = {
+// Simple console-only logger
+const logger = createLogger({
   level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
   format: combine(label({ label: 'Inter-bene-backend' }), timestamp(), myFormat),
-};
-
-// Production-optimized transports
-const productionTransports = [
-  new transports.Console({
-    level: 'error' // Only log errors to console in production
-  }),
-  new DailyRotateFile({
-    filename: path.join(
-      process.cwd(),
-      'winston',
-      'success',
-      '%DATE%-success.log'
-    ),
-    datePattern: 'DD-MM-YYYY',
-    zippedArchive: true,
-    maxSize: '5m', // Reduced from 10m
-    maxFiles: '3d', // Reduced from 7d
-    level: 'info'
-  }),
-];
-
-// Development transports
-const developmentTransports = [
-  new transports.Console(),
-  new DailyRotateFile({
-    filename: path.join(
-      process.cwd(),
-      'winston',
-      'success',
-      '%DATE%-success.log'
-    ),
-    datePattern: 'DD-MM-YYYY',
-    zippedArchive: true,
-    maxSize: '2m', // Smaller for development
-    maxFiles: '1d', // Only keep 1 day in development
-  }),
-];
-
-const logger = createLogger({
-  ...baseConfig,
-  transports: process.env.NODE_ENV === 'production' 
-    ? productionTransports 
-    : developmentTransports,
+  transports: [
+    new transports.Console(),
+  ],
 });
 
+// Simple error logger (console only)
 const errorLogger = createLogger({
   level: 'error',
   format: combine(label({ label: 'Inter-bene-backend' }), timestamp(), myFormat),
   transports: [
     new transports.Console(),
-    new DailyRotateFile({
-      filename: path.join(
-        process.cwd(),
-        'winston',
-        'error',
-        '%DATE%-error.log'
-      ),
-      datePattern: 'DD-MM-YYYY',
-      zippedArchive: true,
-      maxSize: '5m',
-      maxFiles: '7d', // Keep errors longer for debugging
-    }),
   ],
 });
 

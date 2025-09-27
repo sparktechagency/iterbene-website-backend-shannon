@@ -211,31 +211,6 @@ const logSuspiciousActivity = (req: Request, ip: string | undefined): void => {
   }
 };
 
-/**
- * Configure security logging middleware
- */
-const getSecurityLoggingMiddleware = () => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const timestamp = new Date().toISOString();
-    const ip = req.ip || req.connection.remoteAddress;
-    const userAgent = req.get('User-Agent');
-    const origin = req.get('Origin');
-
-    // Log security-relevant information
-    console.log(
-      `${timestamp} - ${req.method} ${
-        req.url
-      } - IP: ${ip} - Origin: ${origin} - UA: ${userAgent?.substring(0, 100)}`
-    );
-
-    // Log suspicious activities
-    if (req.body && typeof req.body === 'object') {
-      logSuspiciousActivity(req, ip);
-    }
-
-    next();
-  };
-};
 
 /**
  * Configure security error handler
@@ -347,9 +322,6 @@ app.use(getMongoSanitizeConfig());
 
 // HTTP Parameter Pollution Protection
 app.use(getHppConfig());
-
-// Security logging middleware
-app.use(getSecurityLoggingMiddleware());
 
 // =====================
 // Routes
