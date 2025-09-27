@@ -14,7 +14,6 @@ import router from './routes';
 import i18next from './i18n/i18n';
 import i18nextMiddleware from 'i18next-express-middleware';
 import notFound from './middlewares/notFound';
-import { performanceMonitor } from './middlewares/performanceMiddleware';
 import { config } from './config';
 
 // Create Express application
@@ -298,8 +297,6 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 // i18next middleware
 app.use(i18nextMiddleware.handle(i18next));
 
-// Performance monitoring
-app.use(performanceMonitor);
 
 // =====================
 // Security Middlewares
