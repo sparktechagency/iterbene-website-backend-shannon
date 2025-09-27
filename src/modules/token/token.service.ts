@@ -23,7 +23,7 @@ const getExpirationTime = (expiration: string) => {
 };
 
 const generateToken = (payload: object, secret: Secret, expireTime: string): string => {
-  const options: SignOptions = { expiresIn: expireTime };
+  const options: SignOptions = { expiresIn: expireTime as any };
   return jwt.sign(payload, secret, options);
 };
 
